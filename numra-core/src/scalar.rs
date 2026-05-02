@@ -39,11 +39,6 @@ use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAss
 ///     Some(((-b + sqrt_d) / two_a, (-b - sqrt_d) / two_a))
 /// }
 /// ```
-//!
-//! Author: Moussa Leblouba
-//! Date: 9 February 2026
-//! Modified: 2 May 2026
-
 pub trait Scalar:
     Copy
     + Clone
