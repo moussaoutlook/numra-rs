@@ -1,0 +1,21 @@
+# Numra marketing site — robots.txt
+# ----------------------------------------------------------------------
+# Allow all crawlers. Sitemap helps discovery.
+# Cloudflare Pages preview deployments get a noindex meta tag
+# automatically; no robots.txt change needed for previews.
+
+User-agent: *
+Allow: /
+
+# Common AI crawler controls — uncomment if you want to opt out.
+# Numra is open documentation; allowing is the default.
+# User-agent: GPTBot
+# Disallow: /
+# User-agent: ClaudeBot
+# Disallow: /
+# User-agent: anthropic-ai
+# Disallow: /
+# User-agent: CCBot
+# Disallow: /
+
+Sitemap: https://numra-rs.org/sitemap-index.xml

@@ -1,0 +1,107 @@
+---
+// src/components/Header.astro
+
+const navItems = [
+  { href: 'https://book.numra-rs.org', label: 'Book', external: true },
+  { href: 'https://examples.numra-rs.org', label: 'Examples', external: true },
+  { href: 'https://docs.numra-rs.org', label: 'API', external: true },
+  { href: 'https://github.com/moussaoutlook/numra-rs', label: 'GitHub', external: true },
+];
+---
+
+<header class="site-header">
+  <div class="container">
+    <a class="brand" href="/" aria-label="Numra home">
+      <img src="/numra_logo_no_BG.svg" alt="" width="100" height="32" />
+      <span class="brand-text">Numra</span>
+    </a>
+
+    <nav class="primary-nav" aria-label="Primary">
+      <ul>
+        {navItems.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              {...(item.external ? { rel: 'noopener' } : {})}
+            >{item.label}</a>
+          </li>
+        ))}
+        <li>
+          <a class="btn-install" href="/install">Install</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .site-header .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-block: var(--space-3);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    text-decoration: none;
+    color: var(--color-fg);
+    font-weight: 600;
+  }
+
+  [data-theme="dark"] .brand img {
+    /* Use the dark-mode logo via CSS swap, or duplicate the img and
+       toggle visibility based on data-theme. Single-img approach: */
+    filter: invert(1);
+  }
+
+  .brand-text { font-size: var(--text-lg); }
+
+  .primary-nav ul {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .primary-nav a {
+    color: var(--color-fg);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 500;
+  }
+
+  .primary-nav a:hover {
+    color: var(--color-accent);
+  }
+
+  .btn-install {
+    background: var(--color-accent);
+    color: var(--color-bg) !important;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    font-weight: 600 !important;
+  }
+
+  .btn-install:hover {
+    background: var(--color-accent-hover);
+    color: var(--color-bg) !important;
+  }
+
+  @media (max-width: 720px) {
+    .primary-nav ul { gap: var(--space-3); }
+    .brand-text { display: none; }
+  }
+</style>

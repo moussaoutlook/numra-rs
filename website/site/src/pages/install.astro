@@ -1,0 +1,83 @@
+---
+// src/pages/install.astro
+//
+// Install + first solve. The single most important onboarding page —
+// SPEC §22 mandates `/` → `cargo add numra` → running Lorenz solve in
+// under 60 seconds. Keep this page short, copy-pasteable, and
+// linear.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Install"
+  description="Install Numra in a Rust project and run your first ODE solve in under a minute."
+  canonicalPath="/install"
+>
+  <section class="install">
+    <div class="container-narrow">
+      <h1>Install Numra.</h1>
+      <p class="lede">
+        Numra is a Rust crate. If you have a recent stable Rust toolchain,
+        adding Numra is one command. The MSRV is published on the
+        <a href="/stability">stability</a> page.
+      </p>
+
+      <h2>1. Add the crate.</h2>
+      <pre><code class="language-bash">cargo add numra</code></pre>
+      <p>
+        That pulls the workspace facade. Modules become available under
+        <code>numra::ode</code>, <code>numra::sde</code>,
+        <code>numra::dde</code>, <code>numra::pde</code>, and so on.
+      </p>
+
+      <h2>2. Solve a Lorenz system.</h2>
+      <p>
+        Drop this into <code>src/main.rs</code>:
+      </p>
+      <pre><code class="language-rust">{`use numra::ode::{solve_ivp, Tsit5};
+use numra::prelude::*;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let lorenz = |_t: f64, y: &[f64], dy: &mut [f64]| {
+        let (s, r, b) = (10.0, 28.0, 8.0 / 3.0);
+        dy[0] = s * (y[1] - y[0]);
+        dy[1] = y[0] * (r - y[2]) - y[1];
+        dy[2] = y[0] * y[1] - b * y[2];
+    };
+
+    let sol = solve_ivp(lorenz, (0.0, 40.0), &[1.0, 1.0, 1.0])
+        .method(Tsit5::new())
+        .rtol(1e-8)
+        .atol(1e-10)
+        .dense_output(true)
+        .run()?;
+
+    println!("steps: {}, final state: {:?}", sol.t.len(), sol.y_last());
+    Ok(())
+}`}</code></pre>
+
+      <h2>3. Run.</h2>
+      <pre><code class="language-bash">cargo run --release</code></pre>
+
+      <h2>What's next?</h2>
+      <ul>
+        <li><a href="https://book.numra-rs.org">Read the book</a> for tutorials and the solver reference.</li>
+        <li><a href="https://docs.numra-rs.org">Browse the API</a> on docs.rs.</li>
+        <li><a href="/cite">Cite Numra</a> if you publish work that uses it.</li>
+        <li><a href="/license">License</a> and <a href="/commercial">commercial use</a>.</li>
+      </ul>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .install { padding: var(--space-8) 0; }
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  h2 { margin-top: var(--space-7); }
+</style>

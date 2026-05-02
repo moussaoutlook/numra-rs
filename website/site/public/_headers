@@ -1,0 +1,53 @@
+# Numra marketing site — Cloudflare Pages security headers
+# ----------------------------------------------------------------------
+# CSP is authoritative here. Astro's experimental security.csp
+# meta-tag emitter is disabled — having two policies intersect made
+# the static `default-src 'self'` block the meta-hashed inline
+# scripts/styles. Single source of truth wins.
+#
+# script-src: 'self' covers /theme-init.js and all _astro/* chunks.
+# `https://static.cloudflareinsights.com` is allowed for the
+# Cloudflare Web Analytics beacon, which is auto-injected by the
+# Cloudflare proxy at edge time — we ship no manual `data-cf-beacon`
+# snippet ourselves. The marketing site emits zero authored inline
+# <script> blocks in built HTML — JSON-LD is non-executable data
+# (CSP does not apply), and the theme-persistence script lives at
+# public/theme-init.js so that 'self' covers it without needing
+# 'unsafe-inline'.
+#
+# style-src: 'unsafe-inline' is needed because Astro emits scoped
+# component CSS as inline <style> blocks at build time. CSS-injection
+# attacks have minimal surface on a static marketing site; the
+# trade-off is acceptable.
+#
+# font-src: data: covers any data-URI fonts inlined by sub-100B
+# subsetting (e.g. Inter Variable's woff2 inlining strategy).
+#
+# Header-only directives (frame-ancestors, upgrade-insecure-requests,
+# HSTS, X-Frame-Options, Permissions-Policy) cannot live in <meta>;
+# they're set here.
+
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://static.cloudflareinsights.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  X-DNS-Prefetch-Control: off
+
+# Long-cache static assets — fingerprinted by Astro at build time.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML pages — short cache, must revalidate
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate

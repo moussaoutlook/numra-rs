@@ -1,0 +1,93 @@
+---
+// src/pages/404.astro
+//
+// Branded 404. No animations, no illustrations of broken robots, no
+// humor. Short message, links to common destinations.
+//
+// Cloudflare Pages serves /404.html automatically when a route is
+// missing — no _redirects rule needed.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Page not found"
+  description="That page doesn't exist on numra-rs.org."
+  canonicalPath="/404"
+>
+  <section class="not-found">
+    <div class="container-narrow">
+      <p class="status">404</p>
+      <h1>That page doesn't exist.</h1>
+      <p class="lede">
+        The link may be wrong, the page may have moved, or you may have
+        followed a stale reference.
+      </p>
+
+      <ul class="suggestions">
+        <li><a href="/">Home</a></li>
+        <li><a href="/install">Install</a></li>
+        <li><a href="https://book.numra-rs.org">Book</a></li>
+        <li><a href="https://docs.numra-rs.org">API reference</a></li>
+        <li><a href="https://github.com/moussaoutlook/numra-rs" rel="noopener">GitHub</a></li>
+      </ul>
+
+      <p class="contact">
+        If you arrived here from a Numra page, please
+        <a href="https://github.com/moussaoutlook/numra-rs/issues/new" rel="noopener">open an issue</a>
+        so we can fix the broken link.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .not-found {
+    padding: var(--space-9) 0;
+    min-height: 60vh;
+  }
+
+  .status {
+    font-family: var(--font-mono);
+    font-size: var(--text-5xl);
+    color: var(--color-fg-subtle);
+    margin-bottom: var(--space-3);
+    line-height: 1;
+  }
+
+  h1 { margin-bottom: var(--space-4); }
+
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+
+  .suggestions {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-5);
+    margin-bottom: var(--space-7);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    padding-block: var(--space-4);
+  }
+
+  .suggestions li { margin: 0; }
+
+  .suggestions a {
+    color: var(--color-fg);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .suggestions a:hover { color: var(--color-accent); text-decoration: underline; }
+
+  .contact {
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+  }
+</style>

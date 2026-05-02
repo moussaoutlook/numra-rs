@@ -1,0 +1,87 @@
+[package]
+name = "numra"
+description = "Numra - Numerical Methods Library for Rust"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+numra-core = { workspace = true }
+numra-linalg = { workspace = true }
+numra-nonlinear = { workspace = true }
+numra-ode = { workspace = true }
+numra-sde = { workspace = true }
+numra-dde = { workspace = true }
+numra-fde = { workspace = true }
+numra-ide = { workspace = true }
+numra-pde = { workspace = true }
+numra-spde = { workspace = true }
+numra-autodiff = { workspace = true }
+numra-optim = { workspace = true }
+numra-ocp = { workspace = true }
+numra-integrate = { workspace = true }
+numra-interp = { workspace = true }
+numra-special = { workspace = true }
+numra-fft = { workspace = true }
+numra-stats = { workspace = true }
+numra-fit = { workspace = true }
+numra-signal = { workspace = true }
+
+[[example]]
+name = "lorenz"
+path = "examples/lorenz.rs"
+
+[[example]]
+name = "van_der_pol"
+path = "examples/van_der_pol.rs"
+
+[[example]]
+name = "solver_zoo"
+path = "examples/solver_zoo.rs"
+
+[[example]]
+name = "gbm_monte_carlo"
+path = "examples/gbm_monte_carlo.rs"
+
+[[example]]
+name = "mackey_glass"
+path = "examples/mackey_glass.rs"
+
+[[example]]
+name = "pendulum_dae"
+path = "examples/pendulum_dae.rs"
+
+[[example]]
+name = "fractional_relaxation"
+path = "examples/fractional_relaxation.rs"
+
+[[example]]
+name = "viscoelastic_prony"
+path = "examples/viscoelastic_prony.rs"
+
+[[example]]
+name = "heat_equation"
+path = "examples/heat_equation.rs"
+
+[[example]]
+name = "stefan_problem"
+path = "examples/stefan_problem.rs"
+
+[[example]]
+name = "stochastic_heat"
+path = "examples/stochastic_heat.rs"
+
+[[example]]
+name = "bouncing_ball"
+path = "examples/bouncing_ball.rs"
+
+[[example]]
+name = "dde_mackey_glass"
+path = "examples/dde_mackey_glass.rs"
+
+[[example]]
+name = "spde_heat"
+path = "examples/spde_heat.rs"

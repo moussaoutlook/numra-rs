@@ -1,0 +1,104 @@
+---
+// src/pages/stability.astro
+//
+// Per SPEC §16. The MSRV value mirrors `rust-version` in the workspace
+// Cargo.toml — keep them in sync. If you bump one, bump the other.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const msrv = '1.83';
+---
+
+<BaseLayout
+  title="Stability"
+  description="Numra's MSRV, semver policy, deprecation windows, and feature-flag stability commitments."
+  canonicalPath="/stability"
+>
+  <section class="stability">
+    <div class="container-narrow">
+      <h1>Stability.</h1>
+
+      <p class="lede">
+        Numra is in <code>0.x</code>. The API is settling. This page
+        states the commitments adopters can plan around.
+      </p>
+
+      <h2>Minimum Supported Rust Version (MSRV).</h2>
+      <p>
+        The current MSRV is <strong>Rust {msrv}</strong>. The
+        authoritative value lives in the workspace
+        <code>Cargo.toml</code> as <code>rust-version</code>; this page
+        mirrors it. The MSRV is updated only on minor releases and
+        only with a two-version grace period — no patch release
+        bumps the MSRV.
+      </p>
+
+      <h2>Semver during 0.x.</h2>
+      <p>
+        While Numra is in <code>0.x</code>, breaking changes are
+        published as minor bumps (for example, <code>0.3.x &rarr;
+        0.4.0</code>). Patch releases are bug-fix and additive only.
+        This is stricter than Cargo's
+        default <code>0.x</code> semantics; it is stated explicitly so
+        adopters are not surprised.
+      </p>
+
+      <h2>Semver from 1.0.</h2>
+      <p>
+        From <code>1.0</code> onward Numra follows standard semantic
+        versioning. Breaking changes only happen on major releases.
+        Public API is everything reachable from the <code>numra</code>
+        facade crate; per-crate APIs in the workspace inherit the same
+        guarantees.
+      </p>
+
+      <h2>Deprecation window.</h2>
+      <p>
+        Public API removals carry a <code>#[deprecated]</code>
+        annotation for at least two minor releases before the item is
+        removed. Each deprecation states the migration in its
+        attribute message.
+      </p>
+
+      <h2>Feature-flag stability.</h2>
+      <p>
+        Crate features in Numra fall into three buckets:
+      </p>
+      <ul>
+        <li>
+          Stable features — covered by the semver guarantees above.
+        </li>
+        <li>
+          <code>unstable-*</code> features — explicitly experimental,
+          may change shape without a deprecation cycle, may be removed
+          at any time.
+        </li>
+        <li>
+          Default-on features — listed in each crate's <code>Cargo.toml</code>;
+          turning them off remains supported across a major.
+        </li>
+      </ul>
+
+      <h2>Numerical behavior.</h2>
+      <p>
+        Solver outputs may shift bit-for-bit across releases when
+        underlying tableaux, reorderings, or floating-point
+        accumulation orders change. Numra does not promise bit-for-bit
+        reproducibility across versions; it does promise that
+        documented order-of-accuracy and stability properties are
+        preserved within each solver's documented regime.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .stability { padding: var(--space-8) 0; }
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  h2 { margin-top: var(--space-7); }
+</style>

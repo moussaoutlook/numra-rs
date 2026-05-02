@@ -1,0 +1,87 @@
+---
+title: "Numra"
+description: "Composable numerical methods for Rust — user and solver guide."
+template: splash
+hero:
+  tagline: Composable numerical methods for Rust.
+  actions:
+    - text: Get started
+      link: /ch01-introduction/installation
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/moussaoutlook/numra-rs
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## What is Numra?
+
+Numra is a Rust library for numerical methods in scientific computing,
+covering ordinary, stochastic, delay, fractional, integro-differential,
+and partial differential equations under one composable API.
+
+This book is the long-form companion to the API reference at
+[`docs.rs/numra`](https://docs.rs/numra). The marketing site at
+[`numra-rs.org`](https://numra-rs.org) has the elevator pitch and
+licensing details.
+
+<CardGrid>
+  <Card title="Getting started" icon="rocket">
+    Install Numra and run your first solve.
+    [Start here →](/ch01-introduction/installation)
+  </Card>
+  <Card title="Solving ODEs" icon="open-book">
+    Explicit, implicit, stiff, and event-driven methods.
+    [Browse the chapter →](/ch02-solving-odes/your-first-ode)
+  </Card>
+  <Card title="Beyond ODEs" icon="document">
+    SDEs, DDEs, FDEs, IDEs, PDEs, and SPDEs.
+    [Explore →](/ch04-beyond-odes/stochastic-des)
+  </Card>
+  <Card title="Solver reference" icon="approve-check">
+    Solver tables, method cards, and Butcher tableaux.
+    [Reference →](/appendix/solver-reference)
+  </Card>
+</CardGrid>
+
+## How this book is organized
+
+The sidebar groups material by topic, in pedagogical order:
+
+- **Getting Started** — install, first solve, architecture overview.
+- **Ordinary Differential Equations** — explicit and implicit methods,
+  stiff systems, dense output, event detection.
+- **Beyond ODEs** — SDEs, DDEs, FDEs, IDEs, PDEs, SPDEs.
+- **Optimization** — unconstrained, constrained, global, multi-objective.
+- **Linear Algebra** — dense, sparse, factorizations, eigenproblems.
+- **Calculus & Analysis** — quadrature, interpolation, autodiff, special functions.
+- **Signal Processing** — FFT, filters, Hilbert transform.
+- **Statistics** — distributions, hypothesis testing, regression.
+- **Optimal Control** — shooting, collocation, adjoint methods.
+- **Uncertainty & Sensitivity** — error propagation, Monte Carlo, intervals.
+- **Advanced Topics** — composability, performance, no_std, extending Numra.
+- **Appendix** — solver reference, method cards, Butcher tableaux.
+
+## A note on math
+
+Equations throughout this book are typeset with KaTeX. For example:
+
+$$
+\frac{d\mathbf{y}}{dt} = \mathbf{f}(t, \mathbf{y}), \qquad \mathbf{y}(t_0) = \mathbf{y}_0
+$$
+
+If math is rendering as plain text rather than typeset symbols, the
+build is broken — please [open an issue](https://github.com/moussaoutlook/numra-rs/issues).
+
+## A note on benchmarks
+
+Every plot in this book carries (in its caption or alt text):
+
+1. The Numra commit SHA used to generate it.
+2. The hardware and compiler version.
+3. A link to the reproduction script.
+
+If a plot can't meet that bar, it doesn't ship. The same standard
+applies to comparison benchmarks against other libraries.

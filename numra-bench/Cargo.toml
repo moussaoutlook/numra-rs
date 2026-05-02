@@ -1,0 +1,20 @@
+[package]
+name = "numra-bench"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Benchmarks for Numra numerical methods workspace"
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bench]]
+name = "solvers"
+harness = false
+
+[dependencies]
+numra-ode = { path = "../numra-ode" }
+numra-core = { path = "../numra-core" }
+
+[dev-dependencies]
+criterion = { workspace = true }

@@ -1,0 +1,213 @@
+# Numra website CI/CD — GitHub Actions
+# ----------------------------------------------------------------------
+# Builds and deploys both the marketing site (numra-rs.org) and the
+# book (book.numra-rs.org) to Cloudflare Pages, plus runs Lighthouse
+# CI and pa11y on each PR.
+#
+# Required repository secrets:
+#   CLOUDFLARE_API_TOKEN   — Pages:Edit + Account:Read scope
+#   CLOUDFLARE_ACCOUNT_ID  — from Cloudflare dashboard
+#
+# Optional:
+#   LHCI_GITHUB_APP_TOKEN  — for Lighthouse status checks on PRs
+#                            (install the Lighthouse CI GitHub App
+#                            at https://github.com/apps/lighthouse-ci
+#                            then add the token here)
+#
+# Cloudflare Pages projects expected:
+#   numra-site   →  numra-rs.org
+#   numra-book   →  book.numra-rs.org
+#
+# This workflow lives at .github/workflows/website.yml in the repo root.
+
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/website.yml'
+  pull_request:
+    paths:
+      - 'website/**'
+      - '.github/workflows/website.yml'
+  workflow_dispatch:
+
+# Cancel in-flight runs of the same workflow on the same ref.
+concurrency:
+  group: website-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write  # for Lighthouse CI to comment on PRs
+
+jobs:
+  # ----------------------------------------------------------------- site
+  site:
+    name: Build & deploy marketing site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Lighthouse CI needs git history for ancestor comparison
+          fetch-depth: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: website/site/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: website/site
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        working-directory: website/site
+        run: pnpm astro check
+
+      - name: Build
+        working-directory: website/site
+        run: pnpm build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        id: deploy_site
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy website/site/dist --project-name=numra-site --branch=${{ github.head_ref || github.ref_name }}
+
+      - name: Upload build artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-dist
+          path: website/site/dist
+          retention-days: 7
+
+  # ------------------------------------------------------------------ book
+  book:
+    name: Build & deploy book
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: website/book/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: website/book
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        working-directory: website/book
+        run: pnpm astro check
+
+      - name: Build (Starlight + Pagefind)
+        working-directory: website/book
+        run: pnpm build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        id: deploy_book
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy website/book/dist --project-name=numra-book --branch=${{ github.head_ref || github.ref_name }}
+
+      - name: Upload build artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: book-dist
+          path: website/book/dist
+          retention-days: 7
+
+  # ----------------------------------------------------------- lighthouse
+  lighthouse:
+    name: Lighthouse CI
+    needs: [site, book]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run Lighthouse CI on production deploys
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          # Audits the marketing site only. The book ships with
+          # Starlight chrome plus Pagefind, which exceeds the strict
+          # marketing budget; a dedicated lighthouserc-book.json with
+          # looser thresholds would be needed to audit it.
+          #
+          # These are production URLs. Per-PR preview-URL auditing
+          # would require capturing the wrangler-action deployment
+          # output.
+          urls: |
+            https://numra-rs.org/
+            https://numra-rs.org/install
+            https://numra-rs.org/license
+            https://numra-rs.org/commercial
+            https://numra-rs.org/cite
+            https://numra-rs.org/community
+            https://numra-rs.org/stability
+            https://numra-rs.org/features
+            https://numra-rs.org/privacy
+          configPath: ./website/ci/lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        env:
+          # Optional — enables status checks on PRs. Leave unset to skip.
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+  # ----------------------------------------------------------------- a11y
+  pa11y:
+    name: Accessibility (pa11y-ci)
+    needs: [site, book]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pa11y-ci
+        run: npm install -g pa11y-ci@4
+
+      - name: Run pa11y-ci
+        run: pa11y-ci --config website/ci/pa11yci.json

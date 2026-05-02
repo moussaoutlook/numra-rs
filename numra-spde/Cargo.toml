@@ -1,0 +1,20 @@
+[package]
+name = "numra-spde"
+description = "Stochastic Partial Differential Equation solvers for Numra"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+numra-core = { workspace = true }
+numra-pde = { workspace = true }
+numra-sde = { workspace = true }
+numra-ode = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+
+[dev-dependencies]
+approx = "0.5"

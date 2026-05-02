@@ -1,0 +1,35 @@
+{
+  "name": "@numra/book",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Numra user and solver guide (book.numra-rs.org)",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "lint": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.0",
+    "@astrojs/starlight": "^0.38.0",
+    "@fontsource-variable/inter": "^5.1.0",
+    "@fontsource-variable/jetbrains-mono": "^5.1.0",
+    "astro": "^6.1.0",
+    "starlight-katex": "^0.0.4",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "comments": {
+    "starlight-katex": "Use starlight-katex, NOT raw remark-math + rehype-katex. There are known Starlight CSS conflicts with KaTeX SVG output — see https://github.com/withastro/starlight/issues/2511",
+    "starlight-version": "Starlight 0.38 is the first version compatible with Astro 6. Do not pair Starlight 0.37 or earlier with Astro 6.",
+    "pagefind": "Pagefind is built into Starlight by default. Do not add astro-pagefind here.",
+    "node": "Astro 6 + Starlight 0.38 require Node 22+."
+  }
+}

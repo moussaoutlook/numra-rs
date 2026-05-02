@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: rustfmt
+        run: cargo fmt --all -- --check
+
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: test
+        run: cargo test --workspace
+
+      - name: doctests
+        run: cargo test --workspace --doc
+
+      - name: build examples
+        run: cargo build -p numra --examples
+
+      - name: rustdoc
+        run: RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps
+
+      - name: Book drift check
+        run: python3 scripts/check_book_inventory.py
+
+      - name: Book snippet harness
+        run: python3 scripts/extract_book_snippets.py
+
+      - name: Book math lint
+        run: python3 scripts/check_book_math.py
+
+      - name: Generated book HTML is untracked
+        run: test -z "$(git ls-files 'numra-book/book')"
+
+      - name: Install mdbook
+        run: cargo install mdbook --locked
+
+      - name: Install mdbook-pdf
+        run: cargo install mdbook-pdf --locked --features fetch
+
+      - name: mdbook build
+        working-directory: numra-book
+        run: mdbook build
+
+      - name: mdbook test
+        working-directory: numra-book
+        run: mdbook test
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+
+      - name: cargo deny
+        run: cargo deny check
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MSRV toolchain
+        uses: dtolnay/rust-toolchain@1.83
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: MSRV check
+        run: cargo check --workspace

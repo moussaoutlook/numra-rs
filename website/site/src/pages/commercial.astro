@@ -1,0 +1,78 @@
+---
+// src/pages/commercial.astro
+//
+// Mailto-only commercial inquiry path per SPEC §14.2 / §19.1. A
+// Cloudflare Workers-backed form is a Phase 3 decision if mailto
+// volume becomes unmanageable.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const subject = encodeURIComponent('[Numra commercial] ');
+const mailto = `mailto:contact@spectralautomata.com?subject=${subject}`;
+---
+
+<BaseLayout
+  title="Commercial licensing"
+  description="Get a commercial license for Numra. Production deployments, paid products, and hosted services using Numra require a separate license."
+  canonicalPath="/commercial"
+>
+  <section class="commercial">
+    <div class="container-narrow">
+      <h1>Commercial licensing.</h1>
+
+      <p class="lede">
+        Numra is free for non-commercial academic and research use under
+        the <a href="/license">Numra Academic &amp; Research License</a>.
+        For everything else — production deployments, paid products,
+        hosted services, and embedded use in commercial software —
+        you need a commercial license.
+      </p>
+
+      <h2>How to get in touch.</h2>
+      <p>
+        Email <a href={mailto}>contact@spectralautomata.com</a> with
+        the subject prefix <code>[Numra commercial]</code> and a few
+        sentences about your use case. We aim to respond within five
+        business days.
+      </p>
+
+      <p>
+        Useful context to include in the first email:
+      </p>
+      <ul>
+        <li>What you want to build with Numra.</li>
+        <li>Whether the deployment is internal, customer-facing, or hosted.</li>
+        <li>Approximate scale (developer seats, instances, or users).</li>
+        <li>Any timing constraints.</li>
+      </ul>
+
+      <h2>Tiers.</h2>
+      <p>
+        Tier definitions and indicative pricing — Individual, Cloud
+        (Free / Pro / Team), Institutional, OEM — are issued
+        directly to inquirers. They will be published on this page in
+        a future revision.
+      </p>
+
+      <h2>Already a non-commercial user?</h2>
+      <p>
+        You probably do not need a commercial license. Academic
+        research, teaching, and individual non-revenue projects are all
+        free under the existing license. If your use is unclear, send
+        a short email and we will tell you whether a license is
+        required.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .commercial { padding: var(--space-8) 0; }
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  h2 { margin-top: var(--space-7); }
+</style>

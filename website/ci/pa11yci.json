@@ -1,0 +1,38 @@
+{
+  "_comment": "pa11y-ci configuration. Standard set to WCAG 2.2 AA. All listed URLs are checked; any AA violation fails the build.",
+
+  "defaults": {
+    "standard": "WCAG2AA",
+    "timeout": 30000,
+    "wait": 1500,
+    "chromeLaunchConfig": {
+      "args": ["--no-sandbox", "--disable-setuid-sandbox"]
+    },
+    "viewport": {
+      "width": 1280,
+      "height": 1024
+    },
+    "ignore": [
+      "WCAG2AA.Principle1.Guideline1_3.1_3_1.AAA"
+    ],
+    "_comment_ignore": "We target AA not AAA, so AAA-only checks are excluded. Add other rule IDs here if false positives appear; document the reason in this comment field."
+  },
+
+  "urls": [
+    "https://numra-rs.org/",
+    "https://numra-rs.org/install",
+    "https://numra-rs.org/license",
+    "https://numra-rs.org/commercial",
+    "https://numra-rs.org/cite",
+    "https://numra-rs.org/community",
+    "https://numra-rs.org/stability",
+    "https://numra-rs.org/features",
+    "https://numra-rs.org/privacy",
+    "https://numra-rs.org/changelog",
+    "https://numra-rs.org/roadmap",
+    "https://numra-rs.org/404",
+
+    "https://book.numra-rs.org/",
+    "https://book.numra-rs.org/getting-started/install"
+  ]
+}

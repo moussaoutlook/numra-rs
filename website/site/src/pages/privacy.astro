@@ -1,0 +1,84 @@
+---
+// src/pages/privacy.astro
+//
+// Per SPEC §13. Cloudflare Web Analytics is cookieless and PII-free;
+// this page states that explicitly.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Privacy"
+  description="What numra-rs.org collects and what it doesn't. Spoiler: nothing personally identifying."
+  canonicalPath="/privacy"
+>
+  <section class="privacy">
+    <div class="container-narrow">
+      <h1>Privacy.</h1>
+
+      <p class="lede">
+        <code>numra-rs.org</code> uses Cloudflare Web Analytics for
+        traffic measurement. No cookies, no fingerprinting, no
+        third-party trackers, no advertising network beacons.
+      </p>
+
+      <h2>What is collected.</h2>
+      <p>
+        Anonymous request metadata only: page URL, referrer, an
+        approximate country, and a coarse browser/OS class. The
+        information is collected and aggregated by Cloudflare; no
+        identifier links a visit to a specific person or device.
+      </p>
+
+      <h2>What is not collected.</h2>
+      <ul>
+        <li>No cookies are set by this site.</li>
+        <li>No browser fingerprinting.</li>
+        <li>No IP addresses are stored.</li>
+        <li>No third-party advertising or marketing trackers.</li>
+        <li>No Google Analytics, no social-media pixels.</li>
+      </ul>
+
+      <h2>Where data is stored.</h2>
+      <p>
+        On Cloudflare's edge infrastructure, retained for at most six
+        months in aggregate form. See
+        <a
+          href="https://www.cloudflare.com/web-analytics/"
+          rel="noopener"
+        >Cloudflare Web Analytics documentation</a> for the underlying
+        retention policy.
+      </p>
+
+      <h2>Removal requests.</h2>
+      <p>
+        Because no identifiable data is collected, there is no record to
+        remove. If you want to confirm this for compliance reasons,
+        email
+        <a href="mailto:contact@spectralautomata.com?subject=%5BNumra%20privacy%5D%20"
+          >contact@spectralautomata.com</a>
+        with the subject prefix <code>[Numra privacy]</code>.
+      </p>
+
+      <h2>Other Numra properties.</h2>
+      <p>
+        The same policy applies to
+        <code>book.numra-rs.org</code>, <code>docs.numra-rs.org</code>,
+        and <code>examples.numra-rs.org</code>. The book and examples
+        properties run on the same Cloudflare Pages stack and inherit
+        the same privacy posture.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .privacy { padding: var(--space-8) 0; }
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  h2 { margin-top: var(--space-7); }
+</style>

@@ -1,0 +1,83 @@
+[workspace]
+resolver = "2"
+members = [
+    "numra-core",
+    "numra-linalg",
+    "numra-nonlinear",
+    "numra-ode",
+    "numra-sde",
+    "numra-dde",
+    "numra-fde",
+    "numra-ide",
+    "numra-pde",
+    "numra-spde",
+    "numra-autodiff",
+    "numra-optim",
+    "numra-ocp",
+    "numra-integrate",
+    "numra-interp",
+    "numra-special",
+    "numra-fft",
+    "numra-stats",
+    "numra-fit",
+    "numra-signal",
+    "numra",
+    "numra-bench",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.83"
+license = "LicenseRef-Numra-Academic-Research-NonCommercial"
+license-file = "LICENSE"
+repository = "https://github.com/moussaoutlook/numra-rs"
+homepage = "https://numra-rs.org"
+documentation = "https://docs.rs/numra"
+authors = ["Moussa <mlablouba@gmail.com>"]
+keywords = ["numerical", "differential-equations", "ode", "sde", "scientific"]
+categories = ["science", "mathematics", "algorithms"]
+
+[workspace.dependencies]
+# Internal crates
+numra-core = { path = "numra-core", version = "0.1.0" }
+numra-linalg = { path = "numra-linalg", version = "0.1.0" }
+numra-nonlinear = { path = "numra-nonlinear", version = "0.1.0" }
+numra-ode = { path = "numra-ode", version = "0.1.0" }
+numra-sde = { path = "numra-sde", version = "0.1.0" }
+numra-dde = { path = "numra-dde", version = "0.1.0" }
+numra-fde = { path = "numra-fde", version = "0.1.0" }
+numra-ide = { path = "numra-ide", version = "0.1.0" }
+numra-pde = { path = "numra-pde", version = "0.1.0" }
+numra-spde = { path = "numra-spde", version = "0.1.0" }
+numra-autodiff = { path = "numra-autodiff", version = "0.1.0" }
+numra-optim = { path = "numra-optim", version = "0.1.0" }
+numra-ocp = { path = "numra-ocp", version = "0.1.0" }
+numra-integrate = { path = "numra-integrate", version = "0.1.0" }
+numra-interp = { path = "numra-interp", version = "0.1.0" }
+numra-special = { path = "numra-special", version = "0.1.0" }
+numra-fft = { path = "numra-fft", version = "0.1.0" }
+numra-stats = { path = "numra-stats", version = "0.1.0" }
+numra-fit = { path = "numra-fit", version = "0.1.0" }
+numra-signal = { path = "numra-signal", version = "0.1.0" }
+
+# Linear algebra backend (primary)
+faer = "0.20"
+
+# Random number generation (for SDE)
+rand = "0.8"
+rand_distr = "0.4"
+
+# Special functions
+libm = "0.2"
+
+# Optional integrations
+serde = { version = "1.0", features = ["derive"] }
+rayon = { version = "1.10" }
+
+# Error handling
+thiserror = "1.0"
+
+# Dev dependencies
+criterion = { version = "0.5", features = ["html_reports"] }
+approx = "0.5"

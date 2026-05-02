@@ -1,0 +1,234 @@
+/*
+ * Numra design tokens (book copy)
+ * ---------------------------------------------------------------------------
+ * Duplicated from website/site/src/styles/tokens.css; keep in sync.
+ * The site copy is canonical — when in doubt, copy site → book, never
+ * the other way. A shared package may be extracted in Phase 2.
+ *
+ * This file is the single source of truth for color, typography, spacing,
+ * radius, shadow, and motion across the marketing site and the book.
+ *
+ * Both Astro projects import this file. Do not redefine these values
+ * elsewhere. If you need a new token, add it here.
+ *
+ * Conventions:
+ *   --color-*   semantic colors (bg, fg, border, accent)
+ *   --plot-*    Wong color-blind-safe palette for data viz
+ *   --space-*   4px-step spacing scale
+ *   --radius-*  border radius scale
+ *   --shadow-*  shadow elevation scale
+ *   --motion-*  duration tokens
+ *   --ease-*    easing curves
+ *   --font-*    font family stacks
+ *   --leading-* line heights
+ *   --measure   max prose line length
+ */
+
+:root {
+  /* ------------------------------------------------------------ surface */
+  --color-bg:           #FFFFFF;
+  --color-bg-subtle:    #F5F6F7;
+  --color-bg-elevated:  #FFFFFF;
+  --color-border:       #E1E4E8;
+  --color-border-strong:#C2C8D0;
+
+  /* --------------------------------------------------------------- text */
+  --color-fg:           #14171A;
+  --color-fg-muted:     #5C6370;
+  --color-fg-subtle:    #8A92A0;
+
+  /* ---------------------------------------------- accent (deep teal) */
+  --color-accent:       #0A6E6B;
+  --color-accent-hover: #0C8581;
+  --color-accent-soft:  #E6F0EF;
+
+  /* ----------------------------------------------------------- code */
+  --color-code-bg:      #F5F6F7;
+  --color-code-fg:      #14171A;
+  --color-code-border:  #E1E4E8;
+
+  /* ------------------------------------- focus, selection, status */
+  --color-focus-ring:   #0A6E6B;
+  --color-selection-bg: #E6F0EF;
+  --color-success:      #1F7A4A;
+  --color-warn:         #B86E0E;
+  --color-danger:       #B92133;
+
+  /* --------------------------------- Wong palette (color-blind safe) */
+  /* Use these for charts, plots, and data series. */
+  --plot-1: #000000;
+  --plot-2: #E69F00;
+  --plot-3: #56B4E9;
+  --plot-4: #009E73;
+  --plot-5: #F0E442;
+  --plot-6: #0072B2;
+  --plot-7: #D55E00;
+  --plot-8: #CC79A7;
+
+  /* -------------------------------------------------- typography */
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system,
+               'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: 'Source Serif 4 Variable', 'Source Serif 4',
+                'Source Serif Pro', Charter, 'Iowan Old Style',
+                'Apple Garamond', Georgia, serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono',
+               ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
+               Consolas, 'Liberation Mono', monospace;
+
+  /* type scale (modular ratio 1.2) */
+  --text-xs:    0.75rem;
+  --text-sm:    0.875rem;
+  --text-base:  1rem;
+  --text-lg:    1.125rem;
+  --text-xl:    1.25rem;
+  --text-2xl:   1.5rem;
+  --text-3xl:   1.875rem;
+  --text-4xl:   2.25rem;
+  --text-5xl:   3rem;
+  --text-6xl:   3.75rem;
+
+  /* line heights */
+  --leading-tight: 1.2;
+  --leading-snug:  1.4;
+  --leading-base:  1.6;
+  --leading-loose: 1.8;
+
+  /* prose measure */
+  --measure: 68ch;
+
+  /* ----------------------------------------------- spacing (4px scale) */
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4px  */
+  --space-2: 0.5rem;    /* 8px  */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.5rem;    /* 24px */
+  --space-6: 2rem;      /* 32px */
+  --space-7: 3rem;      /* 48px */
+  --space-8: 4rem;      /* 64px */
+  --space-9: 6rem;      /* 96px */
+  --space-10: 8rem;     /* 128px */
+
+  /* ---------------------------------------------------------- radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* ---------------------------------------------------------- shadow */
+  --shadow-1: 0 1px 2px rgba(20, 23, 26, 0.04),
+              0 1px 3px rgba(20, 23, 26, 0.06);
+  --shadow-2: 0 4px 8px rgba(20, 23, 26, 0.04),
+              0 8px 24px rgba(20, 23, 26, 0.08);
+  --shadow-3: 0 8px 16px rgba(20, 23, 26, 0.06),
+              0 24px 48px rgba(20, 23, 26, 0.12);
+
+  /* ---------------------------------------------------------- motion */
+  --motion-instant: 0ms;
+  --motion-fast:    120ms;
+  --motion-base:    200ms;
+  --motion-slow:    320ms;
+
+  --ease-out:    cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* layout */
+  --container-width: 1200px;
+  --container-narrow: 720px;
+}
+
+/* ============================================================ DARK MODE
+ * Triggered by `data-theme="dark"` on <html>, set by a script that reads
+ * `prefers-color-scheme` on first load and persists user choice.
+ */
+[data-theme="dark"] {
+  --color-bg:           #0E1116;
+  --color-bg-subtle:    #161B22;
+  --color-bg-elevated:  #1C2128;
+  --color-border:       #2D333B;
+  --color-border-strong:#444C56;
+
+  --color-fg:           #E6EDF3;
+  --color-fg-muted:     #9BA3AE;
+  --color-fg-subtle:    #6E7681;
+
+  --color-accent:       #2DBAB5;
+  --color-accent-hover: #4FCFCB;
+  --color-accent-soft:  #1A2D2C;
+
+  --color-code-bg:      #161B22;
+  --color-code-fg:      #E6EDF3;
+  --color-code-border:  #2D333B;
+
+  --color-focus-ring:   #2DBAB5;
+  --color-selection-bg: #1A2D2C;
+  --color-success:      #3FB37F;
+  --color-warn:         #E0A24A;
+  --color-danger:       #F25E6E;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3),
+              0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 8px rgba(0, 0, 0, 0.3),
+              0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 8px 16px rgba(0, 0, 0, 0.4),
+              0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================== Honor system preference
+ * Default to system preference until the user explicitly toggles.
+ * The toggle script sets data-theme="light" or data-theme="dark";
+ * absence of that attribute means "follow system".
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg:           #0E1116;
+    --color-bg-subtle:    #161B22;
+    --color-bg-elevated:  #1C2128;
+    --color-border:       #2D333B;
+    --color-border-strong:#444C56;
+
+    --color-fg:           #E6EDF3;
+    --color-fg-muted:     #9BA3AE;
+    --color-fg-subtle:    #6E7681;
+
+    --color-accent:       #2DBAB5;
+    --color-accent-hover: #4FCFCB;
+    --color-accent-soft:  #1A2D2C;
+
+    --color-code-bg:      #161B22;
+    --color-code-fg:      #E6EDF3;
+    --color-code-border:  #2D333B;
+
+    --color-focus-ring:   #2DBAB5;
+    --color-selection-bg: #1A2D2C;
+    --color-success:      #3FB37F;
+    --color-warn:         #E0A24A;
+    --color-danger:       #F25E6E;
+  }
+}
+
+/* ===================================================== Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ================================================= Selection styling */
+::selection {
+  background: var(--color-selection-bg);
+  color: var(--color-fg);
+}
+
+/* ===================================================== Focus visible */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

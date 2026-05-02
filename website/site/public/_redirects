@@ -1,0 +1,27 @@
+# Numra marketing site — Cloudflare Pages redirects
+# ----------------------------------------------------------------------
+# Cloudflare Pages rejects absolute-URL sources in _redirects (a
+# relative path is required), so the www → apex redirect cannot live
+# here. It is handled by attaching both numra-rs.org and
+# www.numra-rs.org as custom domains on the same Pages project —
+# Pages then issues an automatic 301 from www to apex.
+#
+# Trailing slash → no trailing slash to align with Astro's
+# `trailingSlash: 'never'` config.
+
+# /getting-started → /install (canonical onboarding URL)
+/getting-started            /install                     301
+/getting-started/*          /install                     301
+
+# Trailing-slash normalization (handled by Astro at build, but fallback)
+/install/                   /install                     301
+/license/                   /license                     301
+/cite/                      /cite                        301
+/commercial/                /commercial                  301
+/community/                 /community                   301
+/stability/                 /stability                   301
+/roadmap/                   /roadmap                     301
+/changelog/                 /changelog                   301
+
+# 404 fallback (Cloudflare Pages serves /404.html automatically for
+# missing pages; no redirect needed, but documented here for clarity).

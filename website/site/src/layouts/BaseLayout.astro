@@ -1,0 +1,134 @@
+---
+// src/layouts/BaseLayout.astro
+//
+// Base HTML shell for every marketing-site page. Every page extends
+// this. Handles:
+//   - <head> metadata (canonical URL, OG, JSON-LD slot)
+//   - global stylesheets (tokens.css, base.css, KaTeX)
+//   - dark/light mode via data-theme attribute
+//   - skip-to-content link for keyboard users
+//   - header and footer
+//
+// CSP is handled exclusively by Cloudflare Pages headers
+// (public/_headers). The experimental security.csp meta-tag approach
+// was dropped because it conflicts with the static header CSP and
+// can't hash KaTeX-style inline `style=""` attributes
+
+import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
+import 'katex/dist/katex.min.css';
+import '../styles/tokens.css';
+import '../styles/base.css';
+
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+  ogImage?: string;
+  /** JSON-LD structured data — pass an object, will be stringified. */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const {
+  title,
+  description,
+  canonicalPath = Astro.url.pathname,
+  ogImage = '/og/default.png',
+  jsonLd,
+} = Astro.props;
+
+const canonicalUrl = new URL(canonicalPath, Astro.site).toString();
+const ogImageUrl = new URL(ogImage, Astro.site).toString();
+const fullTitle = title.endsWith('Numra') ? title : `${title} · Numra`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+
+    {/* OpenGraph */}
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:site_name" content="Numra" />
+    <meta property="og:locale" content="en_US" />
+
+    {/* Twitter card */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+
+    {/* Theme */}
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0E1116" media="(prefers-color-scheme: dark)" />
+
+    {/* Favicon — apple-touch-icon is omitted in Phase 1 (no rasterised
+        PNG yet); modern iOS Safari falls back to the SVG favicon. */}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    {/* Sitemap */}
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    {/* JSON-LD */}
+    {jsonLd && (
+      <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    )}
+
+    {/* Theme persistence: read user choice before render to avoid
+        a flash of incorrect theme. Loaded as an external script
+        (public/theme-init.js) so that `script-src 'self'` covers it
+        without an `'unsafe-inline'` exemption. */}
+    <script is:inline src="/theme-init.js"></script>
+
+    {/* Cloudflare Web Analytics is auto-injected by the proxy when
+        the configured hostname (`numra-rs.org`) sits behind Cloudflare's
+        orange cloud and the dashboard's "Real User Measurements" mode
+        is set to Enable / "Enable, excluding visitor data in the EU".
+        We do not ship a manual `data-cf-beacon` snippet — Cloudflare
+        injects beacon.min.js into the response HTML at edge time, so
+        any local copy would just double-fire (and a stale "TOKEN"
+        placeholder fires against an invalid site tag and is silently
+        dropped). The CSP `script-src` and `connect-src` allowances
+        for `static.cloudflareinsights.com` cover the auto-injected
+        script. */}
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <Header />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
+
+<style is:global>
+  /* Skip-link styles live globally because the link itself is in the
+     base layout body. */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: var(--color-accent);
+    color: var(--color-bg);
+    padding: var(--space-3) var(--space-4);
+    border-radius: 0 0 var(--radius-md) 0;
+    z-index: 1000;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .skip-link:focus { left: 0; }
+</style>

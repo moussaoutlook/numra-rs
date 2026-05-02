@@ -1,0 +1,123 @@
+---
+// src/pages/cite.astro
+//
+// Citation page per SPEC §15.3. Embeds JSON-LD per §15.4 (license URL
+// pointed at LICENSE in-repo, not SPDX, since Numra ships a custom
+// non-commercial license).
+//
+// DOI is intentionally a placeholder until the first GitHub release
+// after the Zenodo integration is enabled. The BibTeX entry uses the
+// same placeholder and a note explaining that.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const citeJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Numra',
+  description: 'Composable numerical methods for Rust.',
+  applicationCategory: 'ScientificComputing',
+  operatingSystem: 'Cross-platform',
+  softwareVersion: '0.1.0',
+  author: {
+    '@type': 'Person',
+    name: 'Moussa Leblouba',
+    affiliation: 'University of Sharjah, UAE',
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'Spectral Automata',
+  },
+  license: 'https://github.com/moussaoutlook/numra-rs/blob/main/LICENSE',
+  codeRepository: 'https://github.com/moussaoutlook/numra-rs',
+  url: 'https://numra-rs.org/',
+};
+
+const bibtex = `@software{numra,
+  author       = {Leblouba, Moussa},
+  title        = {{Numra: Composable Numerical Methods for Rust}},
+  year         = {2026},
+  publisher    = {Spectral Automata},
+  url          = {https://numra-rs.org},
+  note         = {Software, version 0.1.0}
+  % doi       = {10.5281/zenodo.XXXXXXX}
+  % Uncomment and populate once the first Zenodo release is published.
+}`;
+
+const ris = `TY  - COMP
+TI  - Numra: Composable Numerical Methods for Rust
+AU  - Leblouba, Moussa
+PY  - 2026
+PB  - Spectral Automata
+UR  - https://numra-rs.org
+ER  -`;
+---
+
+<BaseLayout
+  title="Cite Numra"
+  description="Citation information, BibTeX, and RIS for Numra. CITATION.cff at the repo root drives Zenodo and GitHub's Cite this repository button."
+  canonicalPath="/cite"
+  jsonLd={citeJsonLd}
+>
+  <section class="cite">
+    <div class="container-narrow">
+      <h1>Cite Numra.</h1>
+
+      <p class="lede">
+        If Numra contributed to your work — research papers, theses,
+        benchmarks, or technical reports — please cite it. A correct
+        citation makes your work reproducible and helps sustain the
+        library.
+      </p>
+
+      <h2>Recommended citation.</h2>
+      <p>
+        Numra ships a
+        <a
+          href="https://github.com/moussaoutlook/numra-rs/blob/main/CITATION.cff"
+          rel="noopener"
+        >CITATION.cff</a>
+        at the repository root. GitHub's "Cite this repository" button
+        and Zenodo both consume it. The two snippets below are
+        equivalent.
+      </p>
+
+      <h3>BibTeX</h3>
+      <pre><code class="language-bibtex">{bibtex}</code></pre>
+
+      <h3>RIS</h3>
+      <pre><code class="language-text">{ris}</code></pre>
+
+      <h2>DOI.</h2>
+      <p>
+        A Zenodo DOI is minted on the first GitHub release after the
+        Zenodo integration is enabled. Until then, the BibTeX entry
+        above leaves the <code>doi</code> field commented out. Once a
+        DOI exists, this page will list both the all-versions concept
+        DOI (preferred for citation) and per-version DOIs (for
+        reproducibility).
+      </p>
+
+      <h2>Why citation matters.</h2>
+      <p>
+        Open scientific software depends on citations the same way
+        open scientific papers do. A cited library is a maintained
+        library: citations show up in funding applications, hiring
+        cases, and grant renewals. A short citation is the cheapest
+        way to keep the library you rely on healthy.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .cite { padding: var(--space-8) 0; }
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  h2 { margin-top: var(--space-7); }
+  h3 { margin-top: var(--space-5); }
+</style>

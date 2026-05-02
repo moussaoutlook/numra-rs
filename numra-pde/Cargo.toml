@@ -1,0 +1,18 @@
+[package]
+name = "numra-pde"
+description = "Partial Differential Equation (PDE) solvers for Numra using Method of Lines"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+faer = { workspace = true }
+numra-core = { workspace = true }
+numra-linalg = { workspace = true }
+numra-ode = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

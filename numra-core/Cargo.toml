@@ -1,0 +1,21 @@
+[package]
+name = "numra-core"
+description = "Core traits and types for the Numra numerical methods library"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+libm = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+
+[features]
+default = ["std"]
+std = []

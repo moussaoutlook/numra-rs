@@ -1,0 +1,163 @@
+---
+// src/components/Footer.astro
+
+const year = new Date().getFullYear();
+
+const footerSections = [
+  {
+    title: 'Documentation',
+    links: [
+      { href: 'https://book.numra-rs.org',     label: 'Book',         external: true },
+      { href: 'https://docs.numra-rs.org',     label: 'API reference',external: true },
+      { href: 'https://examples.numra-rs.org', label: 'Examples',     external: true },
+    ],
+  },
+  {
+    title: 'Project',
+    links: [
+      { href: 'https://github.com/moussaoutlook/numra-rs',          label: 'GitHub',     external: true },
+      { href: 'https://github.com/moussaoutlook/numra-rs/releases', label: 'Releases',   external: true },
+      { href: '/changelog',                              label: 'Changelog',  external: false },
+      { href: '/roadmap',                                label: 'Roadmap',    external: false },
+    ],
+  },
+  {
+    title: 'Use',
+    links: [
+      { href: '/install',    label: 'Install',     external: false },
+      { href: '/cite',       label: 'Cite Numra',  external: false },
+      { href: '/stability',  label: 'Stability',   external: false },
+      { href: '/community',  label: 'Community',   external: false },
+    ],
+  },
+  {
+    title: 'Licensing',
+    links: [
+      { href: '/license',    label: 'License (academic / research, non-commercial)', external: false },
+      { href: '/commercial', label: 'Commercial licensing', external: false },
+    ],
+  },
+];
+---
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="/numra_logo_no_BG.svg" alt="Numra" width="120" height="40" />
+        <p class="tagline">
+          Composable numerical methods for Rust.
+        </p>
+      </div>
+
+      {footerSections.map((section) => (
+        <div class="footer-section">
+          <h2 class="footer-heading">{section.title}</h2>
+          <ul>
+            {section.links.map((link) => (
+              <li>
+                <a
+                  href={link.href}
+                  {...(link.external ? { rel: 'noopener' } : {})}
+                >{link.label}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+
+    <div class="footer-bottom">
+      <p>
+        © {year} Spectral Automata. Source available for
+        <a href="/license">non-commercial academic and research use</a>.
+      </p>
+      <p>
+        <a href="https://spectralautomata.com" rel="noopener">
+          A Spectral Automata project
+        </a>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+    padding: var(--space-7) 0 var(--space-5);
+    margin-top: var(--space-9);
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr repeat(4, 1fr);
+    gap: var(--space-6);
+    margin-bottom: var(--space-7);
+  }
+
+  .footer-brand .tagline {
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+    max-width: 28ch;
+    margin-top: var(--space-3);
+  }
+
+  .footer-heading {
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-3);
+    font-weight: 600;
+  }
+
+  .footer-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .footer-section li {
+    margin-bottom: var(--space-2);
+  }
+
+  .footer-section a {
+    color: var(--color-fg);
+    text-decoration: none;
+    font-size: var(--text-sm);
+  }
+
+  .footer-section a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+
+  [data-theme="dark"] .footer-brand img {
+    filter: invert(1);
+  }
+
+  .footer-bottom {
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+  }
+
+  .footer-bottom a {
+    color: var(--color-fg-muted);
+  }
+
+  @media (max-width: 800px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .footer-brand {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

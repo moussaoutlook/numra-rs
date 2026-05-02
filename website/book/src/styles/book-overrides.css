@@ -1,0 +1,140 @@
+/*
+ * book-overrides.css — Numra book (Starlight)
+ * ---------------------------------------------------------------------
+ * Maps Numra's design tokens onto Starlight's CSS variable surface so
+ * the book inherits the same color, typography, and spacing as the
+ * marketing site.
+ *
+ * Starlight variables documented at:
+ *   https://starlight.astro.build/guides/css-and-tailwind/#styling-starlight
+ *
+ * Order of operations:
+ *   1. tokens.css defines --color-*, --font-*, etc. (loaded first)
+ *   2. This file maps them to Starlight's --sl-color-* etc.
+ *   3. Starlight's own theme uses --sl-* throughout.
+ *
+ * Do NOT redefine Numra tokens here. Add them to tokens.css.
+ */
+
+/* =========================================== Light-theme Starlight map */
+:root {
+  /* Backgrounds */
+  --sl-color-bg:           var(--color-bg);
+  --sl-color-bg-nav:       var(--color-bg);
+  --sl-color-bg-sidebar:   var(--color-bg);
+  --sl-color-bg-inline-code: var(--color-code-bg);
+
+  /* Text */
+  --sl-color-text:         var(--color-fg);
+  --sl-color-text-accent:  var(--color-accent);
+  --sl-color-text-invert:  var(--color-bg);
+
+  /* Borders / hairlines */
+  --sl-color-hairline:           var(--color-border);
+  --sl-color-hairline-light:     var(--color-border);
+  --sl-color-hairline-shade:     var(--color-border-strong);
+
+  /* Accent (link color, button color, focus ring) */
+  --sl-color-accent:        var(--color-accent);
+  --sl-color-accent-high:   var(--color-accent-hover);
+  --sl-color-accent-low:    var(--color-accent-soft);
+
+  /* Type */
+  --sl-font:           var(--font-sans);
+  --sl-font-system:    var(--font-sans);
+  --sl-font-mono:      var(--font-mono);
+
+  /* Sizes */
+  --sl-text-base:      var(--text-base);
+  --sl-line-height:    var(--leading-base);
+  --sl-text-h1:        var(--text-4xl);
+  --sl-text-h2:        var(--text-3xl);
+  --sl-text-h3:        var(--text-2xl);
+  --sl-text-h4:        var(--text-xl);
+}
+
+/* ============================================ Dark-theme Starlight map */
+:root[data-theme='dark'] {
+  --sl-color-bg:           var(--color-bg);
+  --sl-color-bg-nav:       var(--color-bg);
+  --sl-color-bg-sidebar:   var(--color-bg);
+  --sl-color-bg-inline-code: var(--color-code-bg);
+
+  --sl-color-text:         var(--color-fg);
+  --sl-color-text-accent:  var(--color-accent);
+  --sl-color-text-invert:  var(--color-bg);
+
+  --sl-color-hairline:       var(--color-border);
+  --sl-color-hairline-light: var(--color-border);
+  --sl-color-hairline-shade: var(--color-border-strong);
+
+  --sl-color-accent:      var(--color-accent);
+  --sl-color-accent-high: var(--color-accent-hover);
+  --sl-color-accent-low:  var(--color-accent-soft);
+}
+
+/* ============================================ Prose font (book-only)
+ * The book uses Source Serif 4 for body prose to differentiate the
+ * reading experience from the marketing site UI font. Tutorials and
+ * reference text feel scholarly, while code and UI stay sans.
+ *
+ * Heading in the book also use the serif for cohesion. UI chrome
+ * (sidebar, navbar) uses the sans font.
+ */
+.sl-markdown-content {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;     /* slightly larger for serif legibility */
+  line-height: var(--leading-base);
+}
+
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.sl-markdown-content h4,
+.sl-markdown-content h5,
+.sl-markdown-content h6 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.005em;
+}
+
+/* Code stays sans-serif inside prose */
+.sl-markdown-content code,
+.sl-markdown-content pre {
+  font-family: var(--font-mono);
+}
+
+/* ============================================== KaTeX adjustments
+ * starlight-katex handles the SVG-svg conflict, but we want display
+ * equations to stand out a little more in our serif content.
+ */
+.sl-markdown-content .katex-display {
+  margin: var(--space-5) 0;
+  padding: var(--space-3) 0;
+}
+
+/* Make sure inline math doesn't mix awkwardly with the serif body */
+.sl-markdown-content .katex {
+  font-size: 1.05em;
+}
+
+/* ================================================ Code-block container
+ * Subtle visual lift to match the marketing site's hero-code styling.
+ */
+.sl-markdown-content .expressive-code {
+  margin: var(--space-5) 0;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+}
+
+/* ============================================== Sidebar tweaks
+ * Slightly tighter sidebar typography because of the volume of links.
+ */
+.sidebar-content {
+  font-size: var(--text-sm);
+}
+
+/* ============================================ Selection highlight */
+.sl-markdown-content ::selection {
+  background: var(--color-selection-bg);
+  color: var(--color-fg);
+}

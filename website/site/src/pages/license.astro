@@ -1,0 +1,72 @@
+---
+// src/pages/license.astro
+//
+// Phase 1 minimal license page (Option C in the implementation review).
+// Names the license, states the free-vs-commercial split, links to the
+// canonical text. No clause-by-clause FAQ, no comparison table — both
+// are deferred until the actual license text has been reviewed for
+// public-facing wording.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="License"
+  description="Numra is free for non-commercial academic and research use; commercial use requires a separate license."
+  canonicalPath="/license"
+>
+  <section class="license">
+    <div class="container-narrow">
+      <h1>License.</h1>
+
+      <p>
+        Numra is published under the
+        <strong>Numra Academic &amp; Research License (Non-Commercial)
+        v1.0</strong>. You can read the canonical text at
+        <a
+          href="https://github.com/moussaoutlook/numra-rs/blob/main/LICENSE"
+          rel="noopener"
+        >LICENSE</a> in the repository.
+      </p>
+
+      <p>
+        In one sentence: Numra is
+        <strong>free for non-commercial academic and research use</strong>,
+        and <strong>commercial use requires a separate license</strong> —
+        see <a href="/commercial">/commercial</a>.
+      </p>
+
+      <p>
+        The source is open and auditable on
+        <a
+          href="https://github.com/moussaoutlook/numra-rs"
+          rel="noopener"
+        >GitHub</a>. The license text governs; this page is a pointer.
+      </p>
+
+      <p class="callout">
+        A long-form FAQ covering the most common adoption scenarios is
+        in preparation. Until it ships, please email
+        <a href="mailto:contact@spectralautomata.com?subject=%5BNumra%20license%20question%5D%20"
+          >contact@spectralautomata.com</a>
+        with the subject prefix
+        <code>[Numra license question]</code> if your situation is
+        unclear.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .license { padding: var(--space-8) 0; }
+  h1 { margin-bottom: var(--space-5); }
+  .callout {
+    margin-top: var(--space-6);
+    padding: var(--space-4) var(--space-5);
+    border-left: 3px solid var(--color-accent);
+    background: var(--color-bg-subtle);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    color: var(--color-fg-muted);
+    max-width: var(--measure);
+  }
+</style>

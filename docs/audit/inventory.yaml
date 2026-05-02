@@ -1,0 +1,399 @@
+# Machine-readable public documentation inventory.
+# Keep this file in sync with public-api-method-inventory.md and book-coverage-matrix.md.
+
+- id: ode.dopri5
+  crate: numra-ode
+  symbol: DoPri5
+  kind: type
+  facade_path: numra::ode::DoPri5
+  book_anchors:
+    - numra-book/src/ch02-solving-odes/explicit-methods.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra-ode/tests/convergence_order_tests.rs
+  examples:
+    - lorenz
+    - solver_zoo
+
+- id: ode.tsit5
+  crate: numra-ode
+  symbol: Tsit5
+  kind: type
+  facade_path: numra::ode::Tsit5
+  book_anchors:
+    - numra-book/src/ch02-solving-odes/explicit-methods.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra-ode/tests/convergence_order_tests.rs
+  examples:
+    - solver_zoo
+
+- id: ode.verner
+  crate: numra-ode
+  symbol: Vern6,Vern7,Vern8
+  kind: type
+  facade_path: numra::ode::Vern6
+  aliases:
+    - numra::ode::Vern7
+    - numra::ode::Vern8
+  book_anchors:
+    - numra-book/src/ch02-solving-odes/explicit-methods.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra-ode/tests/verner_coefficient_tests.rs
+    - numra-ode/tests/convergence_order_tests.rs
+  examples:
+    - solver_zoo
+
+- id: ode.esdirk
+  crate: numra-ode
+  symbol: Esdirk32,Esdirk43,Esdirk54
+  kind: type
+  facade_path: numra::ode::Esdirk32
+  aliases:
+    - numra::ode::Esdirk43
+    - numra::ode::Esdirk54
+  book_anchors:
+    - numra-book/src/ch02-solving-odes/implicit-methods.md
+    - numra-book/src/ch03-stiff-systems/choosing-a-stiff-solver.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra-ode/tests/convergence_order_tests.rs
+  examples:
+    - solver_zoo
+
+- id: ode.radau5
+  crate: numra-ode
+  symbol: Radau5
+  kind: type
+  facade_path: numra::ode::Radau5
+  book_anchors:
+    - numra-book/src/ch02-solving-odes/implicit-methods.md
+    - numra-book/src/ch03-stiff-systems/choosing-a-stiff-solver.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra-ode/tests/convergence_order_tests.rs
+    - numra/tests/integration_tests.rs
+  examples:
+    - pendulum_dae
+
+- id: ode.bdf
+  crate: numra-ode
+  symbol: Bdf
+  kind: type
+  facade_path: numra::ode::Bdf
+  book_anchors:
+    - numra-book/src/ch02-solving-odes/implicit-methods.md
+    - numra-book/src/ch03-stiff-systems/choosing-a-stiff-solver.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra-ode/tests/bdf_algorithm_tests.rs
+    - numra/tests/integration_tests.rs
+  examples:
+    - solver_zoo
+
+- id: ode.auto
+  crate: numra-ode
+  symbol: Auto
+  kind: type
+  facade_path: numra::ode::Auto
+  book_anchors:
+    - numra-book/src/ch02-solving-odes/automatic-selection.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra/tests/integration_tests.rs
+  examples:
+    - solver_zoo
+
+- id: ode.events
+  crate: numra-ode
+  symbol: Event,EventAction
+  kind: module
+  facade_path: numra::ode::Event
+  aliases:
+    - numra::ode::EventAction
+  book_anchors:
+    - numra-book/src/ch02-solving-odes/event-detection.md
+  tests:
+    - numra-ode/src/events.rs
+    - numra-ode/tests/events_regression.rs
+  examples:
+    - bouncing_ball
+
+- id: ode.dae
+  crate: numra-ode
+  symbol: DAE,MassMatrix
+  kind: module
+  facade_path: numra::ode::DaeProblem
+  aliases:
+    - numra::ode::MassMatrix
+  book_anchors:
+    - numra-book/src/ch03-stiff-systems/dae-systems.md
+    - numra-book/src/ch03-stiff-systems/index-reduction.md
+  tests:
+    - numra-ode/tests/dae_tests.rs
+    - numra-ode/tests/index_reduction_regression.rs
+  examples:
+    - pendulum_dae
+
+- id: sde.euler_maruyama
+  crate: numra-sde
+  symbol: EulerMaruyama
+  kind: type
+  facade_path: numra::sde::EulerMaruyama
+  book_anchors:
+    - numra-book/src/ch04-beyond-odes/stochastic-des.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra/tests/composition_tests.rs
+    - numra-sde/tests/gbm_ou_bands.rs
+  examples:
+    - gbm_monte_carlo
+
+- id: sde.milstein
+  crate: numra-sde
+  symbol: Milstein
+  kind: type
+  facade_path: numra::sde::Milstein
+  book_anchors:
+    - numra-book/src/ch04-beyond-odes/stochastic-des.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra-sde/src/milstein.rs
+  examples:
+    - gbm_monte_carlo
+
+- id: sde.sra
+  crate: numra-sde
+  symbol: Sra1,Sra2
+  kind: type
+  facade_path: numra::sde::Sra1
+  aliases:
+    - numra::sde::Sra2
+  book_anchors:
+    - numra-book/src/ch04-beyond-odes/stochastic-des.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra-sde/src/sra.rs
+  examples:
+    - gbm_monte_carlo
+
+- id: dde.method_of_steps
+  crate: numra-dde
+  symbol: MethodOfSteps
+  kind: type
+  facade_path: numra::dde::MethodOfSteps
+  book_anchors:
+    - numra-book/src/ch04-beyond-odes/delay-des.md
+    - numra-book/src/appendix/solver-reference.md
+  tests:
+    - numra/tests/composition_tests.rs
+  examples:
+    - dde_mackey_glass
+    - mackey_glass
+
+- id: fde.l1_caputo
+  crate: numra-fde
+  symbol: L1Solver,Caputo
+  kind: module
+  facade_path: numra::fde::L1Solver
+  book_anchors:
+    - numra-book/src/ch04-beyond-odes/fractional-des.md
+  tests:
+    - numra/tests/composition_tests.rs
+  examples:
+    - fractional_relaxation
+
+- id: ide.volterra_prony
+  crate: numra-ide
+  symbol: Volterra,Prony
+  kind: module
+  facade_path: numra::ide::VolterraProblem
+  book_anchors:
+    - numra-book/src/ch04-beyond-odes/integro-des.md
+  tests:
+    - numra/tests/composition_tests.rs
+  examples:
+    - viscoelastic_prony
+
+- id: pde.mol
+  crate: numra-pde
+  symbol: MethodOfLines
+  kind: module
+  facade_path: numra::pde::Grid1D
+  book_anchors:
+    - numra-book/src/ch04-beyond-odes/partial-des.md
+  tests:
+    - numra/tests/composition_tests.rs
+  examples:
+    - heat_equation
+    - stefan_problem
+
+- id: spde.heat
+  crate: numra-spde
+  symbol: SpdeSolver
+  kind: module
+  facade_path: numra::spde::SpdeSolver
+  book_anchors:
+    - numra-book/src/ch04-beyond-odes/stochastic-pdes.md
+  tests:
+    - numra/tests/composition_tests.rs
+  examples:
+    - spde_heat
+    - stochastic_heat
+
+- id: linalg.matrix
+  crate: numra-linalg
+  symbol: DenseMatrix,SparseMatrix
+  kind: module
+  facade_path: numra::linalg::DenseMatrix
+  book_anchors:
+    - numra-book/src/ch06-linear-algebra/matrices-and-vectors.md
+    - numra-book/src/ch06-linear-algebra/factorizations.md
+  tests:
+    - numra-linalg/tests/dense_solve_smoke.rs
+
+- id: nonlinear.newton
+  crate: numra-nonlinear
+  symbol: Newton
+  kind: module
+  facade_path: numra::nonlinear
+  book_anchors:
+    - numra-book/src/ch01-introduction/architecture-overview.md
+  tests:
+    - numra/tests/integration_tests.rs
+
+- id: optim.overview
+  crate: numra-optim
+  symbol: Optimizer,Problem
+  kind: module
+  facade_path: numra::optim
+  book_anchors:
+    - numra-book/src/ch05-optimization/optimizer-comparison.md
+    - numra-book/src/ch05-optimization/unconstrained.md
+    - numra-book/src/ch05-optimization/constrained.md
+  tests:
+    - numra-optim/tests/integration.rs
+
+- id: optim.lp_qp_milp
+  crate: numra-optim
+  symbol: LinearProgram,QuadraticProgram,MixedIntegerLinearProgram
+  kind: module
+  facade_path: numra::optim::LinearProgram
+  book_anchors:
+    - numra-book/src/ch05-optimization/linear-programming.md
+  tests:
+    - numra-optim/tests/integration.rs
+
+- id: ocp.overview
+  crate: numra-ocp
+  symbol: Shooting,Collocation,Adjoint,ParamEst
+  kind: module
+  facade_path: numra::ocp
+  book_anchors:
+    - numra-book/src/ch10-optimal-control/shooting-methods.md
+    - numra-book/src/ch10-optimal-control/collocation.md
+    - numra-book/src/ch10-optimal-control/adjoint-methods.md
+    - numra-book/src/ch10-optimal-control/parameter-estimation.md
+  tests:
+    - numra-ocp/tests/integration.rs
+
+- id: integrate.quadrature
+  crate: numra-integrate
+  symbol: quad,dblquad
+  kind: fn
+  facade_path: numra::integrate::quad
+  book_anchors:
+    - numra-book/src/ch07-calculus-and-analysis/numerical-integration.md
+  tests:
+    - numra-integrate/tests/quadrature_smoke.rs
+
+- id: interp.curves
+  crate: numra-interp
+  symbol: interp1d,CubicSpline,Akima
+  kind: module
+  facade_path: numra::interp::interp1d
+  book_anchors:
+    - numra-book/src/ch07-calculus-and-analysis/interpolation.md
+  tests:
+    - numra-interp/tests/linear_endpoints.rs
+
+- id: autodiff.gradients
+  crate: numra-autodiff
+  symbol: grad,jacobian
+  kind: module
+  facade_path: numra::autodiff::grad
+  book_anchors:
+    - numra-book/src/ch07-calculus-and-analysis/automatic-differentiation.md
+  tests:
+    - numra/tests/interop_workflows.rs
+
+- id: special.functions
+  crate: numra-special
+  symbol: bessel,gamma,elliptic,zeta
+  kind: module
+  facade_path: numra::special
+  book_anchors:
+    - numra-book/src/ch07-calculus-and-analysis/special-functions.md
+  tests:
+    - numra/tests/composition_tests.rs
+
+- id: fit.curves
+  crate: numra-fit
+  symbol: curve_fit,polynomial_fit
+  kind: module
+  facade_path: numra::fit
+  book_anchors:
+    - numra-book/src/ch07-calculus-and-analysis/curve-fitting.md
+    - numra-book/src/ch07-calculus-and-analysis/automatic-differentiation.md
+  tests:
+    - numra/tests/interop_workflows.rs
+
+- id: fft.spectral
+  crate: numra-fft
+  symbol: fft,ifft,convolution
+  kind: module
+  facade_path: numra::fft::fft
+  book_anchors:
+    - numra-book/src/ch08-signal-processing/fft-and-spectral.md
+  tests:
+    - numra-fft/tests/fft_roundtrip.rs
+
+- id: dsp.signal
+  crate: numra-signal
+  symbol: filters,hilbert,resample,peaks
+  kind: module
+  facade_path: numra::dsp
+  book_anchors:
+    - numra-book/src/ch08-signal-processing/filter-design.md
+    - numra-book/src/ch08-signal-processing/filtering-signals.md
+    - numra-book/src/ch08-signal-processing/hilbert-transform.md
+    - numra-book/src/ch08-signal-processing/resampling-peaks.md
+  tests:
+    - numra/tests/composition_tests.rs
+
+- id: stats.overview
+  crate: numra-stats
+  symbol: descriptive,distributions,hypothesis,regression,correlation
+  kind: module
+  facade_path: numra::stats
+  book_anchors:
+    - numra-book/src/ch09-statistics/descriptive-stats.md
+    - numra-book/src/ch09-statistics/distributions.md
+    - numra-book/src/ch09-statistics/hypothesis-testing.md
+    - numra-book/src/ch09-statistics/regression.md
+    - numra-book/src/ch09-statistics/correlation.md
+  tests:
+    - numra/tests/composition_tests.rs
+
+- id: core.traits
+  crate: numra-core
+  symbol: Scalar,Vector,Signal,Uncertain
+  kind: module
+  facade_path: numra::core
+  book_anchors:
+    - numra-book/src/ch01-introduction/quick-start.md
+    - numra-book/src/ch12-advanced-topics/no-std-usage.md
+    - numra-book/src/ch11-uncertainty/error-propagation.md
+  tests:
+    - numra-core/src/scalar.rs

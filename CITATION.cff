@@ -1,0 +1,89 @@
+# Citation File Format for Numra
+# ----------------------------------------------------------------------
+# This file lives at the REPOSITORY ROOT (not inside website/).
+# GitHub displays a "Cite this repository" button when this file is
+# present and valid, and Zenodo reads it directly to populate metadata
+# for each release's DOI.
+#
+# DO NOT add a `.zenodo.json` file — it would override CITATION.cff
+# for Zenodo metadata and force you to maintain two sources.
+#
+# Validate with `cffconvert` or the cff-initializer web app:
+#   pip install cffconvert
+#   cffconvert --validate
+#
+# After the first GitHub release with the Zenodo integration enabled,
+# Zenodo mints a DOI. Update the `identifiers` block below with both
+# the all-versions DOI (preferred for citation) and the per-version
+# DOI for that release.
+#
+# References:
+#   https://citation-file-format.github.io/
+#   https://help.zenodo.org/docs/github/describe-software/citation-file/
+
+cff-version: 1.2.0
+message: "If you use Numra in your research, please cite it as below."
+title: "Numra: Composable Numerical Methods for Rust"
+abstract: >-
+  Numra is a Rust library for numerical methods in scientific computing,
+  providing composable solvers for ordinary, stochastic, delay, fractional,
+  integro-differential, and partial differential equations, with a focus
+  on numerical correctness, performance, and ergonomic API design.
+
+type: software
+
+authors:
+  - family-names: "Leblouba"
+    given-names: "Moussa"
+    orcid: "https://orcid.org/0000-0003-1651-616X"
+    affiliation: "University of Sharjah, UAE"
+    email: "contact@spectralautomata.com"
+
+repository-code: "https://github.com/moussaoutlook/numra-rs"
+url: "https://numra-rs.org"
+
+# License — Numra ships under a custom non-commercial academic/research
+# license (LicenseRef-Numra-Academic-Research-NonCommercial). It is not
+# in the SPDX list, so CFF 1.2 expects the SPDX identifier omitted and
+# license-url pointing at the canonical text in-repo.
+license-url: "https://github.com/moussaoutlook/numra-rs/blob/main/LICENSE"
+
+# Keywords help discoverability on Zenodo and academic search.
+keywords:
+  - "numerical methods"
+  - "scientific computing"
+  - "ordinary differential equations"
+  - "stochastic differential equations"
+  - "partial differential equations"
+  - "Rust"
+  - "ODE solvers"
+  - "computational mathematics"
+
+# Update version and date-released on every release.
+version: "0.1.0"
+date-released: "2026-04-27"
+
+# Identifiers — uncomment and populate after the first Zenodo-minted DOI.
+# The "concept DOI" is the all-versions DOI; cite this in papers that
+# refer to Numra in general. The "version DOI" is for reproducibility.
+#
+# identifiers:
+#   - type: doi
+#     value: "10.5281/zenodo.XXXXXXX"
+#     description: "All versions (concept DOI)"
+#   - type: doi
+#     value: "10.5281/zenodo.YYYYYYY"
+#     description: "This specific version"
+
+# Optional: list preferred citation as a paper rather than the software
+# itself. Useful if a companion methods paper is published.
+#
+# preferred-citation:
+#   type: article
+#   authors:
+#     - family-names: "Leblouba"
+#       given-names: "Moussa"
+#   title: "Numra: A Composable Numerical Methods Library in Rust"
+#   journal: "Journal Name"
+#   year: 2026
+#   doi: "10.xxxx/xxxxxx"

@@ -1,0 +1,93 @@
+---
+// src/pages/community.astro
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Community"
+  description="How to contribute to Numra, where conversations happen, and what the contribution process looks like."
+  canonicalPath="/community"
+>
+  <section class="community">
+    <div class="container-narrow">
+      <h1>Community.</h1>
+
+      <p class="lede">
+        Numra is developed in the open. Bug reports, design discussions,
+        and pull requests are welcome from anyone. Contributions are
+        accepted under the project's contributor license agreement.
+      </p>
+
+      <h2>Where conversations happen.</h2>
+      <ul>
+        <li>
+          <strong>GitHub Issues</strong> for bug reports and concrete
+          feature requests:
+          <a
+            href="https://github.com/moussaoutlook/numra-rs/issues"
+            rel="noopener"
+          >github.com/moussaoutlook/numra-rs/issues</a>.
+        </li>
+        <li>
+          <strong>GitHub Discussions</strong> for design questions and
+          open-ended threads:
+          <a
+            href="https://github.com/moussaoutlook/numra-rs/discussions"
+            rel="noopener"
+          >github.com/moussaoutlook/numra-rs/discussions</a>.
+        </li>
+        <li>
+          <strong>Pull requests</strong> against the
+          <a
+            href="https://github.com/moussaoutlook/numra-rs"
+            rel="noopener"
+          >main repository</a>.
+          See <code>CONTRIBUTING.md</code> for the workflow.
+        </li>
+      </ul>
+
+      <h2>Contributor License Agreement.</h2>
+      <p>
+        Contributions are accepted under the
+        <a
+          href="https://github.com/moussaoutlook/numra-rs/blob/main/CLA.md"
+          rel="noopener"
+        >Numra Contributor License Agreement</a>.
+        It grants the project the rights needed to relicense and
+        redistribute contributions; it does not transfer copyright.
+      </p>
+
+      <h2>Code of conduct.</h2>
+      <p>
+        Treat other contributors with respect. Disagreements are about
+        ideas, not people. Persistent harassment, personal attacks, or
+        bad-faith engagement get you removed from the project. There
+        is no separate code-of-conduct document yet — that paragraph is
+        the policy.
+      </p>
+
+      <h2>Reporting security issues.</h2>
+      <p>
+        Please do not file public issues for security vulnerabilities.
+        Email
+        <a href="mailto:contact@spectralautomata.com?subject=%5BNumra%20security%5D%20"
+          >contact@spectralautomata.com</a>
+        with the subject prefix <code>[Numra security]</code>. We will
+        acknowledge within five business days and coordinate
+        disclosure.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .community { padding: var(--space-8) 0; }
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  h2 { margin-top: var(--space-7); }
+</style>

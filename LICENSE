@@ -1,0 +1,84 @@
+NUMRA ACADEMIC & RESEARCH LICENSE (NON-COMMERCIAL)
+Version 1.0 — 2026-04-27
+
+Copyright (c) 2026 Prof. Moussa Leblouba.
+All rights reserved.
+
+1. Definitions
+
+“Software” means the Numra project, including all source code, documentation, examples, tests,
+build scripts, and associated files in this repository, and any portion thereof.
+
+“You” means any individual or entity exercising permissions granted by this License.
+
+“Non-Commercial Academic/Research Use” means use solely for teaching, learning, scholarly
+research, and non-profit scientific work, without any intent to obtain commercial advantage or
+monetary compensation.
+
+“Academic/Research Organization” means a university, degree-granting educational institution,
+or non-profit research institute.
+
+“Commercial Use” means any use primarily intended for, or directly related to, commercial
+advantage or monetary compensation, including:
+- use by a for-profit entity (including internal research, prototyping, evaluation, or experimentation);
+- use to develop, deliver, or operate any product, service, or workflow for which You or a third party is paid;
+- use in consulting/services for a fee where the Software is used to produce deliverables;
+- offering the Software or derivative as part of a paid product/service (including SaaS);
+- training, support, or hosting sold for a fee involving the Software.
+
+“Distribute” means to make the Software or a derivative available to a third party, in any form
+(source, binary, container, or network delivery).
+
+2. License Grant (Non-Commercial Academic/Research)
+
+Subject to the terms of this License, the Licensor grants You a non-exclusive, worldwide,
+royalty-free license to:
+- use the Software for Non-Commercial Academic/Research Use;
+- copy and modify the Software for Non-Commercial Academic/Research Use;
+- Distribute the Software (modified or unmodified) only for Non-Commercial Academic/Research Use
+  and only if You comply with Section 5 (Conditions).
+
+3. Redistribution Between Academics (Explicit Permission)
+
+Academic/Research Organizations may Distribute forks and binaries of the Software to other
+Academic/Research Organizations and their members for Non-Commercial Academic/Research Use,
+including for collaboration, reproducibility, teaching, and publication support, subject to Section 5.
+
+4. Commercial Use Requires a Separate License
+
+Commercial Use is not permitted under this License.
+
+To obtain a commercial license, contact:
+contact@spectralautomata.com
+
+5. Conditions (Attribution + Notices)
+
+If You use or Distribute the Software, You must:
+- include a copy of this License with the Software;
+- retain all copyright notices;
+- clearly mark significant modifications (e.g., in a NOTICE file or in the fork’s README).
+
+6. No Trademark Grant
+
+This License does not grant rights to use the Licensor’s trademarks, logos, or branding, except
+for truthful attribution.
+
+7. Warranty Disclaimer
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+8. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY
+CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE
+OR ITS USE.
+
+9. Termination
+
+This License terminates automatically upon any breach. Upon termination, You must cease use and
+Distribution of the Software.
+
+10. Governing Law
+
+This License is governed by the laws of the United Arab Emirates (UAE), excluding conflict-of-laws rules.

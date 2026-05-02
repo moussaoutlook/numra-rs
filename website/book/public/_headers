@@ -1,0 +1,79 @@
+# Numra book — Cloudflare Pages security headers
+# ----------------------------------------------------------------------
+# CSP is authoritative here (Astro's experimental security.csp
+# meta-tag emitter is disabled).
+#
+# style-src 'unsafe-inline' is REQUIRED for the book because:
+#   - KaTeX emits per-glyph inline `style="height:0.84em;..."` and
+#     `style="vertical-align:..."` attributes for math layout. Each
+#     value is unique per equation, so hash-based CSP cannot cover
+#     them (would need 'unsafe-hashes' + a hash per attribute value).
+#   - Pagefind's search UI uses inline styles for the dropdown
+#     chrome and result-snippet highlighting.
+#   - Starlight components emit scoped inline <style> blocks.
+#
+# This is the standard Starlight + KaTeX deployment posture. The
+# trade-off is acceptable: script-src remains strict, the book has
+# no user-generated content, and CSS-injection attacks against a
+# static docs site have minimal attack surface.
+#
+# font-src 'self' data:: data: covers the few inline-decoded glyphs
+# Astro/Starlight emits (Inter Variable subsetting strategy).
+#
+# script-src 'self' 'unsafe-inline': Starlight injects many inline
+# <script> blocks for the theme switcher, mobile menu, sidebar
+# scrollspy, search trigger, and table-of-contents behavior — all
+# page-specific so a static hash list cannot cover them. Pagefind's
+# UI also bootstraps via inline scripts. Without 'unsafe-inline':
+# theme toggle is dead, search hangs at "Searching for…", mobile
+# nav doesn't open. This is the documented Starlight + Pagefind
+# deployment posture.
+#
+# The trade-off: docs site has zero user-generated content paths,
+# all inline scripts are framework-controlled. The protection comes
+# from `'self'` (no third-party JS except CF beacon), `frame-ancestors
+# 'none'`, COOP/CORP, X-Frame-Options DENY.
+#
+# worker-src 'self' blob:: Pagefind spawns a Web Worker from a Blob
+# URL for indexed search; without `blob:` the worker is blocked and
+# search hangs.
+#
+# 'unsafe-eval' + 'wasm-unsafe-eval' in script-src: Pagefind
+# instantiates a WebAssembly module inside a Web Worker that
+# powers search. Pagefind's hosting docs claim 'wasm-unsafe-eval'
+# alone is sufficient in browsers shipping the keyword since 2022,
+# but in practice the worker context in Firefox (and some Chrome
+# builds) still trips a CompileError on WebAssembly.instantiate()
+# when only 'wasm-unsafe-eval' is set. Adding the broader
+# 'unsafe-eval' keyword as a paired fallback resolves the
+# block in all cases. This is a Pagefind / WebAssembly-in-worker
+# quirk; the marketing site does not need either keyword (no
+# search, no WASM).
+#
+# Reference: https://pagefind.app/docs/hosting/ — recommends
+# 'wasm-unsafe-eval'; field experience shows 'unsafe-eval' is
+# the universal fallback when the modern keyword alone fails.
+
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://static.cloudflareinsights.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; worker-src 'self' blob:; upgrade-insecure-requests
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  X-DNS-Prefetch-Control: off
+
+# Long-cache fingerprinted assets
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/pagefind/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate

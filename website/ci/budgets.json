@@ -1,0 +1,46 @@
+[
+  {
+    "_comment": "Performance budgets for Numra. Resource sizes in KB; counts in items. Marketing landing page enforces the strictest budget; other routes inherit.",
+    "path": "/*",
+    "resourceSizes": [
+      { "resourceType": "document",   "budget":  20 },
+      { "resourceType": "stylesheet", "budget":  60 },
+      { "resourceType": "script",     "budget":  50 },
+      { "resourceType": "image",      "budget": 100 },
+      { "resourceType": "font",       "budget": 120 },
+      { "resourceType": "media",      "budget":   0 },
+      { "resourceType": "total",      "budget": 250 },
+      { "resourceType": "third-party","budget":  10 }
+    ],
+    "resourceCounts": [
+      { "resourceType": "third-party", "budget": 2 },
+      { "resourceType": "script",      "budget": 6 },
+      { "resourceType": "stylesheet",  "budget": 4 },
+      { "resourceType": "font",        "budget": 4 },
+      { "resourceType": "total",       "budget": 30 }
+    ],
+    "timings": [
+      { "metric": "first-contentful-paint",   "budget": 1500 },
+      { "metric": "largest-contentful-paint", "budget": 1500 },
+      { "metric": "interactive",              "budget": 2500 },
+      { "metric": "speed-index",              "budget": 2500 },
+      { "metric": "total-blocking-time",      "budget":  100 }
+    ]
+  },
+
+  {
+    "_comment": "Book pages have looser script/CSS budget because Starlight ships its UI runtime and Pagefind. Math-heavy pages may exceed the strict landing budget; this is acceptable.",
+    "path": "/book/*",
+    "resourceSizes": [
+      { "resourceType": "document",   "budget":  30 },
+      { "resourceType": "stylesheet", "budget": 100 },
+      { "resourceType": "script",     "budget": 120 },
+      { "resourceType": "font",       "budget": 200 },
+      { "resourceType": "total",      "budget": 500 }
+    ],
+    "timings": [
+      { "metric": "first-contentful-paint",   "budget": 2000 },
+      { "metric": "largest-contentful-paint", "budget": 2000 }
+    ]
+  }
+]

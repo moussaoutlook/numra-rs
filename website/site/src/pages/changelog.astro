@@ -1,0 +1,61 @@
+---
+// src/pages/changelog.astro
+//
+// Phase 1 placeholder. Auto-generation from CHANGELOG.md is a Phase 2
+// task per SPEC §19.2. Until then, this page points at the canonical
+// changelog in the repository.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Changelog"
+  description="Numra's release notes. The canonical changelog lives in the repository; this page will mirror it once auto-generation lands in Phase 2."
+  canonicalPath="/changelog"
+>
+  <section class="changelog">
+    <div class="container-narrow">
+      <h1>Changelog.</h1>
+
+      <p class="lede">
+        Numra's release notes live in
+        <a
+          href="https://github.com/moussaoutlook/numra-rs/blob/main/CHANGELOG.md"
+          rel="noopener"
+        >CHANGELOG.md</a>
+        in the repository. Auto-generated rendering on this page is a
+        Phase 2 task.
+      </p>
+
+      <h2>Until auto-generation lands.</h2>
+      <p>
+        For now, please consult the canonical
+        <a
+          href="https://github.com/moussaoutlook/numra-rs/blob/main/CHANGELOG.md"
+          rel="noopener"
+        >CHANGELOG.md</a>,
+        the
+        <a
+          href="https://github.com/moussaoutlook/numra-rs/releases"
+          rel="noopener"
+        >GitHub releases page</a>,
+        or the
+        <a
+          href="https://docs.rs/numra"
+          rel="noopener"
+        >per-version rustdoc on docs.rs</a>.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .changelog { padding: var(--space-8) 0; }
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  h2 { margin-top: var(--space-7); }
+</style>

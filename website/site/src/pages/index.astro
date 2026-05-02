@@ -1,0 +1,275 @@
+---
+// src/pages/index.astro
+//
+// Numra home page. The section order is intentional. Do not reorder.
+// Do not add carousels, modals, or scroll-triggered animations. The
+// page is intentionally short.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const homeJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': 'https://numra-rs.org/#website',
+      url: 'https://numra-rs.org/',
+      name: 'Numra',
+      description: 'Composable numerical methods for Rust.',
+      inLanguage: 'en',
+    },
+    {
+      '@type': 'SoftwareSourceCode',
+      '@id': 'https://numra-rs.org/#software',
+      name: 'Numra',
+      description:
+        'A Rust library for numerical methods in scientific computing, providing composable solvers for ODEs, SDEs, DDEs, FDEs, IDEs, PDEs, and SPDEs.',
+      applicationCategory: 'ScientificComputing',
+      programmingLanguage: 'Rust',
+      operatingSystem: 'Cross-platform',
+      license: 'https://github.com/moussaoutlook/numra-rs/blob/main/LICENSE',
+      codeRepository: 'https://github.com/moussaoutlook/numra-rs',
+      url: 'https://numra-rs.org/',
+      author: {
+        '@type': 'Person',
+        name: 'Moussa Leblouba',
+        affiliation: { '@type': 'Organization', name: 'University of Sharjah' },
+      },
+    },
+  ],
+};
+---
+
+<BaseLayout
+  title="Numra"
+  description="Composable numerical methods for Rust. ODE, SDE, DDE, FDE, IDE, PDE, and SPDE solvers in one library."
+  canonicalPath="/"
+  jsonLd={homeJsonLd}
+>
+  <!-- 1. Hero ============================================================ -->
+  <section class="hero">
+    <div class="container-narrow">
+      <h1>Composable numerical methods for Rust.</h1>
+      <p class="lede">
+        ODEs, SDEs, DDEs, FDEs, IDEs, PDEs, and SPDEs in one library —
+        with dense output, event detection, and adaptive integration
+        that compose like Lego.
+      </p>
+
+      <div class="cta-row">
+        <a class="btn btn-primary" href="/install">Get started</a>
+        <a class="btn btn-secondary" href="https://book.numra-rs.org">Read the book</a>
+      </div>
+
+      <!-- Real, runnable code. Highest-signal element on the page. -->
+      <div class="hero-code">
+        <pre><code class="language-rust">{`use numra::ode::{solve_ivp, Tsit5};
+use numra::prelude::*;
+
+// Lorenz system: dx/dt = σ(y - x), dy/dt = x(ρ - z) - y, dz/dt = xy - βz
+let lorenz = |_t: f64, y: &[f64], dy: &mut [f64]| {
+    let (s, r, b) = (10.0, 28.0, 8.0 / 3.0);
+    dy[0] = s * (y[1] - y[0]);
+    dy[1] = y[0] * (r - y[2]) - y[1];
+    dy[2] = y[0] * y[1] - b * y[2];
+};
+
+let sol = solve_ivp(lorenz, (0.0, 40.0), &[1.0, 1.0, 1.0])
+    .method(Tsit5::new())
+    .rtol(1e-8)
+    .atol(1e-10)
+    .dense_output(true)
+    .run()?;`}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. One library, many equations ===================================== -->
+  <section class="capability-section">
+    <div class="container">
+      <h2>One library, many equations.</h2>
+      <p>
+        Numra covers the full equation classes scientific computing
+        depends on, with a unified API surface so you compose solvers
+        instead of fighting them.
+      </p>
+
+      <!-- TODO: capability matrix table.
+           Render as a real <table> with rows for each equation class,
+           columns for solver categories, and links into the book. -->
+    </div>
+  </section>
+
+  <!-- 3. Composability =================================================== -->
+  <section class="composability-section">
+    <div class="container">
+      <h2>Composability in action.</h2>
+      <p>
+        Solvers in Numra are values, not frameworks. You wire them
+        together. The output of one solver is the input of the next —
+        with dense output, you can interpolate, integrate, transform,
+        and reduce.
+      </p>
+
+      <!-- TODO: two diagrams.
+           Diagram 1: ODE → dense interpolation → adaptive quadrature.
+           Diagram 2: PDE (MOL) → ODE solver → reduction → statistic.
+           Render as Mermaid (in MDX) or hand-authored SVG.
+           Each must link to a corresponding test in the repository. -->
+    </div>
+  </section>
+
+  <!-- 4. Performance and correctness ===================================== -->
+  <section class="evidence-section">
+    <div class="container">
+      <h2>Performance and correctness.</h2>
+      <div class="evidence-grid">
+        <div class="evidence-card">
+          <h3>Benchmarks</h3>
+          <!-- TODO: hero benchmark chart with caption declaring
+               commit SHA, hardware, compiler, and reproduction
+               script. -->
+        </div>
+        <div class="evidence-card">
+          <h3>Correctness</h3>
+          <!-- TODO: correctness map — manufactured solutions,
+               regression invariants, reference comparisons. -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Built for science =============================================== -->
+  <section class="science-section">
+    <div class="container">
+      <h2>Built for science.</h2>
+      <div class="science-grid">
+        <div>
+          <h3>Citable</h3>
+          <p>
+            DOI per release via Zenodo, BibTeX on <a href="/cite">/cite</a>.
+            Cite Numra in papers without hesitation.
+          </p>
+        </div>
+        <div>
+          <h3>Versioned</h3>
+          <p>
+            Stable MSRV, semver from 1.0, deprecation windows.
+            See <a href="/stability">/stability</a>.
+          </p>
+        </div>
+        <div>
+          <h3>Evidence-based</h3>
+          <p>
+            Every benchmark plot ships with its commit SHA, hardware,
+            and a reproduction script.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. License at a glance ============================================= -->
+  <section class="license-section">
+    <div class="container-narrow">
+      <h2>License.</h2>
+      <p>
+        Numra is free for non-commercial academic and research use under
+        the Numra Academic &amp; Research License (Non-Commercial) v1.0.
+        Commercial use requires a separate license.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-secondary" href="/license">Read the license</a>
+        <a class="btn btn-secondary" href="/commercial">Commercial licensing</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    padding: var(--space-9) 0 var(--space-8);
+  }
+
+  .hero h1 {
+    margin-bottom: var(--space-4);
+  }
+
+  .lede {
+    font-size: var(--text-xl);
+    color: var(--color-fg-muted);
+    line-height: var(--leading-snug);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-7);
+  }
+
+  .btn {
+    display: inline-block;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: background var(--motion-fast) var(--ease-out),
+                color      var(--motion-fast) var(--ease-out),
+                border     var(--motion-fast) var(--ease-out);
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    color: var(--color-bg);
+  }
+  .btn-primary:hover {
+    background: var(--color-accent-hover);
+    color: var(--color-bg);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--color-fg);
+    border-color: var(--color-border-strong);
+  }
+  .btn-secondary:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .hero-code {
+    margin-top: var(--space-5);
+  }
+
+  .hero-code pre {
+    box-shadow: var(--shadow-2);
+  }
+
+  section + section {
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-8) 0;
+  }
+
+  .evidence-grid,
+  .science-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-5);
+    margin-top: var(--space-5);
+  }
+
+  .evidence-card {
+    padding: var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-elevated);
+  }
+
+  .license-section {
+    padding: var(--space-7) 0 var(--space-9);
+  }
+</style>

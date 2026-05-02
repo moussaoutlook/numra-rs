@@ -1,0 +1,65 @@
+---
+// src/pages/roadmap.astro
+//
+// Phase 1 placeholder. Per SPEC §19.2, the public roadmap (quarterly
+// granularity) is a Phase 2 deliverable. This page exists so the
+// header/footer link does not 404; full content lands later.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Roadmap"
+  description="Numra's public roadmap, at quarterly granularity. Detailed roadmap content lands in Phase 2."
+  canonicalPath="/roadmap"
+>
+  <section class="roadmap">
+    <div class="container-narrow">
+      <h1>Roadmap.</h1>
+
+      <p class="lede">
+        A public quarterly-granularity roadmap is a Phase 2 deliverable.
+        Until it lands, the most accurate signal of upcoming work is
+        the
+        <a
+          href="https://github.com/moussaoutlook/numra-rs/issues"
+          rel="noopener"
+        >open issues</a>
+        and the
+        <a
+          href="https://github.com/moussaoutlook/numra-rs/blob/main/CHANGELOG.md"
+          rel="noopener"
+        >CHANGELOG</a>.
+      </p>
+
+      <h2>What you can rely on today.</h2>
+      <ul>
+        <li>
+          The <a href="/stability">stability</a> commitments — MSRV,
+          semver, deprecation windows.
+        </li>
+        <li>
+          Solver behavior in any released version: covered by the
+          numerical-correctness suite documented in the book's
+          <em>Numerical Correctness</em> chapter.
+        </li>
+        <li>
+          The license: free for non-commercial academic and research
+          use; commercial use requires a separate license. See
+          <a href="/license">/license</a>.
+        </li>
+      </ul>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .roadmap { padding: var(--space-8) 0; }
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  h2 { margin-top: var(--space-7); }
+</style>

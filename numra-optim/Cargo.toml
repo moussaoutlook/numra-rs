@@ -1,0 +1,22 @@
+[package]
+name = "numra-optim"
+description = "Optimization algorithms for Numra"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+numra-core = { workspace = true }
+numra-linalg = { workspace = true }
+numra-nonlinear = { workspace = true }
+numra-autodiff = { workspace = true }
+faer = { workspace = true }
+thiserror = { workspace = true }
+rand = { version = "0.8", features = ["small_rng"] }
+rand_distr = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

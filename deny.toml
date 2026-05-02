@@ -1,0 +1,35 @@
+[graph]
+# Resolve the crate graph with every optional feature enabled so license/advisory
+# checks match the widest dependency set (same idea as `cargo license --all-features`).
+all-features = true
+no-default-features = false
+
+[advisories]
+version = 2
+yanked = "deny"
+ignore = [
+  # Transitive through faer 0.20/gemm. No safe upgrade is available yet.
+  "RUSTSEC-2024-0436",
+]
+
+[licenses]
+version = 2
+allow = [
+  "Apache-2.0",
+  "BSD-2-Clause",
+  "LicenseRef-Numra-Academic-Research-NonCommercial",
+  "MIT",
+  "Unicode-3.0",
+  "Unlicense",
+  "Zlib",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+highlight = "all"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

@@ -1,0 +1,97 @@
+---
+// src/pages/features.astro
+//
+// Capability overview. Links into book chapters when those chapters
+// land. For now, this page is a pointer — the book's solver reference
+// is the source of truth for any specific solver claim.
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Features"
+  description="What Numra covers — equation classes, solver families, and shared abstractions."
+  canonicalPath="/features"
+>
+  <section class="features">
+    <div class="container-narrow">
+      <h1>Features.</h1>
+
+      <p class="lede">
+        Numra covers the equation classes that scientific computing
+        depends on, with a unified API surface. Each feature here links
+        to its full chapter in the
+        <a href="https://book.numra-rs.org">book</a>.
+      </p>
+
+      <h2>Equation classes.</h2>
+      <ul>
+        <li>
+          <strong>ODE</strong> — explicit (Tsit5, DoPri5, Verner 6/7/8),
+          implicit (Radau5, ESDIRK 32/43/54), multistep (BDF), automatic
+          stiffness selection.
+        </li>
+        <li>
+          <strong>SDE</strong> — Euler-Maruyama, Milstein, stochastic
+          Runge-Kutta; weak and strong convergence orders documented
+          per method.
+        </li>
+        <li>
+          <strong>DDE</strong> — delay differential equations with
+          continuous extensions for past-state interpolation.
+        </li>
+        <li>
+          <strong>FDE</strong> — fractional differential equations with
+          memory-efficient Caputo-derivative methods.
+        </li>
+        <li>
+          <strong>IDE</strong> — integro-differential equations.
+        </li>
+        <li>
+          <strong>PDE</strong> — method-of-lines and finite-difference
+          stencils for parabolic and hyperbolic problems.
+        </li>
+        <li>
+          <strong>SPDE</strong> — stochastic partial differential
+          equations.
+        </li>
+      </ul>
+
+      <h2>Cross-cutting capabilities.</h2>
+      <ul>
+        <li>Dense output and event detection across all explicit ODE solvers.</li>
+        <li>Adaptive integration with proportional-integral step control.</li>
+        <li>Linear algebra (faer-backed), nonlinear solvers, automatic differentiation.</li>
+        <li>Quadrature, interpolation, FFT, statistics, signal processing, curve fitting.</li>
+        <li>Optimization and optimal control.</li>
+        <li>Generic over scalar (<code>f32</code> and <code>f64</code>); <code>numra-core</code> is <code>no_std</code>-compatible.</li>
+      </ul>
+
+      <h2>What Numra does not do.</h2>
+      <p>
+        Numra is intentionally a numerical-methods library, not a
+        symbolic-math system or a general PDE framework. Symbolic
+        manipulation, mesh generation, and finite-element assembly live
+        elsewhere; Numra integrates with them through plain Rust
+        interfaces.
+      </p>
+
+      <p>
+        The full solver inventory is documented in the
+        <a href="https://book.numra-rs.org/reference/">solver reference</a>
+        chapter of the book, with literature citations for each method.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .features { padding: var(--space-8) 0; }
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  h2 { margin-top: var(--space-7); }
+</style>
