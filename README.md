@@ -122,7 +122,7 @@ User docs (book): `https://book.numra-rs.org/`
 
 ## Contributing and release quality
 
-CI (GitHub Actions) runs `rustfmt`, `clippy` with `-D warnings`, full workspace tests and doctests, example builds, `rustdoc` with `-D warnings`, mdBook build/test, and `cargo deny`.
+CI (GitHub Actions) runs `rustfmt`, `clippy` with `-D warnings`, full workspace tests and doctests, example builds, `rustdoc` with `-D warnings`, book content checks (drift, snippet harness, math lint), and `cargo deny`. The mdBook itself (`numra-book/`) is built locally with `mdbook build`; the online book at `book.numra-rs.org` is the Astro/Starlight version under `website/book/`.
 
 Local parity with the release bar:
 

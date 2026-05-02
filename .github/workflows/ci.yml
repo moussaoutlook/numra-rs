@@ -53,20 +53,6 @@ jobs:
       - name: Generated book HTML is untracked
         run: test -z "$(git ls-files 'numra-book/book')"
 
-      - name: Install mdbook
-        run: cargo install mdbook --locked
-
-      - name: Install mdbook-pdf
-        run: cargo install mdbook-pdf --locked --features fetch
-
-      - name: mdbook build
-        working-directory: numra-book
-        run: mdbook build
-
-      - name: mdbook test
-        working-directory: numra-book
-        run: mdbook test
-
       - name: Install cargo-deny
         run: cargo install cargo-deny --locked
 
