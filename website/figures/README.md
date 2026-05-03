@@ -41,8 +41,8 @@ figures/
 │   ├── captioning.py    # provenance metadata + caption stamp
 │   └── data.py          # criterion estimates.json → DataFrame
 ├── home/                # home-page evidence (Phase 1)
-├── og/                  # apple-touch-icon (OG default is hand-authored
-│                        # at site/public/og/numra-og.png)
+├── og/                  # (reserved — OG default and apple-touch-icon
+│                        # are both hand-authored under site/public/)
 ├── perf/                # performance chapter (Phase 2)
 ├── comparisons/         # numra vs scipy charts (Phase 2)
 └── examples/            # examples-gallery thumbnails (Phase 2)
