@@ -36,7 +36,7 @@ const {
   title,
   description,
   canonicalPath = Astro.url.pathname,
-  ogImage = '/og/default.png',
+  ogImage = '/og/numra-og.png',
   jsonLd,
 } = Astro.props;
 
@@ -75,9 +75,9 @@ const fullTitle = title.endsWith('Numra') ? title : `${title} · Numra`;
     <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0E1116" media="(prefers-color-scheme: dark)" />
 
-    {/* Favicon. iOS Safari falls back to the SVG favicon when no
-        rasterised apple-touch-icon is provided. */}
+    {/* Favicon + iOS home-screen icon */}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
     {/* Sitemap */}
     <link rel="sitemap" href="/sitemap-index.xml" />
