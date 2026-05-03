@@ -48,9 +48,12 @@ export default defineConfig({
       ],
 
       logo: {
+        // The wordmark already reads "Numra"; with `replacesTitle: true`
+        // Starlight skips emitting its own title text next to the logo,
+        // so the brand area shows only the SVG.
         light: './src/assets/numra_logo_no_BG.svg',
-        dark: './src/assets/numra_logo_white_BG.svg',
-        replacesTitle: false,
+        dark: './src/assets/numra_logo_white-text_no_BG.svg',
+        replacesTitle: true,
       },
 
       favicon: '/favicon.svg',

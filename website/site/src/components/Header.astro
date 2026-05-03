@@ -11,8 +11,21 @@ const navItems = [
 <header class="site-header">
   <div class="container">
     <a class="brand" href="/" aria-label="Numra home">
-      <img src="/numra_logo_no_BG.svg" alt="" width="100" height="32" />
-      <span class="brand-text">Numra</span>
+      <img
+        class="brand-logo brand-logo-light"
+        src="/numra_logo_no_BG.svg"
+        alt="Numra"
+        width="120"
+        height="40"
+      />
+      <img
+        class="brand-logo brand-logo-dark"
+        src="/numra_logo_white-text_no_BG.svg"
+        alt=""
+        aria-hidden="true"
+        width="120"
+        height="40"
+      />
     </a>
 
     <nav class="primary-nav" aria-label="Primary">
@@ -52,19 +65,21 @@ const navItems = [
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
     text-decoration: none;
     color: var(--color-fg);
     font-weight: 600;
   }
 
-  [data-theme="dark"] .brand img {
-    /* Use the dark-mode logo via CSS swap, or duplicate the img and
-       toggle visibility based on data-theme. Single-img approach: */
-    filter: invert(1);
+  .brand-logo {
+    height: auto;
+    display: block;
   }
-
-  .brand-text { font-size: var(--text-lg); }
+  /* Show the light-mode logo by default; swap to the white-text variant
+     when the user is in dark mode. The other variant is hidden via
+     `display: none` so screen readers and search crawlers see only one. */
+  .brand-logo-dark { display: none; }
+  [data-theme="dark"] .brand-logo-light { display: none; }
+  [data-theme="dark"] .brand-logo-dark { display: block; }
 
   .primary-nav ul {
     display: flex;
@@ -101,6 +116,5 @@ const navItems = [
 
   @media (max-width: 720px) {
     .primary-nav ul { gap: var(--space-3); }
-    .brand-text { display: none; }
   }
 </style>

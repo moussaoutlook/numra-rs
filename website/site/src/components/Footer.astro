@@ -48,7 +48,21 @@ const footerSections = [
   <div class="container">
     <div class="footer-grid">
       <div class="footer-brand">
-        <img src="/numra_logo_no_BG.svg" alt="Numra" width="120" height="40" />
+        <img
+          class="footer-logo footer-logo-light"
+          src="/numra_logo_no_BG.svg"
+          alt="Numra"
+          width="120"
+          height="40"
+        />
+        <img
+          class="footer-logo footer-logo-dark"
+          src="/numra_logo_white-text_no_BG.svg"
+          alt=""
+          aria-hidden="true"
+          width="120"
+          height="40"
+        />
         <p class="tagline">
           Composable numerical methods for Rust.
         </p>
@@ -137,9 +151,10 @@ const footerSections = [
     text-decoration: underline;
   }
 
-  [data-theme="dark"] .footer-brand img {
-    filter: invert(1);
-  }
+  .footer-logo { height: auto; display: block; }
+  .footer-logo-dark { display: none; }
+  [data-theme="dark"] .footer-logo-light { display: none; }
+  [data-theme="dark"] .footer-logo-dark { display: block; }
 
   .footer-bottom {
     padding-top: var(--space-5);
