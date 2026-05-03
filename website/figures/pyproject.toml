@@ -1,0 +1,19 @@
+[project]
+name = "numra-figures"
+version = "0.1.0"
+description = "Numra web-presence figure pipeline (matplotlib + mathtext, no LaTeX)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "matplotlib>=3.9",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "scipy>=1.13",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

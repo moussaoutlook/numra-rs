@@ -1,16 +1,10 @@
 ---
-// src/pages/changelog.astro
-//
-// Phase 1 placeholder. Auto-generation from CHANGELOG.md is a Phase 2
-// task per SPEC §19.2. Until then, this page points at the canonical
-// changelog in the repository.
-
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout
   title="Changelog"
-  description="Numra's release notes. The canonical changelog lives in the repository; this page will mirror it once auto-generation lands in Phase 2."
+  description="Numra's release notes. The canonical changelog lives at CHANGELOG.md in the repository."
   canonicalPath="/changelog"
 >
   <section class="changelog">
@@ -22,40 +16,61 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <a
           href="https://github.com/moussaoutlook/numra-rs/blob/main/CHANGELOG.md"
           rel="noopener"
-        >CHANGELOG.md</a>
-        in the repository. Auto-generated rendering on this page is a
-        Phase 2 task.
+        ><code>CHANGELOG.md</code></a>
+        in the repository — that file is canonical.
       </p>
 
-      <h2>Until auto-generation lands.</h2>
-      <p>
-        For now, please consult the canonical
-        <a
-          href="https://github.com/moussaoutlook/numra-rs/blob/main/CHANGELOG.md"
-          rel="noopener"
-        >CHANGELOG.md</a>,
-        the
-        <a
-          href="https://github.com/moussaoutlook/numra-rs/releases"
-          rel="noopener"
-        >GitHub releases page</a>,
-        or the
-        <a
-          href="https://docs.rs/numra"
-          rel="noopener"
-        >per-version rustdoc on docs.rs</a>.
-      </p>
+      <h2>Where to look</h2>
+      <ul>
+        <li>
+          <a
+            href="https://github.com/moussaoutlook/numra-rs/blob/main/CHANGELOG.md"
+            rel="noopener"
+          >CHANGELOG.md</a> — every release with notes, in
+          Keep-a-Changelog format.
+        </li>
+        <li>
+          <a
+            href="https://github.com/moussaoutlook/numra-rs/releases"
+            rel="noopener"
+          >GitHub releases</a> — tagged releases with attached
+          tarballs and Zenodo DOIs.
+        </li>
+        <li>
+          <a
+            href="https://docs.rs/numra"
+            rel="noopener"
+          >docs.rs</a> — per-version Rust API documentation,
+          hosted automatically on every <code>cargo publish</code>.
+        </li>
+      </ul>
     </div>
   </section>
 </BaseLayout>
 
 <style>
   .changelog { padding: var(--space-8) 0; }
+  h1 { margin-bottom: var(--space-5); }
+  h2 {
+    margin-top: var(--space-7);
+    margin-bottom: var(--space-3);
+  }
   .lede {
     font-size: var(--text-lg);
     color: var(--color-fg-muted);
     margin-bottom: var(--space-6);
     max-width: var(--measure);
   }
-  h2 { margin-top: var(--space-7); }
+  ul {
+    max-width: var(--measure);
+  }
+  ul li {
+    margin-block: var(--space-2);
+  }
+  code {
+    font-size: 0.92em;
+    background: var(--color-code-bg);
+    padding: 0.05em 0.4em;
+    border-radius: var(--radius-sm);
+  }
 </style>

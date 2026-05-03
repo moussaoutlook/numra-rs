@@ -162,7 +162,7 @@ fn bench_tolerance_scaling(c: &mut Criterion) {
     let y0 = vec![1.0, 1.0, 1.0];
     let problem = OdeProblem::new(lorenz_rhs, 0.0, 20.0, y0.clone());
 
-    for rtol_exp in [3, 6, 9] {
+    for rtol_exp in [3, 4, 5, 6, 7, 8, 9] {
         let rtol = 10.0_f64.powi(-rtol_exp);
         let atol = rtol * 1e-3;
         let options = SolverOptions::default().rtol(rtol).atol(atol);

@@ -1,0 +1,21 @@
+Numra figure provenance — rendered 2026-05-03T14:11:38Z
+
+Problem        : Numra regression-test inventory
+Solver         : Multiple — see invariant per cell
+Tolerance      : N/A
+Repro script   : docs/audit/correctness-test-map.md (audit) + this script
+
+Numra commit   : 1860552
+rustc version  : 1.92.0
+
+Hardware (CPU) : Apple M4 Max
+Hardware (RAM) : 128 GB
+OS             : Darwin 24.6.0 (arm64)
+
+Python         : 3.14.3
+matplotlib     : 3.10.9
+
+Extra:
+  audit_path    : docs/audit/correctness-test-map.md
+  primary_tests : 7
+  supporting_tests: 8

@@ -21,3 +21,6 @@ Thumbs.db
 .idea/
 .vscode/
 .claude/
+
+# Internal §22 acceptance log — not for public consumption
+website/SPEC-22-ACCEPTANCE.md

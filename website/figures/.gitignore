@@ -1,0 +1,10 @@
+# uv-managed virtualenv and Python bytecode caches
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# uv lockfile is committed (uv.lock) so deps are reproducible.
+# Smoke-test output is ephemeral and should not be checked in.
+_smoke.svg
+_smoke.svg.provenance.txt

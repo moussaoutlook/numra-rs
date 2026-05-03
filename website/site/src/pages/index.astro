@@ -94,9 +94,75 @@ let sol = solve_ivp(lorenz, (0.0, 40.0), &[1.0, 1.0, 1.0])
         instead of fighting them.
       </p>
 
-      <!-- TODO: capability matrix table.
-           Render as a real <table> with rows for each equation class,
-           columns for solver categories, and links into the book. -->
+      <table class="capability-matrix">
+        <thead>
+          <tr>
+            <th scope="col">Equation class</th>
+            <th scope="col">Solvers</th>
+            <th scope="col" class="col-narrow">Adaptive</th>
+            <th scope="col" class="col-narrow">Stiff</th>
+            <th scope="col">Book chapter</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">ODE / DAE</th>
+            <td>DoPri5, Tsit5, Vern6&ndash;9, Radau5, BDF, ESDIRK</td>
+            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
+            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
+            <td><a href="https://book.numra-rs.org/ch02-solving-odes/your-first-ode/">Solving ODEs</a></td>
+          </tr>
+          <tr>
+            <th scope="row">Stiff systems</th>
+            <td>Radau5, BDF, ESDIRK; auto-detection</td>
+            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
+            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
+            <td><a href="https://book.numra-rs.org/ch03-stiff-systems/what-is-stiffness/">Stiff systems</a></td>
+          </tr>
+          <tr>
+            <th scope="row">SDE</th>
+            <td>Euler&ndash;Maruyama, Milstein, SRA, SRI</td>
+            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
+            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
+            <td><a href="https://book.numra-rs.org/ch04-beyond-odes/stochastic-des/">Stochastic DEs</a></td>
+          </tr>
+          <tr>
+            <th scope="row">DDE</th>
+            <td>Runge&ndash;Kutta with delay handling</td>
+            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
+            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
+            <td><a href="https://book.numra-rs.org/ch04-beyond-odes/delay-des/">Delay DEs</a></td>
+          </tr>
+          <tr>
+            <th scope="row">FDE</th>
+            <td>Caputo, Riemann&ndash;Liouville</td>
+            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
+            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
+            <td><a href="https://book.numra-rs.org/ch04-beyond-odes/fractional-des/">Fractional DEs</a></td>
+          </tr>
+          <tr>
+            <th scope="row">IDE</th>
+            <td>Volterra, Fredholm</td>
+            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
+            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
+            <td><a href="https://book.numra-rs.org/ch04-beyond-odes/integro-des/">Integro DEs</a></td>
+          </tr>
+          <tr>
+            <th scope="row">PDE / SPDE</th>
+            <td>Method of lines, finite differences, finite elements; stochastic forcing</td>
+            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
+            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
+            <td><a href="https://book.numra-rs.org/ch04-beyond-odes/partial-des/">Partial DEs</a></td>
+          </tr>
+          <tr>
+            <th scope="row">Optimization</th>
+            <td>Gradient descent, BFGS, L-BFGS, Nelder&ndash;Mead, interior-point</td>
+            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
+            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
+            <td><a href="https://book.numra-rs.org/ch05-optimization/unconstrained/">Optimization</a></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -111,11 +177,124 @@ let sol = solve_ivp(lorenz, (0.0, 40.0), &[1.0, 1.0, 1.0])
         and reduce.
       </p>
 
-      <!-- TODO: two diagrams.
-           Diagram 1: ODE → dense interpolation → adaptive quadrature.
-           Diagram 2: PDE (MOL) → ODE solver → reduction → statistic.
-           Render as Mermaid (in MDX) or hand-authored SVG.
-           Each must link to a corresponding test in the repository. -->
+      <div class="composability-grid">
+        <figure class="composability-figure">
+          <svg
+            class="flow-diagram"
+            viewBox="0 0 720 110"
+            role="img"
+            aria-labelledby="diagram-1-title diagram-1-desc"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <title id="diagram-1-title">ODE composability pipeline</title>
+            <desc id="diagram-1-desc">
+              An ODE problem flows through DoPri5, dense output,
+              cubic spline interpolation, and Gauss&ndash;Kronrod quadrature
+              to produce a scalar result.
+            </desc>
+            <defs>
+              <marker id="arrow-1" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
+              </marker>
+            </defs>
+            <g class="flow-nodes">
+              <g transform="translate(0, 35)">
+                <rect width="100" height="40" rx="6" />
+                <text x="50" y="24">OdeProblem</text>
+              </g>
+              <g transform="translate(120, 35)">
+                <rect width="100" height="40" rx="6" />
+                <text x="50" y="24">DoPri5</text>
+              </g>
+              <g transform="translate(240, 35)">
+                <rect width="110" height="40" rx="6" />
+                <text x="55" y="24">dense_output</text>
+              </g>
+              <g transform="translate(370, 35)">
+                <rect width="120" height="40" rx="6" />
+                <text x="60" y="24">spline_interp</text>
+              </g>
+              <g transform="translate(510, 35)">
+                <rect width="140" height="40" rx="6" />
+                <text x="70" y="24">gauss_kronrod</text>
+              </g>
+              <g transform="translate(670, 35)" class="flow-result">
+                <rect width="50" height="40" rx="6" />
+                <text x="25" y="24">f64</text>
+              </g>
+            </g>
+            <g class="flow-edges" stroke="currentColor" fill="none">
+              <line x1="100" y1="55" x2="120" y2="55" marker-end="url(#arrow-1)" />
+              <line x1="220" y1="55" x2="240" y2="55" marker-end="url(#arrow-1)" />
+              <line x1="350" y1="55" x2="370" y2="55" marker-end="url(#arrow-1)" />
+              <line x1="490" y1="55" x2="510" y2="55" marker-end="url(#arrow-1)" />
+              <line x1="650" y1="55" x2="670" y2="55" marker-end="url(#arrow-1)" />
+            </g>
+          </svg>
+          <figcaption>
+            ODE &rarr; dense output &rarr; interpolation &rarr; quadrature.
+            Verified by
+            <a
+              href="https://github.com/moussaoutlook/numra-rs/blob/main/numra/tests/interop_workflows.rs"
+              rel="noopener"
+            ><code>workflow_ode_interp_integrate</code></a>.
+          </figcaption>
+        </figure>
+
+        <figure class="composability-figure">
+          <svg
+            class="flow-diagram"
+            viewBox="0 0 720 110"
+            role="img"
+            aria-labelledby="diagram-2-title diagram-2-desc"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <title id="diagram-2-title">PDE composability pipeline</title>
+            <desc id="diagram-2-desc">
+              A PDE problem is discretized via the method of lines, solved
+              by Numra's automatic stiffness-aware solver, reduced to a norm,
+              and turned into a scalar statistic.
+            </desc>
+            <g class="flow-nodes">
+              <g transform="translate(0, 35)">
+                <rect width="100" height="40" rx="6" />
+                <text x="50" y="24">PdeProblem</text>
+              </g>
+              <g transform="translate(120, 35)">
+                <rect width="150" height="40" rx="6" />
+                <text x="75" y="24">method_of_lines</text>
+              </g>
+              <g transform="translate(290, 35)">
+                <rect width="100" height="40" rx="6" />
+                <text x="50" y="24">Auto::solve</text>
+              </g>
+              <g transform="translate(410, 35)">
+                <rect width="140" height="40" rx="6" />
+                <text x="70" y="24">reduce_norm_l2</text>
+              </g>
+              <g transform="translate(570, 35)" class="flow-result">
+                <rect width="100" height="40" rx="6" />
+                <text x="50" y="24">Statistic</text>
+              </g>
+            </g>
+            <g class="flow-edges" stroke="currentColor" fill="none">
+              <line x1="100" y1="55" x2="120" y2="55" marker-end="url(#arrow-1)" />
+              <line x1="270" y1="55" x2="290" y2="55" marker-end="url(#arrow-1)" />
+              <line x1="390" y1="55" x2="410" y2="55" marker-end="url(#arrow-1)" />
+              <line x1="550" y1="55" x2="570" y2="55" marker-end="url(#arrow-1)" />
+            </g>
+          </svg>
+          <figcaption>
+            PDE &rarr; method of lines &rarr; automatic solver &rarr; reduction &rarr; statistic.
+            Verified by
+            <a
+              href="https://github.com/moussaoutlook/numra-rs/blob/main/numra/tests/interop_workflows.rs"
+              rel="noopener"
+            ><code>workflow_pde_statistics</code></a>.
+          </figcaption>
+        </figure>
+      </div>
     </div>
   </section>
 
@@ -126,14 +305,43 @@ let sol = solve_ivp(lorenz, (0.0, 40.0), &[1.0, 1.0, 1.0])
       <div class="evidence-grid">
         <div class="evidence-card">
           <h3>Benchmarks</h3>
-          <!-- TODO: hero benchmark chart with caption declaring
-               commit SHA, hardware, compiler, and reproduction
-               script. -->
+          <figure class="bench-figure">
+            <img
+              src="/figures/home_tolerance_runtime.svg"
+              alt="Log-log plot of DoPri5 wall-clock runtime versus requested relative tolerance, integrating the Lorenz system from t=0 to t=20. Seven tolerances from 1e-3 to 1e-9. Empirical power-law slope is approximately 0.17."
+              loading="lazy"
+              width="700"
+              height="430"
+            />
+            <figcaption>
+              DoPri5 on Lorenz across seven tolerances. Adaptive step
+              control means stricter tolerance only costs sub-linearly.
+              <a
+                href="https://github.com/moussaoutlook/numra-rs/blob/main/numra-bench/benches/solvers.rs"
+                rel="noopener"
+              >View the reproduction script</a>; full hardware and
+              toolchain provenance lives in the SVG sidecar.
+            </figcaption>
+          </figure>
         </div>
         <div class="evidence-card">
           <h3>Correctness</h3>
-          <!-- TODO: correctness map — manufactured solutions,
-               regression invariants, reference comparisons. -->
+          <figure class="bench-figure">
+            <img
+              src="/figures/home_correctness_map.svg"
+              alt="Heatmap of regression-test coverage. Rows are equation classes (ODE/DAE, SDE, Optimization, Linear algebra, Quadrature, Interpolation, FFT). Columns are invariant types (convergence order, analytic/golden value, statistical bands, event localization). Filled cells indicate test coverage."
+              loading="lazy"
+              width="560"
+              height="400"
+            />
+            <figcaption>
+              Every solver family has at least one regression invariant
+              under test. <a
+                href="https://github.com/moussaoutlook/numra-rs/blob/main/docs/audit/correctness-test-map.md"
+                rel="noopener"
+              >Browse the full test &rarr; method map</a>.
+            </figcaption>
+          </figure>
         </div>
       </div>
     </div>
@@ -271,5 +479,179 @@ let sol = solve_ivp(lorenz, (0.0, 40.0), &[1.0, 1.0, 1.0])
 
   .license-section {
     padding: var(--space-7) 0 var(--space-9);
+  }
+
+  .capability-matrix {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--space-5);
+    font-size: var(--text-sm);
+  }
+  .capability-matrix th,
+  .capability-matrix td {
+    text-align: left;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+  }
+  .capability-matrix thead th {
+    font-weight: 600;
+    color: var(--color-fg-muted);
+    font-size: var(--text-xs);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--color-border-strong);
+    background: var(--color-bg-subtle);
+  }
+  .capability-matrix tbody th[scope="row"] {
+    font-weight: 600;
+    color: var(--color-fg);
+    white-space: nowrap;
+  }
+  .capability-matrix tbody tr:hover {
+    background: var(--color-bg-subtle);
+  }
+  .capability-matrix .col-narrow {
+    width: 5rem;
+    text-align: center;
+  }
+  .capability-matrix .tick {
+    color: var(--color-accent);
+    font-weight: 700;
+  }
+  .capability-matrix .dash {
+    color: var(--color-fg-subtle);
+  }
+  .capability-matrix a {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--motion-fast) var(--ease-out);
+  }
+  .capability-matrix a:hover {
+    border-bottom-color: var(--color-accent);
+  }
+
+  .composability-grid {
+    display: grid;
+    gap: var(--space-6);
+    margin-top: var(--space-5);
+  }
+  .composability-figure {
+    margin: 0;
+  }
+  .flow-diagram {
+    width: 100%;
+    height: auto;
+    color: var(--color-fg-muted);
+    overflow: visible;
+  }
+  .flow-diagram .flow-nodes rect {
+    fill: var(--color-bg-elevated);
+    stroke: var(--color-border-strong);
+    stroke-width: 1;
+  }
+  .flow-diagram .flow-nodes text {
+    fill: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-anchor: middle;
+    dominant-baseline: middle;
+  }
+  .flow-diagram .flow-result rect {
+    fill: var(--color-accent-soft);
+    stroke: var(--color-accent);
+  }
+  .flow-diagram .flow-result text {
+    fill: var(--color-accent);
+    font-weight: 600;
+  }
+  .flow-diagram .flow-edges line {
+    stroke-width: 1.5;
+  }
+  .composability-figure figcaption {
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-fg-muted);
+    text-align: center;
+  }
+  .composability-figure figcaption code {
+    font-size: 0.92em;
+    background: var(--color-code-bg);
+    padding: 0.05em 0.4em;
+    border-radius: var(--radius-sm);
+  }
+  .composability-figure figcaption a {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--motion-fast) var(--ease-out);
+  }
+  .composability-figure figcaption a:hover {
+    border-bottom-color: var(--color-accent);
+  }
+
+  .bench-figure {
+    margin: 0;
+  }
+  .bench-figure img {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+  }
+  .bench-figure figcaption {
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-fg-muted);
+  }
+  .bench-figure figcaption a {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--motion-fast) var(--ease-out);
+  }
+  .bench-figure figcaption a:hover {
+    border-bottom-color: var(--color-accent);
+  }
+
+  @media (max-width: 760px) {
+    .capability-matrix,
+    .capability-matrix thead,
+    .capability-matrix tbody,
+    .capability-matrix tr,
+    .capability-matrix th,
+    .capability-matrix td {
+      display: block;
+    }
+    .capability-matrix thead {
+      display: none;
+    }
+    .capability-matrix tbody tr {
+      border-bottom: 1px solid var(--color-border);
+      padding-block: var(--space-3);
+    }
+    .capability-matrix tbody th[scope="row"] {
+      font-size: var(--text-base);
+      border-bottom: none;
+      padding-bottom: var(--space-2);
+    }
+    .capability-matrix tbody td {
+      border-bottom: none;
+      padding-block: var(--space-1);
+    }
+    .capability-matrix .col-narrow {
+      display: inline-block;
+      width: auto;
+      text-align: left;
+      padding-right: var(--space-3);
+    }
+    .capability-matrix .col-narrow::before {
+      content: attr(aria-label) ": ";
+      color: var(--color-fg-muted);
+      font-weight: 600;
+      font-size: var(--text-xs);
+    }
   }
 </style>

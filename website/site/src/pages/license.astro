@@ -1,57 +1,195 @@
 ---
-// src/pages/license.astro
-//
-// Phase 1 minimal license page (Option C in the implementation review).
-// Names the license, states the free-vs-commercial split, links to the
-// canonical text. No clause-by-clause FAQ, no comparison table — both
-// are deferred until the actual license text has been reviewed for
-// public-facing wording.
-
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout
   title="License"
-  description="Numra is free for non-commercial academic and research use; commercial use requires a separate license."
+  description="Numra is free for non-commercial academic and research use under a custom source-available license. Commercial use, including internal evaluation by for-profit entities, requires a separate license."
   canonicalPath="/license"
 >
   <section class="license">
     <div class="container-narrow">
       <h1>License.</h1>
 
-      <p>
+      <p class="lede">
         Numra is published under the
         <strong>Numra Academic &amp; Research License (Non-Commercial)
-        v1.0</strong>. You can read the canonical text at
+        v1.0</strong>. The canonical text lives at
         <a
           href="https://github.com/moussaoutlook/numra-rs/blob/main/LICENSE"
           rel="noopener"
-        >LICENSE</a> in the repository.
+        ><code>LICENSE</code></a> in the repository — that text governs;
+        this page is a plain-English summary.
       </p>
 
+      <h2>What you can do for free</h2>
       <p>
-        In one sentence: Numra is
-        <strong>free for non-commercial academic and research use</strong>,
-        and <strong>commercial use requires a separate license</strong> —
-        see <a href="/commercial">/commercial</a>.
+        Non-commercial academic and research use is permitted at no cost.
+        That covers, concretely:
+      </p>
+      <ul>
+        <li>
+          Research papers, theses, dissertations, and conference
+          publications.
+        </li>
+        <li>
+          Teaching and coursework at universities, degree-granting
+          institutions, and non-profit research institutes.
+        </li>
+        <li>
+          Personal projects, hobby work, and self-directed learning.
+        </li>
+        <li>
+          Reproducibility runs and benchmark replication tied to
+          published research.
+        </li>
+        <li>
+          Distribution of forks and binaries to other academic or
+          research organizations for collaboration, teaching, or
+          publication support — subject to the attribution conditions
+          in §5 of the license.
+        </li>
+      </ul>
+
+      <h2>What requires a commercial license</h2>
+      <p>
+        The license defines Commercial Use broadly. The following all
+        require a separate commercial license — including the internal
+        ones:
+      </p>
+      <ul>
+        <li>
+          <strong>Any use by a for-profit entity</strong>, including
+          internal research, prototyping, evaluation, and experimentation.
+          There is no implicit evaluation carve-out.
+        </li>
+        <li>
+          Building, delivering, or operating any product, service, or
+          workflow for which you or a third party is paid.
+        </li>
+        <li>
+          Consulting or services-for-fee work where Numra is used to
+          produce deliverables.
+        </li>
+        <li>
+          Hosted services (including SaaS) that incorporate Numra or a
+          derivative.
+        </li>
+        <li>
+          Paid training, support, or hosting that involves the Software.
+        </li>
+      </ul>
+      <p>
+        For commercial licensing, contact
+        <a href="mailto:contact@spectralautomata.com?subject=%5BNumra%20commercial%5D%20"
+          ><code>contact@spectralautomata.com</code></a>
+        with subject prefix <code>[Numra commercial]</code>. See
+        <a href="/commercial">/commercial</a> for the inquiry path.
       </p>
 
-      <p>
-        The source is open and auditable on
-        <a
-          href="https://github.com/moussaoutlook/numra-rs"
-          rel="noopener"
-        >GitHub</a>. The license text governs; this page is a pointer.
-      </p>
+      <h2>FAQ</h2>
+
+      <details>
+        <summary>Is Numra OSI-approved open source?</summary>
+        <p>
+          No. Numra is <em>source-available</em>: you can read, audit,
+          fork, and modify the code, but the license restricts use to
+          non-commercial academic and research contexts. OSI-approved
+          licenses (MIT, Apache-2.0, BSD, …) place no such restriction.
+        </p>
+      </details>
+
+      <details>
+        <summary>Can I cite Numra in a paper or thesis?</summary>
+        <p>
+          Yes — and citation is encouraged. See <a href="/cite">/cite</a>
+          for BibTeX, RIS, and the canonical
+          <code>CITATION.cff</code>.
+        </p>
+      </details>
+
+      <details>
+        <summary>
+          Can my company use Numra to evaluate replacing SciPy or
+          SUNDIALS internally?
+        </summary>
+        <p>
+          No. The license explicitly classifies internal research,
+          prototyping, evaluation, and experimentation by a for-profit
+          entity as Commercial Use (§1, definition of Commercial Use).
+          A short evaluation license can be arranged — email
+          <a href="mailto:contact@spectralautomata.com?subject=%5BNumra%20evaluation%5D%20"
+            >contact@spectralautomata.com</a>
+          with subject prefix <code>[Numra evaluation]</code>.
+        </p>
+      </details>
+
+      <details>
+        <summary>
+          What does §3 academic-to-academic redistribution actually allow?
+        </summary>
+        <p>
+          §3 lets academic and research organizations distribute forks
+          and binaries to other academic and research organizations
+          (and their members) for non-commercial academic and research
+          use. The use case is collaboration, reproducibility,
+          teaching, and publication support — not commercial pipelines
+          that happen to pass through an academic mirror.
+        </p>
+        <p>
+          Quoting §3: <em>“Academic/Research Organizations may
+          Distribute forks and binaries of the Software to other
+          Academic/Research Organizations and their members for
+          Non-Commercial Academic/Research Use, … subject to Section 5.”</em>
+          §5 requires that you ship the license, keep copyright
+          notices, and mark significant modifications.
+        </p>
+      </details>
+
+      <details>
+        <summary>What governing law applies?</summary>
+        <p>
+          §10: the laws of the United Arab Emirates (UAE), excluding
+          conflict-of-laws rules.
+        </p>
+      </details>
+
+      <details>
+        <summary>Will the license ever change?</summary>
+        <p>
+          The license has no automatic conversion clause — it does not
+          flip to a permissive license after a fixed time. Future
+          releases of Numra may be published under different terms,
+          but each released version remains under the license shipped
+          with it.
+        </p>
+      </details>
+
+      <details>
+        <summary>Can I fork Numra?</summary>
+        <p>
+          Yes, subject to the license terms. You may use, modify, and
+          distribute forks for non-commercial academic and research
+          use; you must keep a copy of the license, retain copyright
+          notices, and mark significant modifications (§5). Commercial
+          forks require a separate license.
+        </p>
+      </details>
+
+      <details>
+        <summary>What about logos and branding?</summary>
+        <p>
+          §6: the license grants no rights to Numra's trademarks,
+          logos, or branding, except for truthful attribution. Don't
+          ship a fork that looks like an official Numra release.
+        </p>
+      </details>
 
       <p class="callout">
-        A long-form FAQ covering the most common adoption scenarios is
-        in preparation. Until it ships, please email
+        If your situation isn't covered above, email
         <a href="mailto:contact@spectralautomata.com?subject=%5BNumra%20license%20question%5D%20"
-          >contact@spectralautomata.com</a>
-        with the subject prefix
-        <code>[Numra license question]</code> if your situation is
-        unclear.
+          ><code>contact@spectralautomata.com</code></a>
+        with subject prefix <code>[Numra license question]</code>.
       </p>
     </div>
   </section>
@@ -60,6 +198,57 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 <style>
   .license { padding: var(--space-8) 0; }
   h1 { margin-bottom: var(--space-5); }
+  h2 {
+    margin-top: var(--space-7);
+    margin-bottom: var(--space-3);
+  }
+  .lede {
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  ul {
+    max-width: var(--measure);
+  }
+  ul li {
+    margin-block: var(--space-2);
+  }
+  details {
+    border-top: 1px solid var(--color-border);
+    padding-block: var(--space-3);
+    max-width: var(--measure);
+  }
+  details:last-of-type {
+    border-bottom: 1px solid var(--color-border);
+  }
+  details summary {
+    cursor: pointer;
+    font-weight: 600;
+    list-style: none;
+    padding-right: var(--space-4);
+    position: relative;
+  }
+  details summary::-webkit-details-marker {
+    display: none;
+  }
+  details summary::after {
+    content: "+";
+    position: absolute;
+    right: 0;
+    top: 0;
+    color: var(--color-fg-muted);
+    font-weight: 400;
+    transition: transform var(--motion-fast) var(--ease-out);
+  }
+  details[open] summary::after {
+    content: "−";
+  }
+  details > p {
+    margin-top: var(--space-3);
+    color: var(--color-fg-muted);
+  }
   .callout {
     margin-top: var(--space-6);
     padding: var(--space-4) var(--space-5);
@@ -68,5 +257,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     border-radius: 0 var(--radius-md) var(--radius-md) 0;
     color: var(--color-fg-muted);
     max-width: var(--measure);
+  }
+  code {
+    font-size: 0.92em;
+    background: var(--color-code-bg);
+    padding: 0.05em 0.4em;
+    border-radius: var(--radius-sm);
   }
 </style>

@@ -1,16 +1,10 @@
 ---
-// src/pages/roadmap.astro
-//
-// Phase 1 placeholder. Per SPEC §19.2, the public roadmap (quarterly
-// granularity) is a Phase 2 deliverable. This page exists so the
-// header/footer link does not 404; full content lands later.
-
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout
   title="Roadmap"
-  description="Numra's public roadmap, at quarterly granularity. Detailed roadmap content lands in Phase 2."
+  description="Where Numra is headed: open issues, planned milestones, and stable commitments you can rely on today."
   canonicalPath="/roadmap"
 >
   <section class="roadmap">
@@ -18,8 +12,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <h1>Roadmap.</h1>
 
       <p class="lede">
-        A public quarterly-granularity roadmap is a Phase 2 deliverable.
-        Until it lands, the most accurate signal of upcoming work is
+        Numra is pre-1.0. The most accurate signal of upcoming work is
         the
         <a
           href="https://github.com/moussaoutlook/numra-rs/issues"
@@ -29,24 +22,48 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <a
           href="https://github.com/moussaoutlook/numra-rs/blob/main/CHANGELOG.md"
           rel="noopener"
-        >CHANGELOG</a>.
+        >CHANGELOG</a>. A long-form quarterly roadmap will land here
+        once the project's public release cadence settles.
       </p>
 
-      <h2>What you can rely on today.</h2>
+      <h2>What you can rely on today</h2>
       <ul>
         <li>
-          The <a href="/stability">stability</a> commitments — MSRV,
-          semver, deprecation windows.
+          <strong>Stability commitments.</strong> See
+          <a href="/stability">/stability</a> for MSRV, semver, and
+          deprecation windows.
         </li>
         <li>
-          Solver behavior in any released version: covered by the
-          numerical-correctness suite documented in the book's
-          <em>Numerical Correctness</em> chapter.
+          <strong>Solver behavior in any released version.</strong>
+          Covered by the regression suite documented in
+          <a
+            href="https://github.com/moussaoutlook/numra-rs/blob/main/docs/audit/correctness-test-map.md"
+            rel="noopener"
+          >docs/audit/correctness-test-map.md</a>.
         </li>
         <li>
-          The license: free for non-commercial academic and research
-          use; commercial use requires a separate license. See
+          <strong>License terms.</strong> Free for non-commercial
+          academic and research use; commercial use requires a
+          separate license. See
           <a href="/license">/license</a>.
+        </li>
+      </ul>
+
+      <h2>How to influence the direction</h2>
+      <ul>
+        <li>
+          <a
+            href="https://github.com/moussaoutlook/numra-rs/issues/new/choose"
+            rel="noopener"
+          >Open an issue</a> with a use case, a missing solver, or a
+          bug.
+        </li>
+        <li>
+          Email
+          <a href="mailto:contact@spectralautomata.com?subject=%5BNumra%20feedback%5D%20"
+            ><code>contact@spectralautomata.com</code></a>
+          with subject prefix <code>[Numra feedback]</code> for
+          private input.
         </li>
       </ul>
     </div>
@@ -55,11 +72,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <style>
   .roadmap { padding: var(--space-8) 0; }
+  h1 { margin-bottom: var(--space-5); }
+  h2 {
+    margin-top: var(--space-7);
+    margin-bottom: var(--space-3);
+  }
   .lede {
     font-size: var(--text-lg);
     color: var(--color-fg-muted);
     margin-bottom: var(--space-6);
     max-width: var(--measure);
   }
-  h2 { margin-top: var(--space-7); }
+  ul { max-width: var(--measure); }
+  ul li { margin-block: var(--space-2); }
+  code {
+    font-size: 0.92em;
+    background: var(--color-code-bg);
+    padding: 0.05em 0.4em;
+    border-radius: var(--radius-sm);
+  }
 </style>

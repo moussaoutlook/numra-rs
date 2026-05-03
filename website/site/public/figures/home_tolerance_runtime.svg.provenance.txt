@@ -1,0 +1,21 @@
+Numra figure provenance — rendered 2026-05-03T14:08:14Z
+
+Problem        : Lorenz system (sigma=10, rho=28, beta=8/3), y0=[1,1,1], t in [0, 20]
+Solver         : DoPri5 (5(4) explicit RK with PI step controller)
+Tolerance      : rtol from 1e-3 to 1e-9, atol = rtol * 1e-3
+Repro script   : numra-bench/benches/solvers.rs::bench_tolerance_scaling
+
+Numra commit   : 1860552
+rustc version  : 1.92.0
+
+Hardware (CPU) : Apple M4 Max
+Hardware (RAM) : 128 GB
+OS             : Darwin 24.6.0 (arm64)
+
+Python         : 3.14.3
+matplotlib     : 3.10.9
+
+Extra:
+  n_points      : 7
+  samples_per_point: 100 (Criterion default)
+  warmup        : 3.0 s per point

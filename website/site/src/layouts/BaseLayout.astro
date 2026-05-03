@@ -75,8 +75,8 @@ const fullTitle = title.endsWith('Numra') ? title : `${title} · Numra`;
     <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0E1116" media="(prefers-color-scheme: dark)" />
 
-    {/* Favicon — apple-touch-icon is omitted in Phase 1 (no rasterised
-        PNG yet); modern iOS Safari falls back to the SVG favicon. */}
+    {/* Favicon. iOS Safari falls back to the SVG favicon when no
+        rasterised apple-touch-icon is provided. */}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
     {/* Sitemap */}
