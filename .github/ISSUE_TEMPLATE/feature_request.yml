@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest a new method, solver, API, or capability for Numra.
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What problem are you trying to solve? Why is the current API insufficient?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API or behavior
+      description: |
+        Sketch the API surface you'd like, even informally. Code snippets are great.
+      render: rust
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other libraries, workarounds, or approaches you've already tried.
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Papers, textbooks, reference implementations, or related issues.

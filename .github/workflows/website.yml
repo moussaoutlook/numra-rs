@@ -49,6 +49,7 @@ jobs:
   site:
     name: Build & deploy marketing site
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -100,6 +101,7 @@ jobs:
   book:
     name: Build & deploy book
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -152,6 +154,7 @@ jobs:
     needs: [site, book]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -197,6 +200,7 @@ jobs:
     needs: [site, book]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4

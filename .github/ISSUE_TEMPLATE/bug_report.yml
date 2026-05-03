@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a problem with Numra (incorrect result, panic, build failure, doc issue, etc.)
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in as much of the
+        following as you can — minimal reproductions are by far the most useful.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One- or two-sentence description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: |
+        Smallest Rust program (or `cargo test` invocation) that triggers the issue.
+        Prefer something runnable from `cargo new` against the published workspace.
+      render: rust
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs. actual behavior
+    validations:
+      required: true
+  - type: input
+    id: numra-version
+    attributes:
+      label: Numra version / commit
+      description: Output of `cargo pkgid -p numra` or the commit SHA you built from.
+    validations:
+      required: true
+  - type: input
+    id: rustc
+    attributes:
+      label: rustc version
+      description: Output of `rustc --version`.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: e.g. `macOS 14.5 aarch64`, `Ubuntu 22.04 x86_64`, `Windows 11 x86_64`.
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Backtraces, logs, screenshots, links to related issues — anything that helps.

@@ -12,6 +12,7 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -54,13 +55,16 @@ jobs:
         run: test -z "$(git ls-files 'numra-book/book')"
 
       - name: Install cargo-deny
-        run: cargo install cargo-deny --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
 
       - name: cargo deny
         run: cargo deny check
 
   msrv:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 

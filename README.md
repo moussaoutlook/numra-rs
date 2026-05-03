@@ -10,7 +10,7 @@
 
 Numra is a **Cargo workspace** with a unified `[numra](numra)` facade: one dependency surface, shared `Scalar` / `Vector` abstractions, and **native Rust** implementations of the solvers and methods in-tree (contrasted with stacks that lean on FFI to classic C/Fortran libraries for the same breadth). Dense linear algebra builds on **[faer](https://github.com/sarah-ek/faer-rs)**.
 
-> *“Numra is the only comprehensive native-Rust source-available numerical stack for differential equations and related methods we are aware of”* — to the best of our knowledge after surveying Rust projects; *“comprehensive”* here means the breadth documented in this repository’s [public API inventory](docs/audit/public-api-method-inventory.md) and the [mdBook](numra-book).
+> *“Numra is the only comprehensive native-Rust source-available numerical stack for differential equations and related methods we are aware of”* — to the best of our knowledge after surveying Rust projects; *“comprehensive”* here means the breadth documented in this repository’s [public API inventory](docs/audit/public-api-method-inventory.md) and the [user book](https://book.numra-rs.org/).
 
 ---
 
@@ -33,7 +33,7 @@ End-to-end workflows are **enforced by integration tests**, including:
 
 Cross-formalism checks (ODE / FDE / IDE / DDE / PDE / SPDE building blocks) live in `[composition_tests.rs](numra/tests/composition_tests.rs)`. Uncertainty, sensitivity, and ODE solves (including automatic stiff/nonstiff selection) are composed in `[integration_tests.rs](numra/tests/integration_tests.rs)` (`test_full_composition`, `test_week4_full_composition`).
 
-For narrative patterns (ODE + optimization, AD, uncertainty, …), see the book chapter **[Composing solvers](numra-book/src/ch12-advanced-topics/composing-solvers.md)**.
+For narrative patterns (ODE + optimization, AD, uncertainty, …), see the book chapter **[Composing solvers](https://book.numra-rs.org/ch12-advanced-topics/composing-solvers/)**.
 
 ```bash
 cargo test -p numra --test interop_workflows
@@ -112,7 +112,7 @@ User docs (book): `https://book.numra-rs.org/`
 
 | Resource            | How                                                                                                                     |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **mdBook**          | Online: `https://book.numra-rs.org/` · Local: `(cd numra-book && mdbook build)` · Sources: `[numra-book/](numra-book/)` |
+| **User book**       | Online (Astro/Starlight): `https://book.numra-rs.org/` · Sources: `[website/book/](website/book/)` · Local mdBook (secondary): `(cd numra-book && mdbook build)` |
 | **Rust API**        | `cargo doc --workspace --no-deps --open`                                                                                |
 | **Changelog**       | `[CHANGELOG.md](CHANGELOG.md)`                                                                                          |
 | **Release / audit** | `[docs/audit/](docs/audit/)` — inventory, coverage matrices, checklists                                                 |

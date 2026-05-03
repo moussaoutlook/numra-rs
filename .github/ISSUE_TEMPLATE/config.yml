@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Commercial license / for-profit use
+    url: mailto:contact@spectralautomata.com
+    about: Numra's non-commercial license requires a separate agreement for commercial use.
+  - name: Documentation
+    url: https://book.numra-rs.org/
+    about: User guide, tutorials, and method references.

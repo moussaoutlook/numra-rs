@@ -20,3 +20,4 @@ Thumbs.db
 *.swo
 .idea/
 .vscode/
+.claude/
