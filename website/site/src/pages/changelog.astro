@@ -1,10 +1,29 @@
 ---
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { createMarkdownProcessor } from '@astrojs/markdown-remark';
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+// Repo-root CHANGELOG.md is the source of truth; render it at build time
+// rather than mirroring a copy under src/. `process.cwd()` is the
+// `website/site` working directory both locally (`pnpm build`) and in CI
+// (the workflow does `working-directory: website/site`).
+const changelogPath = resolve(process.cwd(), '../../CHANGELOG.md');
+const markdown = readFileSync(changelogPath, 'utf-8');
+
+// Strip the top-level H1 ("# Changelog") and any preamble before the first
+// release section — the page already has its own <h1>, and the explanatory
+// paragraph is replaced with the lede below.
+const firstReleaseAt = markdown.search(/^## /m);
+const body = firstReleaseAt >= 0 ? markdown.slice(firstReleaseAt) : markdown;
+
+const processor = await createMarkdownProcessor();
+const { code: renderedHtml } = await processor.render(body);
 ---
 
 <BaseLayout
   title="Changelog"
-  description="Numra's release notes. The canonical changelog lives at CHANGELOG.md in the repository."
+  description="Numra's release notes, rendered from CHANGELOG.md in the repository at build time."
   canonicalPath="/changelog"
 >
   <section class="changelog">
@@ -12,38 +31,21 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <h1>Changelog.</h1>
 
       <p class="lede">
-        Numra's release notes live in
+        Auto-rendered from
         <a
           href="https://github.com/moussaoutlook/numra-rs/blob/main/CHANGELOG.md"
           rel="noopener"
         ><code>CHANGELOG.md</code></a>
-        in the repository — that file is canonical.
+        on each deploy. Tagged releases also live on
+        <a
+          href="https://github.com/moussaoutlook/numra-rs/releases"
+          rel="noopener"
+        >GitHub releases</a>; per-version Rust API docs land on
+        <a href="https://docs.rs/numra" rel="noopener">docs.rs</a> after
+        each <code>cargo publish</code>.
       </p>
 
-      <h2>Where to look</h2>
-      <ul>
-        <li>
-          <a
-            href="https://github.com/moussaoutlook/numra-rs/blob/main/CHANGELOG.md"
-            rel="noopener"
-          >CHANGELOG.md</a> — every release with notes, in
-          Keep-a-Changelog format.
-        </li>
-        <li>
-          <a
-            href="https://github.com/moussaoutlook/numra-rs/releases"
-            rel="noopener"
-          >GitHub releases</a> — tagged releases with attached
-          tarballs and Zenodo DOIs.
-        </li>
-        <li>
-          <a
-            href="https://docs.rs/numra"
-            rel="noopener"
-          >docs.rs</a> — per-version Rust API documentation,
-          hosted automatically on every <code>cargo publish</code>.
-        </li>
-      </ul>
+      <article class="changelog-body" set:html={renderedHtml} />
     </div>
   </section>
 </BaseLayout>
@@ -51,26 +53,56 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 <style>
   .changelog { padding: var(--space-8) 0; }
   h1 { margin-bottom: var(--space-5); }
-  h2 {
-    margin-top: var(--space-7);
-    margin-bottom: var(--space-3);
-  }
   .lede {
     font-size: var(--text-lg);
     color: var(--color-fg-muted);
     margin-bottom: var(--space-6);
     max-width: var(--measure);
   }
-  ul {
-    max-width: var(--measure);
-  }
-  ul li {
-    margin-block: var(--space-2);
-  }
   code {
     font-size: 0.92em;
     background: var(--color-code-bg);
     padding: 0.05em 0.4em;
     border-radius: var(--radius-sm);
+  }
+
+  .changelog-body { max-width: var(--measure); }
+  .changelog-body :global(h2) {
+    margin-top: var(--space-7);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+    font-size: var(--text-xl);
+  }
+  .changelog-body :global(h3) {
+    margin-top: var(--space-5);
+    margin-bottom: var(--space-3);
+    font-size: var(--text-base);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-fg-muted);
+  }
+  .changelog-body :global(ul) {
+    padding-left: var(--space-5);
+  }
+  .changelog-body :global(li) {
+    margin-block: var(--space-2);
+  }
+  .changelog-body :global(p) {
+    margin-block: var(--space-3);
+  }
+  .changelog-body :global(a) {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--motion-fast) var(--ease-out);
+  }
+  .changelog-body :global(a:hover) {
+    border-bottom-color: var(--color-accent);
+  }
+  .changelog-body :global(code) {
+    background: var(--color-code-bg);
+    padding: 0.05em 0.4em;
+    border-radius: var(--radius-sm);
+    font-size: 0.92em;
   }
 </style>

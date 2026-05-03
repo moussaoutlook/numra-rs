@@ -79,8 +79,14 @@ const fullTitle = title.endsWith('Numra') ? title : `${title} · Numra`;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
-    {/* Sitemap */}
+    {/* Sitemap + RSS autodiscovery */}
     <link rel="sitemap" href="/sitemap-index.xml" />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="Numra changelog"
+      href="/changelog.xml"
+    />
 
     {/* JSON-LD */}
     {jsonLd && (
