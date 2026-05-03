@@ -24,7 +24,13 @@ import { starlightKatex } from 'starlight-katex';
  */
 export default defineConfig({
   site: 'https://book.numra-rs.org',
-  trailingSlash: 'never',
+  // Starlight builds with directory output (`/foo/index.html`), so
+  // requests to `/foo` get a 308 to `/foo/` from Cloudflare Pages.
+  // Emitting links with trailing slashes avoids that redirect hop on
+  // every internal navigation. The marketing site uses `'never'`
+  // because its content is built with `format: 'file'` (single-file
+  // pages) — that mismatch is not relevant here.
+  trailingSlash: 'always',
 
   integrations: [
     starlight({

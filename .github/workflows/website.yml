@@ -86,7 +86,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy website/site/dist --project-name=numra-site --branch=${{ github.head_ref || github.ref_name }}
+          command: pages deploy website/site/dist --project-name=numra-site-2 --branch=${{ github.head_ref || github.ref_name }}
 
       - name: Upload build artifact
         if: github.event_name == 'pull_request'
@@ -136,7 +136,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy website/book/dist --project-name=numra-book --branch=${{ github.head_ref || github.ref_name }}
+          command: pages deploy website/book/dist --project-name=numra-book-2 --branch=${{ github.head_ref || github.ref_name }}
 
       - name: Upload build artifact
         if: github.event_name == 'pull_request'
