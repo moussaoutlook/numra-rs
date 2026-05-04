@@ -12,9 +12,14 @@ authors.workspace = true
 name = "solvers"
 harness = false
 
+[[bench]]
+name = "pde_mol"
+harness = false
+
 [dependencies]
 numra-ode = { path = "../numra-ode" }
 numra-core = { path = "../numra-core" }
+numra-pde = { path = "../numra-pde" }
 
 [dev-dependencies]
 criterion = { workspace = true }

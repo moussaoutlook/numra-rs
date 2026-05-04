@@ -1,0 +1,13 @@
+{
+  "group": "dopri5_lorenz_t100",
+  "samples": [
+    {
+      "bench": "dopri5_lorenz_t100",
+      "ci_high_ns": 832167.8257207626,
+      "ci_low_ns": 825607.8713663751,
+      "mean_ns": 828893.7774450418,
+      "n_samples": 0,
+      "stddev_ns": 16636.90051102373
+    }
+  ]
+}

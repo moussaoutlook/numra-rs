@@ -788,6 +788,7 @@ dependencies = [
  "criterion",
  "numra-core",
  "numra-ode",
+ "numra-pde",
 ]
 
 [[package]]

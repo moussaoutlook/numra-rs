@@ -1,0 +1,19 @@
+Numra figure provenance — rendered 2026-05-04T10:28:47Z
+
+Problem        : Lorenz system, y0=[1,1,1], t in [0, 10]
+Solver         : DoPri5 with and without dense output (5th-order interpolant)
+Tolerance      : rtol = 1e-6, atol = 1e-9
+Repro script   : numra-bench/benches/solvers.rs::bench_dense_output
+
+Numra commit   : 04cb123
+rustc version  : 1.92.0
+
+Hardware (CPU) : Apple M4 Max
+Hardware (RAM) : 128 GB
+OS             : Darwin 24.6.0 (arm64)
+
+Python         : 3.14.3
+matplotlib     : 3.10.9
+
+Extra:
+  measurement   : 20.0 s per variant

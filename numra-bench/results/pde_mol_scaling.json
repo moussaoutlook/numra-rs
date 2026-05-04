@@ -1,0 +1,41 @@
+{
+  "group": "pde_mol_scaling",
+  "samples": [
+    {
+      "bench": "dopri5_heat_1d",
+      "ci_high_ns": 2513.9447594949306,
+      "ci_low_ns": 2503.932813087826,
+      "mean_ns": 2508.6244389069093,
+      "n_samples": 0,
+      "param": "19",
+      "stddev_ns": 11.942498139121698
+    },
+    {
+      "bench": "dopri5_heat_1d",
+      "ci_high_ns": 540076.6928674119,
+      "ci_low_ns": 533644.6555980608,
+      "mean_ns": 536024.0030765194,
+      "n_samples": 0,
+      "param": "199",
+      "stddev_ns": 8510.306376930403
+    },
+    {
+      "bench": "dopri5_heat_1d",
+      "ci_high_ns": 5050.854610205037,
+      "ci_low_ns": 5035.251249060812,
+      "mean_ns": 5041.55386775393,
+      "n_samples": 0,
+      "param": "49",
+      "stddev_ns": 18.81129730783295
+    },
+    {
+      "bench": "dopri5_heat_1d",
+      "ci_high_ns": 51541.57235097082,
+      "ci_low_ns": 51173.703900554945,
+      "mean_ns": 51323.80089488363,
+      "n_samples": 0,
+      "param": "99",
+      "stddev_ns": 446.8924806631649
+    }
+  ]
+}

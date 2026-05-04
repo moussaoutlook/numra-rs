@@ -5,6 +5,14 @@
 //! Modified: 2 May 2026
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use numra_ode::{Bdf, DoPri5, Esdirk54, OdeProblem, Radau5, Solver, SolverOptions, Tsit5, Vern6};
+use std::time::Duration;
+
+/// Publication-grade measurement window. Per SPEC §5.2, every shipped
+/// chart's underlying bench needs a long enough sampling window that
+/// the reported confidence intervals are not warm-up noise. 20s gives
+/// Criterion roughly 100+ inner iterations on the slowest groups.
+const MEASUREMENT_TIME: Duration = Duration::from_secs(20);
+const WARM_UP_TIME: Duration = Duration::from_secs(3);
 
 // ---------------------------------------------------------------------------
 // Right-hand side functions
@@ -47,14 +55,22 @@ fn bench_dopri5_lorenz(c: &mut Criterion) {
     let problem = OdeProblem::new(lorenz_rhs, 0.0, 100.0, y0.clone());
     let options = SolverOptions::default().rtol(1e-6).atol(1e-9);
 
-    c.bench_function("dopri5_lorenz_t100", |b| {
+    let mut group = c.benchmark_group("dopri5_lorenz_t100");
+    group
+        .measurement_time(MEASUREMENT_TIME)
+        .warm_up_time(WARM_UP_TIME);
+    group.bench_function("dopri5_lorenz_t100", |b| {
         b.iter(|| DoPri5::solve(black_box(&problem), 0.0, 100.0, black_box(&y0), &options))
     });
+    group.finish();
 }
 
 /// Compare DoPri5 vs Tsit5 vs Vern6 on non-stiff exponential decay.
 fn bench_explicit_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("explicit_nonstiff");
+    group
+        .measurement_time(MEASUREMENT_TIME)
+        .warm_up_time(WARM_UP_TIME);
 
     let y0 = vec![1.0];
     let problem = OdeProblem::new(exponential_decay, 0.0, 10.0, y0.clone());
@@ -79,6 +95,9 @@ fn bench_explicit_comparison(c: &mut Criterion) {
 /// increasing stiffness parameter mu.
 fn bench_stiff_solvers(c: &mut Criterion) {
     let mut group = c.benchmark_group("van_der_pol_stiff");
+    group
+        .measurement_time(MEASUREMENT_TIME)
+        .warm_up_time(WARM_UP_TIME);
 
     for mu in [10.0, 100.0, 1000.0] {
         let mu_val = mu;
@@ -111,12 +130,22 @@ fn bench_stiff_solvers(c: &mut Criterion) {
     group.finish();
 }
 
-/// Benchmark dimension scaling: coupled linear system at n = 2, 10, 50, 200.
+/// Benchmark dimension scaling on the coupled linear ODE.
+///
+/// DoPri5 (explicit) is run across n ∈ {2, 10, 50, 200} — its per-step
+/// cost is O(n) so the n=200 case still completes inside Criterion's
+/// budget. Radau5 (implicit) factors a dense Jacobian at every Newton
+/// iterate (O(n³)); n=200 is impractical at publication-grade sampling
+/// and is omitted, keeping the implicit-vs-explicit slope comparison
+/// honest within the n ∈ {2, 10, 50} range.
 fn bench_dimension_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("dimension_scaling");
-    group.sample_size(20); // Fewer samples for large systems
+    group
+        .sample_size(20) // Fewer samples for large systems
+        .measurement_time(MEASUREMENT_TIME)
+        .warm_up_time(WARM_UP_TIME);
 
-    for n in [2, 10, 50, 200] {
+    for n in [2_usize, 10, 50, 200] {
         let rhs = coupled_linear(n, 2.0, 0.5);
         let y0: Vec<f64> = (0..n).map(|i| if i == 0 { 1.0 } else { 0.0 }).collect();
         let problem = OdeProblem::new(rhs, 0.0, 5.0, y0.clone());
@@ -126,9 +155,14 @@ fn bench_dimension_scaling(c: &mut Criterion) {
             b.iter(|| DoPri5::solve(black_box(&problem), 0.0, 5.0, &y0, &options))
         });
 
-        group.bench_with_input(BenchmarkId::new("radau5", n), &n, |b, _| {
-            b.iter(|| Radau5::solve(black_box(&problem), 0.0, 5.0, &y0, &options))
-        });
+        // Radau5 is omitted at n=200: with a dense Jacobian factorisation
+        // the cost-per-step blows up, and a single 20s Criterion sample
+        // turns into many minutes of wall-clock for a single point.
+        if n < 200 {
+            group.bench_with_input(BenchmarkId::new("radau5", n), &n, |b, _| {
+                b.iter(|| Radau5::solve(black_box(&problem), 0.0, 5.0, &y0, &options))
+            });
+        }
     }
 
     group.finish();
@@ -137,6 +171,9 @@ fn bench_dimension_scaling(c: &mut Criterion) {
 /// Benchmark dense output overhead.
 fn bench_dense_output(c: &mut Criterion) {
     let mut group = c.benchmark_group("dense_output");
+    group
+        .measurement_time(MEASUREMENT_TIME)
+        .warm_up_time(WARM_UP_TIME);
 
     let y0 = vec![1.0, 1.0, 1.0];
     let problem = OdeProblem::new(lorenz_rhs, 0.0, 10.0, y0.clone());
@@ -158,6 +195,9 @@ fn bench_dense_output(c: &mut Criterion) {
 /// Benchmark tolerance scaling: same problem at different accuracies.
 fn bench_tolerance_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("tolerance_scaling");
+    group
+        .measurement_time(MEASUREMENT_TIME)
+        .warm_up_time(WARM_UP_TIME);
 
     let y0 = vec![1.0, 1.0, 1.0];
     let problem = OdeProblem::new(lorenz_rhs, 0.0, 20.0, y0.clone());
@@ -171,6 +211,18 @@ fn bench_tolerance_scaling(c: &mut Criterion) {
             BenchmarkId::new("dopri5", format!("1e-{}", rtol_exp)),
             &rtol_exp,
             |b, _| b.iter(|| DoPri5::solve(black_box(&problem), 0.0, 20.0, &y0, &options)),
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("tsit5", format!("1e-{}", rtol_exp)),
+            &rtol_exp,
+            |b, _| b.iter(|| Tsit5::solve(black_box(&problem), 0.0, 20.0, &y0, &options)),
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("vern6", format!("1e-{}", rtol_exp)),
+            &rtol_exp,
+            |b, _| b.iter(|| Vern6::solve(black_box(&problem), 0.0, 20.0, &y0, &options)),
         );
     }
 

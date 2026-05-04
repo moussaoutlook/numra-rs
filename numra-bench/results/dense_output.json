@@ -1,0 +1,21 @@
+{
+  "group": "dense_output",
+  "samples": [
+    {
+      "bench": "dopri5_dense",
+      "ci_high_ns": 79547.47658807087,
+      "ci_low_ns": 79279.26274003729,
+      "mean_ns": 79401.44622805626,
+      "n_samples": 0,
+      "stddev_ns": 685.021999779703
+    },
+    {
+      "bench": "dopri5_no_dense",
+      "ci_high_ns": 61532.346531439034,
+      "ci_low_ns": 61191.48803373352,
+      "mean_ns": 61319.09438482209,
+      "n_samples": 0,
+      "stddev_ns": 958.4607733872681
+    }
+  ]
+}

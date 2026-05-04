@@ -1,0 +1,21 @@
+Numra figure provenance — rendered 2026-05-04T10:27:15Z
+
+Problem        : Coupled linear ODE: dy_i/dt = -alpha y_i + beta (y_{i-1} + y_{i+1}), alpha=2, beta=0.5, t in [0, 5]
+Solver         : DoPri5 (explicit) and Radau5 (implicit)
+Tolerance      : rtol = 1e-6, atol = 1e-9
+Repro script   : numra-bench/benches/solvers.rs::bench_dimension_scaling
+
+Numra commit   : 04cb123
+rustc version  : 1.92.0
+
+Hardware (CPU) : Apple M4 Max
+Hardware (RAM) : 128 GB
+OS             : Darwin 24.6.0 (arm64)
+
+Python         : 3.14.3
+matplotlib     : 3.10.9
+
+Extra:
+  measurement   : 20.0 s per (solver, n)
+  n_values      : 2, 10, 50, 200
+  samples       : 20 (sample_size override)

@@ -208,6 +208,16 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Performance',
+          items: [
+            { label: 'Overview & Methodology', slug: 'ch13-performance' },
+            { label: 'Tolerance vs Runtime', slug: 'ch13-performance/tolerance-runtime' },
+            { label: 'Stiffness Handling', slug: 'ch13-performance/stiffness-handling' },
+            { label: 'Dimension Scaling', slug: 'ch13-performance/dimension-scaling' },
+            { label: 'Dense-Output Overhead', slug: 'ch13-performance/dense-output-overhead' },
+          ],
+        },
+        {
           label: 'Appendix',
           items: [
             { label: 'Solver Reference Table', slug: 'appendix/solver-reference' },
