@@ -75,11 +75,17 @@ const navItems = [
     display: block;
   }
   /* Show the light-mode logo by default; swap to the white-text variant
-     when the user is in dark mode. The other variant is hidden via
-     `display: none` so screen readers and search crawlers see only one. */
+     when the user is in dark mode (either explicit via the toggle or
+     inherited from the OS when no explicit preference is stored). The
+     other variant is hidden via `display: none` so screen readers and
+     search crawlers see only one. */
   .brand-logo-dark { display: none; }
   [data-theme="dark"] .brand-logo-light { display: none; }
   [data-theme="dark"] .brand-logo-dark { display: block; }
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) .brand-logo-light { display: none; }
+    html:not([data-theme="light"]) .brand-logo-dark { display: block; }
+  }
 
   .primary-nav ul {
     display: flex;

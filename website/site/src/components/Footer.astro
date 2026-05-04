@@ -155,6 +155,10 @@ const footerSections = [
   .footer-logo-dark { display: none; }
   [data-theme="dark"] .footer-logo-light { display: none; }
   [data-theme="dark"] .footer-logo-dark { display: block; }
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) .footer-logo-light { display: none; }
+    html:not([data-theme="light"]) .footer-logo-dark { display: block; }
+  }
 
   .footer-bottom {
     padding-top: var(--space-5);
