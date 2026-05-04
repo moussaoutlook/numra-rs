@@ -1,0 +1,33 @@
+---
+title: 1D Heat Equation
+summary: Linear parabolic PDE solved by method of lines with Dirichlet boundaries.
+equation_class: PDE
+stiff: true
+has_events: false
+dense_output: false
+complexity: intermediate
+order: 30
+source_path: numra/examples/heat_equation.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/heat_equation.rs
+book_link: https://book.numra-rs.org/ch04-beyond-odes/partial-des/
+---
+
+The 1D heat equation discretised in space (finite differences,
+`numra_pde::Grid1D`) and integrated in time by `DoPri5` via the
+`MOLSystem` adaptor. Dirichlet boundary conditions hold the two ends
+at hot and cold temperatures; the interior relaxes from a sine initial
+profile.
+
+```text
+∂T/∂t = α ∂²T/∂x²,   0 < x < L,   t > 0
+T(0, t) = T_hot,   T(L, t) = T_cold,   T(x, 0) = f(x)
+```
+
+The reference series solution is computed alongside the numerical run
+so the example prints L² error against the exact solution.
+
+Run it:
+
+```bash
+cargo run --release --example heat_equation
+```

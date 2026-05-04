@@ -15,8 +15,9 @@
 #                            then add the token here)
 #
 # Cloudflare Pages projects expected:
-#   numra-site   →  numra-rs.org
-#   numra-book   →  book.numra-rs.org
+#   numra-site-2     →  numra-rs.org
+#   numra-book-2     →  book.numra-rs.org
+#   numra-examples-2 →  examples.numra-rs.org
 #
 # This workflow lives at .github/workflows/website.yml in the repo root.
 
@@ -148,10 +149,61 @@ jobs:
           path: website/book/dist
           retention-days: 7
 
+  # -------------------------------------------------------------- examples
+  examples:
+    name: Build & deploy examples gallery
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: website/examples/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: website/examples
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        working-directory: website/examples
+        run: pnpm astro check
+
+      - name: Build
+        working-directory: website/examples
+        run: pnpm build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        id: deploy_examples
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy website/examples/dist --project-name=numra-examples-2 --branch=${{ github.head_ref || github.ref_name }}
+
+      - name: Upload build artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: examples-dist
+          path: website/examples/dist
+          retention-days: 7
+
   # ----------------------------------------------------------- lighthouse
   lighthouse:
     name: Lighthouse CI
-    needs: [site, book]
+    needs: [site, book, examples]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -197,7 +249,7 @@ jobs:
   # ----------------------------------------------------------------- a11y
   pa11y:
     name: Accessibility (pa11y-ci)
-    needs: [site, book]
+    needs: [site, book, examples]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10

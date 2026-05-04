@@ -1,0 +1,33 @@
+---
+title: Van der Pol Oscillator
+summary: Stiff ODE benchmark comparing explicit DoPri5 against implicit Radau5 across stiffness levels.
+equation_class: ODE
+stiff: true
+has_events: false
+dense_output: false
+complexity: intermediate
+order: 20
+source_path: numra/examples/van_der_pol.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/van_der_pol.rs
+book_link: https://book.numra-rs.org/ch03-stiff-systems/what-is-stiffness/
+---
+
+The Van der Pol oscillator is the canonical stiff-ODE test problem.
+For small `μ` the system is non-stiff and any explicit solver works
+fine; for large `μ` (e.g. `μ = 1000`) it develops sharp transitions
+between slow and fast dynamics, and an implicit method becomes
+necessary.
+
+```text
+x'' - μ(1 - x²)x' + x = 0
+```
+
+This example sweeps `μ ∈ {1, 10, 100}` with both `DoPri5` (explicit)
+and `Radau5` (implicit), printing step counts and wall-clock so the
+crossover is observable.
+
+Run it:
+
+```bash
+cargo run --release --example van_der_pol
+```

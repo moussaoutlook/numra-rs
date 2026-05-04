@@ -1,0 +1,152 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img
+          class="footer-logo footer-logo-light"
+          src="/numra_logo_no_BG.svg"
+          alt="Numra"
+          width="120"
+          height="40"
+        />
+        <img
+          class="footer-logo footer-logo-dark"
+          src="/numra_logo_white-text_no_BG.svg"
+          alt=""
+          aria-hidden="true"
+          width="120"
+          height="40"
+        />
+        <p class="tagline">
+          Composable numerical methods for Rust.
+        </p>
+      </div>
+
+      <div class="footer-section">
+        <h2 class="footer-heading">Documentation</h2>
+        <ul>
+          <li><a href="https://book.numra-rs.org" rel="noopener">Book</a></li>
+          <li><a href="https://numra-rs.org/api" rel="noopener">API reference</a></li>
+          <li><a href="/" >Examples gallery</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-section">
+        <h2 class="footer-heading">Project</h2>
+        <ul>
+          <li><a href="https://github.com/moussaoutlook/numra-rs" rel="noopener">GitHub</a></li>
+          <li><a href="https://numra-rs.org/changelog" rel="noopener">Changelog</a></li>
+          <li><a href="https://numra-rs.org/roadmap" rel="noopener">Roadmap</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-section">
+        <h2 class="footer-heading">Licensing</h2>
+        <ul>
+          <li><a href="https://numra-rs.org/license" rel="noopener">License (academic / research)</a></li>
+          <li><a href="https://numra-rs.org/commercial" rel="noopener">Commercial licensing</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>
+        © {year} Spectral Automata. Source available for
+        <a href="https://numra-rs.org/license" rel="noopener">non-commercial academic and research use</a>.
+      </p>
+      <p>
+        <a href="https://spectralautomata.com" rel="noopener">A Spectral Automata project</a>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+    padding: var(--space-7) 0 var(--space-5);
+    margin-top: var(--space-9);
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr repeat(3, 1fr);
+    gap: var(--space-6);
+    margin-bottom: var(--space-7);
+  }
+
+  .footer-brand .tagline {
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+    max-width: 28ch;
+    margin-top: var(--space-3);
+  }
+
+  .footer-heading {
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-3);
+    font-weight: 600;
+  }
+
+  .footer-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .footer-section li {
+    margin-bottom: var(--space-2);
+  }
+
+  .footer-section a {
+    color: var(--color-fg);
+    text-decoration: none;
+    font-size: var(--text-sm);
+  }
+
+  .footer-section a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+
+  .footer-logo { height: auto; display: block; }
+  .footer-logo-dark { display: none; }
+  [data-theme="dark"] .footer-logo-light { display: none; }
+  [data-theme="dark"] .footer-logo-dark { display: block; }
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) .footer-logo-light { display: none; }
+    html:not([data-theme="light"]) .footer-logo-dark { display: block; }
+  }
+
+  .footer-bottom {
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+  }
+
+  .footer-bottom a {
+    color: var(--color-fg-muted);
+  }
+
+  @media (max-width: 800px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .footer-brand {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

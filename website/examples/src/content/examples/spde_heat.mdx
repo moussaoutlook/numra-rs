@@ -1,0 +1,33 @@
+---
+title: SPDE Heat — Adaptive Time Stepping
+summary: Stochastic heat equation comparing fixed vs. adaptive time stepping; convergence to deterministic limit.
+equation_class: SPDE
+stiff: true
+has_events: false
+dense_output: false
+complexity: advanced
+order: 111
+source_path: numra/examples/spde_heat.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/spde_heat.rs
+book_link: https://book.numra-rs.org/ch04-beyond-odes/stochastic-pdes/
+---
+
+A more advanced cousin of `stochastic_heat`. Instead of running a
+single fixed-step integration, this example wires the stochastic heat
+equation through both fixed and adaptive time-step controllers and
+shows how an SPDE adaptive stepper handles the noise-driven stiffness
+spikes.
+
+```text
+du/dt = α ∂²u/∂x² + σ dW(x, t)
+u(0, t) = u(1, t) = 0,    u(x, 0) = sin(πx)
+```
+
+Use it as a template for your own SPDE work — the `SpdeSystem` trait
+implementation is the part most likely to transplant.
+
+Run it:
+
+```bash
+cargo run --release --example spde_heat
+```

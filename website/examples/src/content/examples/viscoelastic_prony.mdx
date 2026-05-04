@@ -1,0 +1,33 @@
+---
+title: Viscoelastic Material (Prony Series)
+summary: Integro-differential equation for stress relaxation, evaluated with O(1)-memory Prony recursion.
+equation_class: IDE
+stiff: false
+has_events: false
+dense_output: false
+complexity: advanced
+order: 90
+source_path: numra/examples/viscoelastic_prony.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/viscoelastic_prony.rs
+book_link: https://book.numra-rs.org/ch04-beyond-odes/integro-des/
+---
+
+Linear viscoelasticity expresses stress as the sum of an instantaneous
+elastic response and a fading-memory integral over the strain history.
+
+```text
+σ'(t) = E₀ ε'(t) - ∫₀ᵗ K(t-s) ε'(s) ds
+K(t) = Σᵢ Eᵢ/τᵢ exp(-t/τᵢ)
+```
+
+When the relaxation kernel `K` is a sum of exponentials (a *Prony*
+series — equivalent to a generalized Maxwell model), the convolution
+admits an exact recursion that runs in `O(1)` memory and time per
+step, instead of the `O(n²)` cost of full quadrature. This example
+demonstrates that recursion on a creep-recovery loading profile.
+
+Run it:
+
+```bash
+cargo run --release --example viscoelastic_prony
+```

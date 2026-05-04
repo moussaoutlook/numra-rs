@@ -1,0 +1,35 @@
+---
+title: Lorenz Attractor
+summary: Chaotic three-state ODE solved with DoPri5, plus uncertainty propagation across initial conditions.
+equation_class: ODE
+stiff: false
+has_events: false
+dense_output: false
+complexity: beginner
+order: 10
+source_path: numra/examples/lorenz.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/lorenz.rs
+book_link: https://book.numra-rs.org/ch02-solving-odes/your-first-ode/
+---
+
+The Lorenz system is the canonical "first chaotic ODE" — three coupled
+nonlinear equations that produce a butterfly-shaped strange attractor.
+This example integrates with the `DoPri5` adaptive Runge-Kutta solver
+and then runs the same integration through `numra::uncertainty` to show
+how a small perturbation in initial conditions diverges over time.
+
+The math:
+
+```text
+dx/dt = σ(y - x)
+dy/dt = x(ρ - z) - y
+dz/dt = xy - βz
+```
+
+with the standard parameters `σ = 10, ρ = 28, β = 8/3`.
+
+Run it:
+
+```bash
+cargo run --release --example lorenz
+```

@@ -1,0 +1,30 @@
+---
+title: Fractional Relaxation
+summary: Caputo-derivative FDE solved by L1 scheme, with the Mittag-Leffler exact solution as reference.
+equation_class: FDE
+stiff: false
+has_events: false
+dense_output: false
+complexity: advanced
+order: 80
+source_path: numra/examples/fractional_relaxation.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/fractional_relaxation.rs
+book_link: https://book.numra-rs.org/ch04-beyond-odes/fractional-des/
+---
+
+Fractional differential equations replace the integer-order derivative
+with a non-local Caputo operator `D^α` (for `α ∈ (0, 1]`). The
+relaxation problem `D^α y = -λ y, y(0) = 1` has a closed-form solution
+in terms of the Mittag-Leffler function `E_α(-λ t^α)` — when `α = 1`
+this reduces to ordinary exponential decay, and for `α < 1` the
+solution decays slower-than-exponentially with a heavy tail typical of
+viscoelastic and anomalous-diffusion systems.
+
+This example uses the L1 quadrature scheme and validates against the
+exact Mittag-Leffler reference.
+
+Run it:
+
+```bash
+cargo run --release --example fractional_relaxation
+```

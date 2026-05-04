@@ -1,0 +1,366 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const allExamples = await getCollection('examples');
+
+// Sort: complexity first (beginner < intermediate < advanced), then order field.
+const complexityRank: Record<string, number> = { beginner: 0, intermediate: 1, advanced: 2 };
+const examples = allExamples.sort((a, b) => {
+  const cd = complexityRank[a.data.complexity] - complexityRank[b.data.complexity];
+  if (cd !== 0) return cd;
+  return a.data.order - b.data.order;
+});
+
+const equationClassCounts = examples.reduce<Record<string, number>>((acc, ex) => {
+  acc[ex.data.equation_class] = (acc[ex.data.equation_class] ?? 0) + 1;
+  return acc;
+}, {});
+const equationClassList = Object.keys(equationClassCounts).sort();
+
+const facetCounts = {
+  stiff: examples.filter((e) => e.data.stiff).length,
+  has_events: examples.filter((e) => e.data.has_events).length,
+  dense_output: examples.filter((e) => e.data.dense_output).length,
+};
+
+const description =
+  'A gallery of runnable Rust examples for the Numra workspace — ODEs, SDEs, DDEs, PDEs, optimization, and more.';
+---
+
+<BaseLayout title="Numra Examples" description={description}>
+  <section class="hero container">
+    <h1>Examples</h1>
+    <p class="lede">
+      Every example is a runnable Rust program in the
+      <a href="https://github.com/moussaoutlook/numra-rs/tree/main/numra/examples" rel="noopener">
+        <code>numra/examples/</code>
+      </a>
+      directory. Filter by equation class, stiffness, or feature; click through
+      to read the source and the relevant book chapter.
+    </p>
+  </section>
+
+  <section class="gallery container">
+    <aside class="filter-panel" aria-label="Gallery filters">
+      <h2>Filter</h2>
+
+      <fieldset>
+        <legend>Equation class</legend>
+        {equationClassList.map((cls) => (
+          <label>
+            <input type="checkbox" data-filter="equation_class" value={cls} />
+            <span>{cls}</span>
+            <span class="count">{equationClassCounts[cls]}</span>
+          </label>
+        ))}
+      </fieldset>
+
+      <fieldset>
+        <legend>Features</legend>
+        <label>
+          <input type="checkbox" data-filter="stiff" value="true" />
+          <span>Stiff system</span>
+          <span class="count">{facetCounts.stiff}</span>
+        </label>
+        <label>
+          <input type="checkbox" data-filter="has_events" value="true" />
+          <span>Event detection</span>
+          <span class="count">{facetCounts.has_events}</span>
+        </label>
+        <label>
+          <input type="checkbox" data-filter="dense_output" value="true" />
+          <span>Dense output</span>
+          <span class="count">{facetCounts.dense_output}</span>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Complexity</legend>
+        {(['beginner', 'intermediate', 'advanced'] as const).map((c) => (
+          <label>
+            <input type="checkbox" data-filter="complexity" value={c} />
+            <span>{c}</span>
+            <span class="count">{examples.filter((e) => e.data.complexity === c).length}</span>
+          </label>
+        ))}
+      </fieldset>
+
+      <button type="button" id="clear-filters" class="reset-btn">Clear all</button>
+    </aside>
+
+    <div class="cards-wrap">
+      <p class="result-count" aria-live="polite">
+        Showing <span id="visible-count">{examples.length}</span> of {examples.length} examples.
+      </p>
+
+      <ul class="cards" id="card-list">
+        {examples.map((ex) => (
+          <li
+            class="card"
+            data-equation-class={ex.data.equation_class}
+            data-stiff={String(ex.data.stiff)}
+            data-events={String(ex.data.has_events)}
+            data-dense={String(ex.data.dense_output)}
+            data-complexity={ex.data.complexity}
+          >
+            <a class="card-link" href={`/${ex.id}`}>
+              <div class="card-header">
+                <h3>{ex.data.title}</h3>
+                <span class={`badge badge-${ex.data.equation_class.toLowerCase()}`}>
+                  {ex.data.equation_class}
+                </span>
+              </div>
+              <p class="summary">{ex.data.summary}</p>
+              <ul class="tags">
+                <li class={`tag complexity-${ex.data.complexity}`}>{ex.data.complexity}</li>
+                {ex.data.stiff && <li class="tag">stiff</li>}
+                {ex.data.has_events && <li class="tag">events</li>}
+                {ex.data.dense_output && <li class="tag">dense output</li>}
+              </ul>
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <p class="empty-state" id="empty-state" hidden>
+        No examples match the current filter combination.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  // Pure-DOM filter island — no framework. Each filter group works as
+  // OR within the group, AND across groups (standard faceted search).
+  const list = document.getElementById('card-list') as HTMLUListElement | null;
+  const empty = document.getElementById('empty-state') as HTMLParagraphElement | null;
+  const visibleCount = document.getElementById('visible-count') as HTMLSpanElement | null;
+  const clearBtn = document.getElementById('clear-filters') as HTMLButtonElement | null;
+  if (!list || !empty || !visibleCount || !clearBtn) {
+    throw new Error('Gallery DOM nodes missing — markup drift?');
+  }
+  const inputs = Array.from(
+    document.querySelectorAll<HTMLInputElement>('input[data-filter]'),
+  );
+
+  function activeValues(filter: string): Set<string> {
+    return new Set(
+      inputs.filter((i) => i.dataset.filter === filter && i.checked).map((i) => i.value),
+    );
+  }
+
+  function applyFilters() {
+    const eqClasses = activeValues('equation_class');
+    const stiff = activeValues('stiff');
+    const events = activeValues('has_events');
+    const dense = activeValues('dense_output');
+    const complexity = activeValues('complexity');
+
+    let visible = 0;
+    const cards = list!.querySelectorAll<HTMLLIElement>('li.card');
+    cards.forEach((card) => {
+      const matchesClass = eqClasses.size === 0 || eqClasses.has(card.dataset.equationClass ?? '');
+      const matchesStiff = stiff.size === 0 || stiff.has(card.dataset.stiff ?? 'false');
+      const matchesEvents = events.size === 0 || events.has(card.dataset.events ?? 'false');
+      const matchesDense = dense.size === 0 || dense.has(card.dataset.dense ?? 'false');
+      const matchesComplexity =
+        complexity.size === 0 || complexity.has(card.dataset.complexity ?? '');
+      const show =
+        matchesClass && matchesStiff && matchesEvents && matchesDense && matchesComplexity;
+      card.hidden = !show;
+      if (show) visible++;
+    });
+    visibleCount!.textContent = String(visible);
+    empty!.hidden = visible !== 0;
+  }
+
+  inputs.forEach((i) => i.addEventListener('change', applyFilters));
+  clearBtn.addEventListener('click', () => {
+    inputs.forEach((i) => (i.checked = false));
+    applyFilters();
+  });
+</script>
+
+<style>
+  .hero {
+    padding: var(--space-7) 0 var(--space-5);
+  }
+
+  .hero h1 {
+    font-size: var(--text-3xl);
+    margin: 0 0 var(--space-3);
+  }
+
+  .hero .lede {
+    color: var(--color-fg-muted);
+    max-width: 70ch;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: var(--space-7);
+    padding-bottom: var(--space-9);
+  }
+
+  .filter-panel h2 {
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-fg-muted);
+    margin: 0 0 var(--space-3);
+    font-weight: 600;
+  }
+
+  .filter-panel fieldset {
+    border: none;
+    padding: 0 0 var(--space-5);
+    margin: 0 0 var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .filter-panel fieldset:last-of-type {
+    border-bottom: none;
+  }
+
+  .filter-panel legend {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+  }
+
+  .filter-panel label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    padding: 4px 0;
+    cursor: pointer;
+  }
+
+  .filter-panel .count {
+    margin-left: auto;
+    color: var(--color-fg-muted);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-xs);
+  }
+
+  .reset-btn {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-fg);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    margin-top: var(--space-3);
+  }
+
+  .reset-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .result-count {
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+    margin: 0 0 var(--space-4);
+  }
+
+  .cards {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-4);
+  }
+
+  .card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+  }
+
+  .card-link {
+    display: block;
+    padding: var(--space-4);
+    color: inherit;
+    text-decoration: none;
+    height: 100%;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .card-header h3 {
+    margin: 0;
+    font-size: var(--text-md);
+  }
+
+  .badge {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-subtle);
+    color: var(--color-fg);
+    border: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .summary {
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    margin: 0 0 var(--space-3);
+  }
+
+  .tags {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .tag {
+    font-size: var(--text-xs);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-subtle);
+    color: var(--color-fg-muted);
+    border: 1px solid var(--color-border);
+  }
+
+  .tag.complexity-beginner { color: var(--color-fg); }
+  .tag.complexity-intermediate { color: var(--color-fg); }
+  .tag.complexity-advanced { color: var(--color-fg); }
+
+  .empty-state {
+    color: var(--color-fg-muted);
+    text-align: center;
+    padding: var(--space-7);
+  }
+
+  @media (max-width: 800px) {
+    .gallery {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,36 @@
+---
+title: Stefan Problem (Moving Boundary)
+summary: One-phase melting/solidification PDE on a fixed domain via coordinate transformation.
+equation_class: PDE
+stiff: true
+has_events: false
+dense_output: false
+complexity: advanced
+order: 100
+source_path: numra/examples/stefan_problem.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/stefan_problem.rs
+book_link: https://book.numra-rs.org/ch04-beyond-odes/partial-des/
+---
+
+The Stefan problem couples a parabolic PDE on a domain `0 < x < s(t)`
+with an ODE for the moving boundary `s(t)` itself. Numerically, it's a
+classic free-boundary problem: the domain length is part of the
+solution.
+
+```text
+∂T/∂t = α ∂²T/∂x²,  0 < x < s(t)
+T(0, t) = T_hot > T_melt
+T(s(t), t) = T_melt
+ds/dt = -κ ∂T/∂x |_{x = s(t)}     (Stefan condition)
+```
+
+The example maps `ξ = x/s(t)` to a fixed domain `[0, 1]`, transforms
+the PDE accordingly, and integrates the coupled system as method of
+lines. Useful as a template for any free-boundary problem you might
+encounter in phase-change physics or finance.
+
+Run it:
+
+```bash
+cargo run --release --example stefan_problem
+```

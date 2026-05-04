@@ -1,0 +1,31 @@
+---
+title: Mackey-Glass DDE
+summary: Classic chaotic delay differential equation solved by method of steps.
+equation_class: DDE
+stiff: false
+has_events: false
+dense_output: false
+complexity: intermediate
+order: 50
+source_path: numra/examples/mackey_glass.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/mackey_glass.rs
+book_link: https://book.numra-rs.org/ch04-beyond-odes/delay-des/
+---
+
+The Mackey-Glass equation models the regulation of red blood cells and
+becomes chaotic at the right delay. With `β = 2, γ = 1, n = 9.65,
+τ = 2` it produces a classic chaotic time series that's been used as a
+benchmark in everything from neural networks to time-series forecasting.
+
+```text
+y'(t) = β y(t-τ) / (1 + y(t-τ)^n) - γ y(t)
+```
+
+This example uses `numra::dde::MethodOfSteps` and prints the trajectory
+at fixed intervals so you can plot it.
+
+Run it:
+
+```bash
+cargo run --release --example mackey_glass
+```

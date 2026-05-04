@@ -1,0 +1,32 @@
+---
+title: Pendulum DAE
+summary: Pendulum solved both as an ODE in polar coordinates and as a DAE with a holonomic constraint.
+equation_class: DAE
+stiff: false
+has_events: false
+dense_output: false
+complexity: intermediate
+order: 60
+source_path: numra/examples/pendulum_dae.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/pendulum_dae.rs
+book_link: https://book.numra-rs.org/ch03-stiff-systems/dae-systems/
+---
+
+A simple pendulum admits two formulations: a low-dimensional ODE in
+polar coordinates, or a constrained system in Cartesian coordinates
+where the rod-length constraint `x² + y² = L²` becomes an algebraic
+equation alongside Newton's law.
+
+```text
+θ'' = -(g/L) sin(θ)              (ODE)
+M y' = f(t, y),  g(y) = 0       (DAE, with M singular)
+```
+
+This example walks both formulations and reconciles the trajectories,
+useful as a teaching tool before the bigger DAE problems in chapter 3.
+
+Run it:
+
+```bash
+cargo run --release --example pendulum_dae
+```

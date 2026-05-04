@@ -1,0 +1,29 @@
+---
+title: Geometric Brownian Motion (Monte Carlo)
+summary: SDE option-pricing example with ensemble statistics across Euler-Maruyama, Milstein, and SRA1.
+equation_class: SDE
+stiff: false
+has_events: false
+dense_output: false
+complexity: intermediate
+order: 40
+source_path: numra/examples/gbm_monte_carlo.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/gbm_monte_carlo.rs
+book_link: https://book.numra-rs.org/ch04-beyond-odes/stochastic-des/
+---
+
+The geometric Brownian motion model `dS = μS dt + σS dW` is the
+backbone of Black-Scholes pricing. This example runs a Monte Carlo
+ensemble of paths (`numra::sde::EnsembleRunner`) using three different
+SDE solvers and compares the empirical mean and variance against the
+known analytical moments.
+
+```text
+S(T) = S(0) * exp((μ - σ²/2)T + σ W(T))
+```
+
+Run it:
+
+```bash
+cargo run --release --example gbm_monte_carlo
+```

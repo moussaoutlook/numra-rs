@@ -1,0 +1,11 @@
+# Astro build output
+dist/
+.astro/
+
+# Dependencies (lockfile IS committed — CI's pnpm cache key depends on
+# website/examples/pnpm-lock.yaml resolving deterministically.)
+node_modules/
+
+# Editor
+.DS_Store
+*.log

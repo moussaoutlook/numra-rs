@@ -1,0 +1,33 @@
+---
+title: Bouncing Ball (Event Detection)
+summary: Hybrid system showing event detection at ground contact, with restitution-based velocity reset.
+equation_class: Hybrid
+stiff: false
+has_events: true
+dense_output: true
+complexity: beginner
+order: 70
+source_path: numra/examples/bouncing_ball.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/bouncing_ball.rs
+book_link: https://book.numra-rs.org/ch02-solving-odes/event-detection/
+---
+
+A ball falling under gravity, bouncing off the floor with coefficient
+of restitution `e`. The continuous dynamics are trivial; the
+interesting bit is the discrete reset at each ground contact.
+
+```text
+y'' = -g
+v_after = -e * v_before     at every event
+```
+
+The example chains integration segments — one per bounce — and uses
+the dense-output interpolant to locate ground contact precisely
+between steps. It's the canonical introduction to numra's
+event-detection API.
+
+Run it:
+
+```bash
+cargo run --release --example bouncing_ball
+```

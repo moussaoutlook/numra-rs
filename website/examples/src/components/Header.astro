@@ -1,0 +1,131 @@
+---
+// Gallery header — cross-domain nav back to the apex and book.
+const navItems = [
+  { href: 'https://numra-rs.org',                      label: 'Home',   external: true },
+  { href: 'https://book.numra-rs.org',                 label: 'Book',   external: true },
+  { href: 'https://numra-rs.org/api',                  label: 'API',    external: true },
+  { href: 'https://github.com/moussaoutlook/numra-rs', label: 'GitHub', external: true },
+];
+---
+
+<header class="site-header">
+  <div class="container">
+    <a class="brand" href="https://numra-rs.org" aria-label="Numra home">
+      <img
+        class="brand-logo brand-logo-light"
+        src="/numra_logo_no_BG.svg"
+        alt="Numra"
+        width="120"
+        height="40"
+      />
+      <img
+        class="brand-logo brand-logo-dark"
+        src="/numra_logo_white-text_no_BG.svg"
+        alt=""
+        aria-hidden="true"
+        width="120"
+        height="40"
+      />
+      <span class="examples-tag">Examples</span>
+    </a>
+
+    <nav class="primary-nav" aria-label="Primary">
+      <ul>
+        {navItems.map((item) => (
+          <li>
+            <a href={item.href} {...(item.external ? { rel: 'noopener' } : {})}>{item.label}</a>
+          </li>
+        ))}
+        <li>
+          <a class="btn-install" href="https://numra-rs.org/install">Install</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .site-header .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-block: var(--space-3);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    text-decoration: none;
+    color: var(--color-fg);
+    font-weight: 600;
+  }
+
+  .brand-logo {
+    height: auto;
+    display: block;
+  }
+  .brand-logo-dark { display: none; }
+  [data-theme="dark"] .brand-logo-light { display: none; }
+  [data-theme="dark"] .brand-logo-dark { display: block; }
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) .brand-logo-light { display: none; }
+    html:not([data-theme="light"]) .brand-logo-dark { display: block; }
+  }
+
+  .examples-tag {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-fg-muted);
+    border: 1px solid var(--color-border);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+  }
+
+  .primary-nav ul {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .primary-nav a {
+    color: var(--color-fg);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 500;
+  }
+
+  .primary-nav a:hover {
+    color: var(--color-accent);
+  }
+
+  .btn-install {
+    background: var(--color-accent);
+    color: var(--color-bg) !important;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    font-weight: 600 !important;
+  }
+
+  .btn-install:hover {
+    background: var(--color-accent-hover);
+    color: var(--color-bg) !important;
+  }
+
+  @media (max-width: 720px) {
+    .primary-nav ul { gap: var(--space-3); }
+    .examples-tag { display: none; }
+  }
+</style>

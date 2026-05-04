@@ -1,0 +1,28 @@
+---
+title: ODE Solver Zoo & Auto-Selection
+summary: Tour of every numra ODE solver, plus the auto-selection logic that picks the right one from problem hints.
+equation_class: ODE
+stiff: true
+has_events: false
+dense_output: true
+complexity: intermediate
+order: 5
+source_path: numra/examples/solver_zoo.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/solver_zoo.rs
+book_link: https://book.numra-rs.org/ch02-solving-odes/automatic-selection/
+---
+
+A breadth-first tour. Runs the same handful of test problems through
+every ODE solver in the workspace — explicit Runge-Kutta variants
+(DoPri5, Tsit5, Vern6/7/8/9), implicit methods (Radau5, BDF, ESDIRK)
+— and finally hands the same problem to `auto_solve_with_hints` to
+show the auto-selection logic picking sensibly.
+
+If you're undecided on a solver: start here, look at the table at the
+end, and pick the one whose trade-offs match your problem.
+
+Run it:
+
+```bash
+cargo run --release --example solver_zoo
+```

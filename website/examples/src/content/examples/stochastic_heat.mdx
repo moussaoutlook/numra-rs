@@ -1,0 +1,33 @@
+---
+title: Stochastic Heat Equation
+summary: Linear parabolic SPDE with additive space-time white noise; deterministic limit recovered as σ → 0.
+equation_class: SPDE
+stiff: true
+has_events: false
+dense_output: false
+complexity: advanced
+order: 110
+source_path: numra/examples/stochastic_heat.rs
+source_link: https://github.com/moussaoutlook/numra-rs/blob/main/numra/examples/stochastic_heat.rs
+book_link: https://book.numra-rs.org/ch04-beyond-odes/stochastic-pdes/
+---
+
+The stochastic heat equation adds spatially-correlated white noise to
+the standard parabolic heat equation:
+
+```text
+∂T/∂t = α ∂²T/∂x² + σ ξ(x, t)
+T(0, t) = T(L, t) = 0          (Dirichlet)
+T(x, 0) = sin(πx/L)            (initial condition)
+```
+
+The deterministic part decays as `sin(πx/L) exp(-α π² t / L²)`; the
+stochastic forcing perturbs trajectories around that mean. The example
+runs at a few different noise intensities so you can watch the
+solution relax back to the deterministic limit as `σ → 0`.
+
+Run it:
+
+```bash
+cargo run --release --example stochastic_heat
+```

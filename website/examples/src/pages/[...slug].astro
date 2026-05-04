@@ -1,0 +1,160 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const examples = await getCollection('examples');
+  return examples.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+// Resolve the source file relative to the repo root. CWD when astro
+// runs (locally and in CI) is `website/examples`, so the example
+// sources are 2 levels up under `numra/examples/`.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+const sourcePath = resolve(process.cwd(), '../..', entry.data.source_path);
+const sourceText = readFileSync(sourcePath, 'utf-8');
+
+// Trim leading doc-comment block — readers can see the same prose at
+// the top of the page already; the in-source `//!` block duplicates it.
+const sourceTrimmed = sourceText.replace(/^(\s*\/\/!.*\n)+\s*\n?/, '');
+---
+
+<BaseLayout
+  title={`${entry.data.title} · Numra Examples`}
+  description={entry.data.summary}
+  canonicalPath={`/${entry.id}`}
+>
+  <article class="example container">
+    <nav class="crumb" aria-label="Breadcrumb">
+      <a href="/">← All examples</a>
+    </nav>
+
+    <header class="example-header">
+      <span class={`badge badge-${entry.data.equation_class.toLowerCase()}`}>
+        {entry.data.equation_class}
+      </span>
+      <h1>{entry.data.title}</h1>
+      <p class="summary">{entry.data.summary}</p>
+      <ul class="tags">
+        <li class={`tag complexity-${entry.data.complexity}`}>{entry.data.complexity}</li>
+        {entry.data.stiff && <li class="tag">stiff</li>}
+        {entry.data.has_events && <li class="tag">events</li>}
+        {entry.data.dense_output && <li class="tag">dense output</li>}
+      </ul>
+    </header>
+
+    <section class="prose">
+      <Content />
+    </section>
+
+    <section class="meta">
+      <h2>Source</h2>
+      <p>
+        <a href={entry.data.source_link} rel="noopener">
+          <code>{entry.data.source_path}</code> on GitHub
+        </a>
+        ·
+        <a href={entry.data.book_link} rel="noopener">Related book chapter</a>
+      </p>
+      <pre><code class="language-rust">{sourceTrimmed}</code></pre>
+    </section>
+  </article>
+</BaseLayout>
+
+<style>
+  .example {
+    padding: var(--space-5) 0 var(--space-9);
+    max-width: 80ch;
+  }
+
+  .crumb {
+    margin-bottom: var(--space-4);
+    font-size: var(--text-sm);
+  }
+
+  .crumb a {
+    color: var(--color-fg-muted);
+    text-decoration: none;
+  }
+
+  .crumb a:hover {
+    color: var(--color-accent);
+  }
+
+  .example-header {
+    margin-bottom: var(--space-6);
+  }
+
+  .example-header h1 {
+    font-size: var(--text-3xl);
+    margin: var(--space-2) 0 var(--space-3);
+  }
+
+  .summary {
+    color: var(--color-fg-muted);
+    font-size: var(--text-md);
+    margin: 0 0 var(--space-4);
+  }
+
+  .badge {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-subtle);
+    color: var(--color-fg);
+    border: 1px solid var(--color-border);
+  }
+
+  .tags {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .tag {
+    font-size: var(--text-xs);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-subtle);
+    color: var(--color-fg-muted);
+    border: 1px solid var(--color-border);
+  }
+
+  .meta {
+    margin-top: var(--space-7);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .meta h2 {
+    font-size: var(--text-md);
+    margin: 0 0 var(--space-3);
+  }
+
+  .meta pre {
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    overflow-x: auto;
+    font-size: var(--text-sm);
+    line-height: 1.55;
+  }
+
+  .meta code {
+    font-family: var(--font-mono);
+  }
+</style>
