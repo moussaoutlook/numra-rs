@@ -348,5 +348,4 @@ When adding a public solver or numerical entry point:
 1. Export it from the crate `lib.rs`.
 2. Re-export from `numra` if user-facing.
 3. Add a row here and in `[book-coverage-matrix.md](book-coverage-matrix.md)`.
-4. Extend `[../scripts/check_book_inventory.py](../scripts/check_book_inventory.py)` denylist / checks if needed.
 

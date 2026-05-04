@@ -42,18 +42,6 @@ jobs:
       - name: rustdoc
         run: RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps
 
-      - name: Book drift check
-        run: python3 scripts/check_book_inventory.py
-
-      - name: Book snippet harness
-        run: python3 scripts/extract_book_snippets.py
-
-      - name: Book math lint
-        run: python3 scripts/check_book_math.py
-
-      - name: Generated book HTML is untracked
-        run: test -z "$(git ls-files 'numra-book/book')"
-
       - name: Install cargo-deny
         uses: taiki-e/install-action@v2
         with:

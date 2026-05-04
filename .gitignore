@@ -7,9 +7,6 @@ node_modules/
 dist/
 .astro/
 
-# mdBook generated output
-numra-book/book/
-
 # OS
 .DS_Store
 **/.DS_Store

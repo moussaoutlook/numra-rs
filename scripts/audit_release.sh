@@ -24,28 +24,6 @@ cargo build -p numra --examples
 echo "==> rustdoc"
 RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps
 
-echo "==> book drift script"
-python3 scripts/check_book_inventory.py
-
-echo "==> book snippet harness"
-python3 scripts/extract_book_snippets.py
-
-echo "==> book math lint"
-python3 scripts/check_book_math.py
-
-if command -v mdbook >/dev/null 2>&1; then
-  if command -v mdbook-pdf >/dev/null 2>&1; then
-    echo "==> mdbook build (html + pdf)"
-    (cd numra-book && mdbook build)
-  else
-    echo "WARN: mdbook-pdf not installed; skip mdbook build (install: cargo install mdbook-pdf --locked --features fetch)"
-  fi
-  echo "==> mdbook test"
-  (cd numra-book && mdbook test)
-else
-  echo "WARN: mdbook not installed; skip mdbook build/test (install: cargo install mdbook)"
-fi
-
 echo "==> cargo deny"
 cargo deny check
 

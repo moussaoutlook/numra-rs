@@ -7,8 +7,8 @@
   kind: type
   facade_path: numra::ode::DoPri5
   book_anchors:
-    - numra-book/src/ch02-solving-odes/explicit-methods.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch02-solving-odes/explicit-methods.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra-ode/tests/convergence_order_tests.rs
   examples:
@@ -21,8 +21,8 @@
   kind: type
   facade_path: numra::ode::Tsit5
   book_anchors:
-    - numra-book/src/ch02-solving-odes/explicit-methods.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch02-solving-odes/explicit-methods.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra-ode/tests/convergence_order_tests.rs
   examples:
@@ -37,8 +37,8 @@
     - numra::ode::Vern7
     - numra::ode::Vern8
   book_anchors:
-    - numra-book/src/ch02-solving-odes/explicit-methods.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch02-solving-odes/explicit-methods.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra-ode/tests/verner_coefficient_tests.rs
     - numra-ode/tests/convergence_order_tests.rs
@@ -54,9 +54,9 @@
     - numra::ode::Esdirk43
     - numra::ode::Esdirk54
   book_anchors:
-    - numra-book/src/ch02-solving-odes/implicit-methods.md
-    - numra-book/src/ch03-stiff-systems/choosing-a-stiff-solver.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch02-solving-odes/implicit-methods.md
+    - website/book/src/content/docs/ch03-stiff-systems/choosing-a-stiff-solver.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra-ode/tests/convergence_order_tests.rs
   examples:
@@ -68,9 +68,9 @@
   kind: type
   facade_path: numra::ode::Radau5
   book_anchors:
-    - numra-book/src/ch02-solving-odes/implicit-methods.md
-    - numra-book/src/ch03-stiff-systems/choosing-a-stiff-solver.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch02-solving-odes/implicit-methods.md
+    - website/book/src/content/docs/ch03-stiff-systems/choosing-a-stiff-solver.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra-ode/tests/convergence_order_tests.rs
     - numra/tests/integration_tests.rs
@@ -83,9 +83,9 @@
   kind: type
   facade_path: numra::ode::Bdf
   book_anchors:
-    - numra-book/src/ch02-solving-odes/implicit-methods.md
-    - numra-book/src/ch03-stiff-systems/choosing-a-stiff-solver.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch02-solving-odes/implicit-methods.md
+    - website/book/src/content/docs/ch03-stiff-systems/choosing-a-stiff-solver.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra-ode/tests/bdf_algorithm_tests.rs
     - numra/tests/integration_tests.rs
@@ -98,8 +98,8 @@
   kind: type
   facade_path: numra::ode::Auto
   book_anchors:
-    - numra-book/src/ch02-solving-odes/automatic-selection.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch02-solving-odes/automatic-selection.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra/tests/integration_tests.rs
   examples:
@@ -113,7 +113,7 @@
   aliases:
     - numra::ode::EventAction
   book_anchors:
-    - numra-book/src/ch02-solving-odes/event-detection.md
+    - website/book/src/content/docs/ch02-solving-odes/event-detection.md
   tests:
     - numra-ode/src/events.rs
     - numra-ode/tests/events_regression.rs
@@ -128,8 +128,8 @@
   aliases:
     - numra::ode::MassMatrix
   book_anchors:
-    - numra-book/src/ch03-stiff-systems/dae-systems.md
-    - numra-book/src/ch03-stiff-systems/index-reduction.md
+    - website/book/src/content/docs/ch03-stiff-systems/dae-systems.md
+    - website/book/src/content/docs/ch03-stiff-systems/index-reduction.md
   tests:
     - numra-ode/tests/dae_tests.rs
     - numra-ode/tests/index_reduction_regression.rs
@@ -142,8 +142,8 @@
   kind: type
   facade_path: numra::sde::EulerMaruyama
   book_anchors:
-    - numra-book/src/ch04-beyond-odes/stochastic-des.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch04-beyond-odes/stochastic-des.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra/tests/composition_tests.rs
     - numra-sde/tests/gbm_ou_bands.rs
@@ -156,8 +156,8 @@
   kind: type
   facade_path: numra::sde::Milstein
   book_anchors:
-    - numra-book/src/ch04-beyond-odes/stochastic-des.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch04-beyond-odes/stochastic-des.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra-sde/src/milstein.rs
   examples:
@@ -171,8 +171,8 @@
   aliases:
     - numra::sde::Sra2
   book_anchors:
-    - numra-book/src/ch04-beyond-odes/stochastic-des.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch04-beyond-odes/stochastic-des.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra-sde/src/sra.rs
   examples:
@@ -184,8 +184,8 @@
   kind: type
   facade_path: numra::dde::MethodOfSteps
   book_anchors:
-    - numra-book/src/ch04-beyond-odes/delay-des.md
-    - numra-book/src/appendix/solver-reference.md
+    - website/book/src/content/docs/ch04-beyond-odes/delay-des.md
+    - website/book/src/content/docs/appendix/solver-reference.md
   tests:
     - numra/tests/composition_tests.rs
   examples:
@@ -198,7 +198,7 @@
   kind: module
   facade_path: numra::fde::L1Solver
   book_anchors:
-    - numra-book/src/ch04-beyond-odes/fractional-des.md
+    - website/book/src/content/docs/ch04-beyond-odes/fractional-des.md
   tests:
     - numra/tests/composition_tests.rs
   examples:
@@ -210,7 +210,7 @@
   kind: module
   facade_path: numra::ide::VolterraProblem
   book_anchors:
-    - numra-book/src/ch04-beyond-odes/integro-des.md
+    - website/book/src/content/docs/ch04-beyond-odes/integro-des.md
   tests:
     - numra/tests/composition_tests.rs
   examples:
@@ -222,7 +222,7 @@
   kind: module
   facade_path: numra::pde::Grid1D
   book_anchors:
-    - numra-book/src/ch04-beyond-odes/partial-des.md
+    - website/book/src/content/docs/ch04-beyond-odes/partial-des.md
   tests:
     - numra/tests/composition_tests.rs
   examples:
@@ -235,7 +235,7 @@
   kind: module
   facade_path: numra::spde::SpdeSolver
   book_anchors:
-    - numra-book/src/ch04-beyond-odes/stochastic-pdes.md
+    - website/book/src/content/docs/ch04-beyond-odes/stochastic-pdes.md
   tests:
     - numra/tests/composition_tests.rs
   examples:
@@ -248,8 +248,8 @@
   kind: module
   facade_path: numra::linalg::DenseMatrix
   book_anchors:
-    - numra-book/src/ch06-linear-algebra/matrices-and-vectors.md
-    - numra-book/src/ch06-linear-algebra/factorizations.md
+    - website/book/src/content/docs/ch06-linear-algebra/matrices-and-vectors.md
+    - website/book/src/content/docs/ch06-linear-algebra/factorizations.md
   tests:
     - numra-linalg/tests/dense_solve_smoke.rs
 
@@ -259,7 +259,7 @@
   kind: module
   facade_path: numra::nonlinear
   book_anchors:
-    - numra-book/src/ch01-introduction/architecture-overview.md
+    - website/book/src/content/docs/ch01-introduction/architecture-overview.md
   tests:
     - numra/tests/integration_tests.rs
 
@@ -269,9 +269,9 @@
   kind: module
   facade_path: numra::optim
   book_anchors:
-    - numra-book/src/ch05-optimization/optimizer-comparison.md
-    - numra-book/src/ch05-optimization/unconstrained.md
-    - numra-book/src/ch05-optimization/constrained.md
+    - website/book/src/content/docs/ch05-optimization/optimizer-comparison.md
+    - website/book/src/content/docs/ch05-optimization/unconstrained.md
+    - website/book/src/content/docs/ch05-optimization/constrained.md
   tests:
     - numra-optim/tests/integration.rs
 
@@ -281,7 +281,7 @@
   kind: module
   facade_path: numra::optim::LinearProgram
   book_anchors:
-    - numra-book/src/ch05-optimization/linear-programming.md
+    - website/book/src/content/docs/ch05-optimization/linear-programming.md
   tests:
     - numra-optim/tests/integration.rs
 
@@ -291,10 +291,10 @@
   kind: module
   facade_path: numra::ocp
   book_anchors:
-    - numra-book/src/ch10-optimal-control/shooting-methods.md
-    - numra-book/src/ch10-optimal-control/collocation.md
-    - numra-book/src/ch10-optimal-control/adjoint-methods.md
-    - numra-book/src/ch10-optimal-control/parameter-estimation.md
+    - website/book/src/content/docs/ch10-optimal-control/shooting-methods.md
+    - website/book/src/content/docs/ch10-optimal-control/collocation.md
+    - website/book/src/content/docs/ch10-optimal-control/adjoint-methods.md
+    - website/book/src/content/docs/ch10-optimal-control/parameter-estimation.md
   tests:
     - numra-ocp/tests/integration.rs
 
@@ -304,7 +304,7 @@
   kind: fn
   facade_path: numra::integrate::quad
   book_anchors:
-    - numra-book/src/ch07-calculus-and-analysis/numerical-integration.md
+    - website/book/src/content/docs/ch07-calculus-and-analysis/numerical-integration.md
   tests:
     - numra-integrate/tests/quadrature_smoke.rs
 
@@ -314,7 +314,7 @@
   kind: module
   facade_path: numra::interp::interp1d
   book_anchors:
-    - numra-book/src/ch07-calculus-and-analysis/interpolation.md
+    - website/book/src/content/docs/ch07-calculus-and-analysis/interpolation.md
   tests:
     - numra-interp/tests/linear_endpoints.rs
 
@@ -324,7 +324,7 @@
   kind: module
   facade_path: numra::autodiff::grad
   book_anchors:
-    - numra-book/src/ch07-calculus-and-analysis/automatic-differentiation.md
+    - website/book/src/content/docs/ch07-calculus-and-analysis/automatic-differentiation.md
   tests:
     - numra/tests/interop_workflows.rs
 
@@ -334,7 +334,7 @@
   kind: module
   facade_path: numra::special
   book_anchors:
-    - numra-book/src/ch07-calculus-and-analysis/special-functions.md
+    - website/book/src/content/docs/ch07-calculus-and-analysis/special-functions.md
   tests:
     - numra/tests/composition_tests.rs
 
@@ -344,8 +344,8 @@
   kind: module
   facade_path: numra::fit
   book_anchors:
-    - numra-book/src/ch07-calculus-and-analysis/curve-fitting.md
-    - numra-book/src/ch07-calculus-and-analysis/automatic-differentiation.md
+    - website/book/src/content/docs/ch07-calculus-and-analysis/curve-fitting.md
+    - website/book/src/content/docs/ch07-calculus-and-analysis/automatic-differentiation.md
   tests:
     - numra/tests/interop_workflows.rs
 
@@ -355,7 +355,7 @@
   kind: module
   facade_path: numra::fft::fft
   book_anchors:
-    - numra-book/src/ch08-signal-processing/fft-and-spectral.md
+    - website/book/src/content/docs/ch08-signal-processing/fft-and-spectral.md
   tests:
     - numra-fft/tests/fft_roundtrip.rs
 
@@ -365,10 +365,10 @@
   kind: module
   facade_path: numra::dsp
   book_anchors:
-    - numra-book/src/ch08-signal-processing/filter-design.md
-    - numra-book/src/ch08-signal-processing/filtering-signals.md
-    - numra-book/src/ch08-signal-processing/hilbert-transform.md
-    - numra-book/src/ch08-signal-processing/resampling-peaks.md
+    - website/book/src/content/docs/ch08-signal-processing/filter-design.md
+    - website/book/src/content/docs/ch08-signal-processing/filtering-signals.md
+    - website/book/src/content/docs/ch08-signal-processing/hilbert-transform.md
+    - website/book/src/content/docs/ch08-signal-processing/resampling-peaks.md
   tests:
     - numra/tests/composition_tests.rs
 
@@ -378,11 +378,11 @@
   kind: module
   facade_path: numra::stats
   book_anchors:
-    - numra-book/src/ch09-statistics/descriptive-stats.md
-    - numra-book/src/ch09-statistics/distributions.md
-    - numra-book/src/ch09-statistics/hypothesis-testing.md
-    - numra-book/src/ch09-statistics/regression.md
-    - numra-book/src/ch09-statistics/correlation.md
+    - website/book/src/content/docs/ch09-statistics/descriptive-stats.md
+    - website/book/src/content/docs/ch09-statistics/distributions.md
+    - website/book/src/content/docs/ch09-statistics/hypothesis-testing.md
+    - website/book/src/content/docs/ch09-statistics/regression.md
+    - website/book/src/content/docs/ch09-statistics/correlation.md
   tests:
     - numra/tests/composition_tests.rs
 
@@ -392,8 +392,8 @@
   kind: module
   facade_path: numra::core
   book_anchors:
-    - numra-book/src/ch01-introduction/quick-start.md
-    - numra-book/src/ch12-advanced-topics/no-std-usage.md
-    - numra-book/src/ch11-uncertainty/error-propagation.md
+    - website/book/src/content/docs/ch01-introduction/quick-start.md
+    - website/book/src/content/docs/ch12-advanced-topics/no-std-usage.md
+    - website/book/src/content/docs/ch11-uncertainty/error-propagation.md
   tests:
     - numra-core/src/scalar.rs

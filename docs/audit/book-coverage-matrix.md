@@ -1,10 +1,10 @@
 # Book–code coverage matrix
 
 **States:** `covered` | `missing` | `incorrect` (must be empty before release).  
-**Book TOC:** `[numra-book/src/SUMMARY.md](../../numra-book/src/SUMMARY.md)`.  
+**Book TOC:** the sidebar config in `[website/book/astro.config.mjs](../../website/book/astro.config.mjs)` (Starlight's equivalent of `SUMMARY.md`).  
 **Inventory:** `[public-api-method-inventory.md](public-api-method-inventory.md)` and machine inventory `[inventory.yaml](inventory.yaml)`.
 
-Use this table to ensure every **user-facing numerical entry point** in the inventory has documentation. Chapter paths are relative to `numra-book/src/`.
+Use this table to ensure every **user-facing numerical entry point** in the inventory has documentation. Chapter paths are relative to `website/book/src/content/docs/`.
 
 ---
 
