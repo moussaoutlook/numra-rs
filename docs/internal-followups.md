@@ -14,6 +14,65 @@ Last updated: 2026-05-05.
 
 ---
 
+## Audit-driven scope corrections
+
+These are not new work items — they're records of where earlier roadmap
+drafts overstated or mis-scoped what we actually have. Kept here so the
+next time someone drafts a public commitment based on memory rather than
+the code, they catch the same correction without redoing the audit.
+
+### "PDE: add 2D method-of-lines + finite element"
+
+**The original draft claim**: ship 2D MOL plus FE in a Q1-2027-ish bucket.
+
+**What the audit found** (2026-05-05):
+- 2D MOL **already ships** — `numra-pde/src/mol2d.rs`, `equations2d.rs`
+  with `HeatEquation2D`, `ReactionDiffusion2D`, Fisher, advection-diffusion;
+  sparse 5-point Laplacian in `sparse_assembly.rs`; all four BC types
+  tested.
+- 3D has `Grid3D` + `BoundaryConditions3D` + 3D Laplacian assembly in
+  `sparse_assembly.rs:228+`, but **no `MOLSystem3D`** wrapper — the
+  pieces are there, the time-stepping integration isn't wired up.
+- `Wave1D` is a documented stub (`equations.rs:129-151`) — a struct
+  exists with a comment that it "would need the `PdeSystem` trait to
+  support systems".
+- **No FE infrastructure at all.** No spectral. No elliptic static solver.
+
+**Correction**: "FE" was aspirational, not a gap to slot into a roadmap
+without scoping the algorithm choice (CG-FEM? DG? hp-adaptive?). The
+real, concrete PDE gaps to keep on the public roadmap as one bullet
+("Expand PDE capabilities") are: 3D MOL wrapper, multi-component coupled
+PDEs (hyperbolic / wave systems become first-class), elliptic static
+solver path. FE is either a separate multi-quarter project or a
+deliberate "not now".
+
+### "DAE: index-2+ in Q4"
+
+**The original draft claim**: ship index-2+ DAE solving as a Q4 2026
+deliverable.
+
+**What the audit found** (2026-05-05):
+- Index-1 ships in Radau5 / BDF (`numra-ode/src/radau5.rs:15-18`,
+  `bdf.rs:16-21`).
+- **Pantelides structural analysis and symbolic differentiation already
+  ship** in `numra-ode/src/index_reduction.rs:118-768`. Tests live in
+  `index_reduction_regression.rs` and exercise the algorithm itself.
+- Consistent-IC helper ships in `numra-ode/src/dae_init.rs:51-159`,
+  Newton-solving for algebraic variables on user-supplied initial guesses.
+- What's **missing** is automatic invocation: solvers don't call
+  `reduce_index()` or `compute_consistent_initial()` for the user, there's
+  no automatic Baumgarte stabilisation, no sparse-Jacobian DAE path, no
+  time-dependent mass matrices.
+
+**Correction**: "Index-2+" was technically inaccurate — the math ships;
+the ergonomics don't. The honest framing for "Expand DAE capabilities"
+on the public roadmap is **plumbing-and-ergonomics work**, not new
+algorithmic capability: solvers should detect higher-index input,
+auto-reduce via the existing Pantelides pass, and pre-solve consistent
+ICs without the user wiring it together by hand.
+
+---
+
 ## Solvers
 
 ### Rewrite the Radau5 step controller
