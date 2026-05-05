@@ -9,6 +9,11 @@ All notable public changes to Numra are recorded here. The project follows seman
 - Workspace facade crate covering ODE, SDE, DDE, FDE, IDE, PDE, SPDE, optimization, optimal control, linear algebra, quadrature, interpolation, special functions, FFT, statistics, fitting, signal processing, and autodiff.
 - Public release audit artifacts under `docs/audit/`, including API inventory, book coverage matrix, correctness test map, and release checklist.
 - CI and local audit gates for formatting, clippy, tests, docs, MSRV, and supply-chain checks.
+- `SolverResult.dense_output: Option<DenseOutput<S>>` field so callers can actually use the dense interpolant they requested via `SolverOptions::dense()`.
+
+### Fixed
+
+- `numra-ode`: DoPri5 was building a `DenseOutput` when `SolverOptions::dense()` was set but never returning it, so the interpolant was silently dropped at the end of integration. The new `SolverResult.dense_output` field is now populated on both the normal exit and the early-termination event path.
 
 ### Policy
 

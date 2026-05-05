@@ -460,6 +460,9 @@ impl<S: Scalar> Solver<S> for DoPri5 {
                         let mut result = SolverResult::new(t_out, y_out, dim, stats);
                         result.events = detected_events;
                         result.terminated_by_event = true;
+                        if options.dense_output && !dense.is_empty() {
+                            result.dense_output = Some(dense);
+                        }
                         return Ok(result);
                     }
                 }
@@ -489,6 +492,9 @@ impl<S: Scalar> Solver<S> for DoPri5 {
 
         let mut result = SolverResult::new(t_out, y_out, dim, stats);
         result.events = detected_events;
+        if options.dense_output && !dense.is_empty() {
+            result.dense_output = Some(dense);
+        }
         Ok(result)
     }
 }
@@ -593,6 +599,50 @@ mod tests {
         let exact = (-5.0_f64).exp();
         let error = (y_final[0] - exact).abs();
         assert!(error < 1e-7, "Error {} too large", error);
+    }
+
+    #[test]
+    fn test_dense_output_returned_when_requested() {
+        use crate::dense::DenseInterpolant;
+        // Regression: when SolverOptions::dense() is set, the integration
+        // builds a DenseOutput; that DenseOutput must be returned to the
+        // caller via SolverResult.dense_output, not silently dropped.
+        let problem = OdeProblem::new(
+            |_t: f64, y: &[f64], dydt: &mut [f64]| {
+                dydt[0] = -y[0];
+            },
+            0.0,
+            5.0,
+            vec![1.0],
+        );
+
+        let options = SolverOptions::default().rtol(1e-8).atol(1e-10).dense();
+        let result = DoPri5::solve(&problem, 0.0, 5.0, &[1.0], &options).unwrap();
+
+        let dense = result
+            .dense_output
+            .as_ref()
+            .expect("dense() requested; SolverResult.dense_output must be Some");
+        assert!(!dense.is_empty(), "dense output should contain segments");
+
+        let t_mid = 2.5;
+        let segment = dense
+            .find_segment(t_mid)
+            .expect("midpoint should fall inside an integrated segment");
+        let mut y_mid = vec![0.0; 1];
+        DoPri5Interpolant.interpolate(segment, t_mid, &mut y_mid);
+        let exact = (-t_mid).exp();
+        assert!(
+            (y_mid[0] - exact).abs() < 1e-3,
+            "interpolated value {} too far from exact {}",
+            y_mid[0],
+            exact
+        );
+
+        // Symmetric: when dense() is NOT requested, dense_output stays None.
+        let options_no_dense = SolverOptions::default().rtol(1e-8).atol(1e-10);
+        let result_no_dense = DoPri5::solve(&problem, 0.0, 5.0, &[1.0], &options_no_dense).unwrap();
+        assert!(result_no_dense.dense_output.is_none());
     }
 
     #[test]

@@ -338,6 +338,7 @@ where
         message: String::new(),
         events: Vec::new(),
         terminated_by_event: false,
+        dense_output: None,
     };
 
     Ok(UncertainSolverResult {
@@ -488,6 +489,7 @@ where
         message: format!("{}/{} samples succeeded", n_success, n_samples),
         events: Vec::new(),
         terminated_by_event: false,
+        dense_output: None,
     };
 
     Ok(UncertainSolverResult {

@@ -6,6 +6,7 @@
 //! Date: 30 April 2026
 //! Modified: 2 May 2026
 
+use crate::dense::DenseOutput;
 use crate::error::SolverError;
 use crate::events::{Event, EventFunction};
 use crate::problem::OdeSystem;
@@ -187,6 +188,8 @@ pub struct SolverResult<S: Scalar> {
     pub events: Vec<Event<S>>,
     /// Whether integration was terminated by a Stop event
     pub terminated_by_event: bool,
+    /// Dense output for continuous interpolation (populated when `SolverOptions::dense()` was set).
+    pub dense_output: Option<DenseOutput<S>>,
 }
 
 impl<S: Scalar> SolverResult<S> {
@@ -201,6 +204,7 @@ impl<S: Scalar> SolverResult<S> {
             message: String::new(),
             events: Vec::new(),
             terminated_by_event: false,
+            dense_output: None,
         }
     }
 
@@ -215,6 +219,7 @@ impl<S: Scalar> SolverResult<S> {
             message,
             events: Vec::new(),
             terminated_by_event: false,
+            dense_output: None,
         }
     }
 
