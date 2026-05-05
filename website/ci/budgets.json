@@ -29,18 +29,20 @@
   },
 
   {
-    "_comment": "Book pages have looser script/CSS budget because Starlight ships its UI runtime and Pagefind. Math-heavy pages may exceed the strict landing budget; this is acceptable.",
+    "_comment": "Book pages (book.numra-rs.org) have looser budgets than the marketing site because Starlight ships its UI runtime, Pagefind ships a WASM search index, and chapters embed SVG figures. Targets here mirror lighthouserc-book.json. The path glob matches Lighthouse's resolution — actual book hostname is book.numra-rs.org but Lighthouse resolves the path independently of host.",
     "path": "/book/*",
     "resourceSizes": [
       { "resourceType": "document",   "budget":  30 },
-      { "resourceType": "stylesheet", "budget": 100 },
-      { "resourceType": "script",     "budget": 120 },
+      { "resourceType": "stylesheet", "budget": 120 },
+      { "resourceType": "script",     "budget": 200 },
       { "resourceType": "font",       "budget": 200 },
-      { "resourceType": "total",      "budget": 500 }
+      { "resourceType": "image",      "budget": 250 },
+      { "resourceType": "total",      "budget": 800 }
     ],
     "timings": [
       { "metric": "first-contentful-paint",   "budget": 2000 },
-      { "metric": "largest-contentful-paint", "budget": 2000 }
+      { "metric": "largest-contentful-paint", "budget": 2500 },
+      { "metric": "total-blocking-time",      "budget":  200 }
     ]
   }
 ]

@@ -51,6 +51,9 @@ jobs:
     name: Build & deploy marketing site
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      preview_url: ${{ steps.deploy_site.outputs.deployment-url }}
+      preview_alias: ${{ steps.deploy_site.outputs.pages-deployment-alias-url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -103,6 +106,9 @@ jobs:
     name: Build & deploy book
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      preview_url: ${{ steps.deploy_book.outputs.deployment-url }}
+      preview_alias: ${{ steps.deploy_book.outputs.pages-deployment-alias-url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -154,6 +160,9 @@ jobs:
     name: Build & deploy examples gallery
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      preview_url: ${{ steps.deploy_examples.outputs.deployment-url }}
+      preview_alias: ${{ steps.deploy_examples.outputs.pages-deployment-alias-url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -201,9 +210,12 @@ jobs:
           retention-days: 7
 
   # ----------------------------------------------------------- lighthouse
-  lighthouse:
-    name: Lighthouse CI
-    needs: [site, book, examples]
+  # On PRs, audit the per-deployment preview URLs (so the score reflects
+  # the diff under review). On push-to-main, fall back to the production
+  # apex URLs so post-merge regressions still page someone.
+  lighthouse-site:
+    name: Lighthouse (marketing site)
+    needs: [site]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -218,32 +230,77 @@ jobs:
         with:
           node-version: 22
 
-      - name: Run Lighthouse CI on production deploys
+      - name: Resolve site preview URL
+        id: resolve_site_url
+        run: |
+          base="${{ needs.site.outputs.preview_alias }}"
+          if [ -z "$base" ]; then base="${{ needs.site.outputs.preview_url }}"; fi
+          if [ -z "$base" ]; then
+            echo "::error::No preview URL captured from wrangler-action"
+            exit 1
+          fi
+          base="${base%/}"
+          {
+            echo "urls<<EOF"
+            for path in / /install /license /commercial /cite /community /stability /features /privacy; do
+              echo "$base$path"
+            done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Lighthouse — preview URLs
         uses: treosh/lighthouse-ci-action@v12
         with:
-          # Audits the marketing site only. The book ships with
-          # Starlight chrome plus Pagefind, which exceeds the strict
-          # marketing budget; a dedicated lighthouserc-book.json with
-          # looser thresholds would be needed to audit it.
-          #
-          # These are production URLs. Per-PR preview-URL auditing
-          # would require capturing the wrangler-action deployment
-          # output.
-          urls: |
-            https://numra-rs.org/
-            https://numra-rs.org/install
-            https://numra-rs.org/license
-            https://numra-rs.org/commercial
-            https://numra-rs.org/cite
-            https://numra-rs.org/community
-            https://numra-rs.org/stability
-            https://numra-rs.org/features
-            https://numra-rs.org/privacy
+          urls: ${{ steps.resolve_site_url.outputs.urls }}
           configPath: ./website/ci/lighthouserc.json
           uploadArtifacts: true
           temporaryPublicStorage: true
         env:
-          # Optional — enables status checks on PRs. Leave unset to skip.
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+  lighthouse-book:
+    name: Lighthouse (book)
+    needs: [book]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Resolve book preview URL
+        id: resolve_book_url
+        run: |
+          base="${{ needs.book.outputs.preview_alias }}"
+          if [ -z "$base" ]; then base="${{ needs.book.outputs.preview_url }}"; fi
+          if [ -z "$base" ]; then
+            echo "::error::No book preview URL captured from wrangler-action"
+            exit 1
+          fi
+          base="${base%/}"
+          {
+            echo "urls<<EOF"
+            for path in / /ch01-fundamentals/numerical-stability/ /ch02-solving-odes/your-first-ode/ /ch13-performance/ /ch13-performance/comparisons/; do
+              echo "$base$path"
+            done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Lighthouse — book preview URLs
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ steps.resolve_book_url.outputs.urls }}
+          configPath: ./website/ci/lighthouserc-book.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
 
   # ----------------------------------------------------------------- a11y
@@ -265,5 +322,41 @@ jobs:
       - name: Install pa11y-ci
         run: npm install -g pa11y-ci@4
 
-      - name: Run pa11y-ci
-        run: pa11y-ci --config website/ci/pa11yci.json
+      - name: Generate per-PR pa11y config
+        id: gen_pa11y
+        run: |
+          site_base="${{ needs.site.outputs.preview_alias }}"
+          if [ -z "$site_base" ]; then site_base="${{ needs.site.outputs.preview_url }}"; fi
+          book_base="${{ needs.book.outputs.preview_alias }}"
+          if [ -z "$book_base" ]; then book_base="${{ needs.book.outputs.preview_url }}"; fi
+          examples_base="${{ needs.examples.outputs.preview_alias }}"
+          if [ -z "$examples_base" ]; then examples_base="${{ needs.examples.outputs.preview_url }}"; fi
+          for var in site_base book_base examples_base; do
+            if [ -z "${!var}" ]; then
+              echo "::error::Missing preview URL: $var"
+              exit 1
+            fi
+          done
+          site_base="${site_base%/}"
+          book_base="${book_base%/}"
+          examples_base="${examples_base%/}"
+          out=website/ci/pa11yci-pr.json
+          jq \
+            --arg site "$site_base" \
+            --arg book "$book_base" \
+            --arg examples "$examples_base" \
+            '.urls = [
+              ($site + "/"),
+              ($site + "/install"),
+              ($site + "/license"),
+              ($site + "/cite"),
+              ($site + "/community"),
+              ($book + "/"),
+              ($examples + "/")
+            ]' \
+            website/ci/pa11yci.json > "$out"
+          cat "$out"
+          echo "config=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Run pa11y-ci against preview URLs
+        run: pa11y-ci --config "${{ steps.gen_pa11y.outputs.config }}"
