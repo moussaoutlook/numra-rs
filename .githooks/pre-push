@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Local gate that mirrors the CI rustfmt + clippy steps.
+# Activate once per clone:
+#   git config core.hooksPath .githooks
+# Bypass for emergencies:
+#   git push --no-verify
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+echo "pre-push: cargo fmt --all -- --check"
+cargo fmt --all -- --check
+
+echo "pre-push: cargo clippy --workspace --all-targets -- -D warnings"
+cargo clippy --workspace --all-targets -- -D warnings

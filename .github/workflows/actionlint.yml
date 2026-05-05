@@ -1,0 +1,30 @@
+name: Actionlint
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Lint workflow files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run actionlint
+        # Pinned to a release tag of the official actionlint action.
+        # The action just downloads and runs the actionlint binary;
+        # no third-party token use.
+        uses: rhysd/actionlint@v1.7.12
+        with:
+          shellcheck_opts: '-e SC2086'

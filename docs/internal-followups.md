@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-05.
+Last updated: 2026-05-05 (actionlint workflow shipped — see `.github/workflows/actionlint.yml`).
 
 ---
 
@@ -223,15 +223,6 @@ ndarray-linalg in disguise". Defer until there's a story to tell.
 ---
 
 ## Tooling
-
-### CI: actionlint workflow
-
-**Status**: not started.
-
-Two recent edits to `.github/workflows/website.yml` could have shipped
-typos that only surface on the next PR run. Adding actionlint as a
-pre-commit or CI step would catch those before they hit a real PR.
-30-minute task.
 
 ### CI: Renovate canary for Astro pre-releases
 
