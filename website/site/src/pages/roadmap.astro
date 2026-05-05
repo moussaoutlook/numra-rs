@@ -4,7 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <BaseLayout
   title="Roadmap"
-  description="Where Numra is headed: open issues, planned milestones, and stable commitments you can rely on today."
+  description="Where Numra is headed — at a high level. Directions of travel, not committed dates."
   canonicalPath="/roadmap"
 >
   <section class="roadmap">
@@ -12,8 +12,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <h1>Roadmap.</h1>
 
       <p class="lede">
-        Numra is pre-1.0. The most accurate signal of upcoming work is
-        the
+        Numra is pre-1.0. This page describes the directions we're
+        actively working on. It's deliberately silent on dates — the
+        single-maintainer release cadence makes calendar promises
+        unreliable, and a vague schedule is worse than none. For the
+        most current signal of where work is happening, see the
         <a
           href="https://github.com/moussaoutlook/numra-rs/issues"
           rel="noopener"
@@ -22,9 +25,68 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <a
           href="https://github.com/moussaoutlook/numra-rs/blob/main/CHANGELOG.md"
           rel="noopener"
-        >CHANGELOG</a>. A long-form quarterly roadmap will land here
-        once the project's public release cadence settles.
+        >CHANGELOG</a>.
       </p>
+
+      <h2>Active directions</h2>
+
+      <article class="direction">
+        <h3>Expand DAE capabilities</h3>
+        <p>
+          Today Numra's stiff solvers (Radau5, BDF) handle index-1
+          differential-algebraic equations with constant mass matrices.
+          The infrastructure for higher-index DAEs — Pantelides
+          structural analysis, symbolic differentiation, and consistent
+          initialisation — already ships, but it's not yet wired into
+          the solver call path. The work here is to close that gap so
+          higher-index problems are practical to solve, with sparse
+          Jacobian support and constraint stabilisation as related
+          extensions.
+        </p>
+      </article>
+
+      <article class="direction">
+        <h3>Expand PDE capabilities</h3>
+        <p>
+          Method of lines on 1D and 2D grids is solid today —
+          parabolic problems (heat, diffusion, reaction-diffusion,
+          advection-diffusion) work with all four boundary-condition
+          types and second/fourth-order stencils. The growth areas are
+          3D method-of-lines, multi-component / coupled-PDE systems
+          (so hyperbolic and wave equations are first-class), an
+          elliptic static solver path, and more discretisation choices
+          beyond finite differences.
+        </p>
+      </article>
+
+      <article class="direction">
+        <h3>Build <code>numra-plot</code></h3>
+        <p>
+          Numerical results without a comfortable plotting story are
+          half-finished. <code>numra-plot</code> will be a Numra-native
+          plotting crate aimed at the
+          equation-class-aware visualisations Numra users actually need
+          — phase portraits, time-series with confidence bands,
+          method-of-lines surface plots, convergence diagrams — without
+          forcing a Python detour.
+        </p>
+      </article>
+
+      <article class="direction">
+        <h3>Numra-native linear algebra; remove the <code>faer</code> dependency</h3>
+        <p>
+          Iterative Krylov solvers (CG, GMRES, BiCGSTAB, MINRES) and
+          preconditioners (Jacobi, ILU, SSOR) are already native code
+          in <code>numra-linalg</code>. The dense direct path —
+          LU, QR, Cholesky, SVD, eigendecomposition — is currently a
+          wrapper around <code>faer</code>. The long-term goal is for
+          Numra to own its complete linear-algebra surface. This is the
+          largest item on this list and is intentionally framed as a
+          direction, not a milestone — the work spans BLAS-equivalent
+          primitives, dense factorisations, and refactors across every
+          downstream crate that uses linalg trait bounds.
+        </p>
+      </article>
 
       <h2>What you can rely on today</h2>
       <ul>
@@ -34,7 +96,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           deprecation windows.
         </li>
         <li>
-          <strong>Solver behavior in any released version.</strong>
+          <strong>Solver behaviour in any released version.</strong>
           Covered by the regression suite documented in
           <a
             href="https://github.com/moussaoutlook/numra-rs/blob/main/docs/audit/correctness-test-map.md"
@@ -90,5 +152,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     background: var(--color-code-bg);
     padding: 0.05em 0.4em;
     border-radius: var(--radius-sm);
+  }
+
+  .direction {
+    max-width: var(--measure);
+    margin-block: var(--space-5);
+    padding-left: var(--space-4);
+    border-left: 3px solid var(--color-accent);
+  }
+  .direction h3 {
+    margin: 0 0 var(--space-2) 0;
+    font-size: var(--text-lg);
+  }
+  .direction p {
+    margin: 0;
+    color: var(--color-fg-muted);
   }
 </style>
