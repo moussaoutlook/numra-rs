@@ -215,6 +215,7 @@ export default defineConfig({
             { label: 'Stiffness Handling', slug: 'ch13-performance/stiffness-handling' },
             { label: 'Dimension Scaling', slug: 'ch13-performance/dimension-scaling' },
             { label: 'Dense-Output Overhead', slug: 'ch13-performance/dense-output-overhead' },
+            { label: 'Numra vs SciPy', slug: 'ch13-performance/comparisons' },
           ],
         },
         {

@@ -16,6 +16,10 @@ harness = false
 name = "pde_mol"
 harness = false
 
+[[bin]]
+name = "compare_vdp"
+path = "src/bin/compare_vdp.rs"
+
 [dependencies]
 numra-ode = { path = "../numra-ode" }
 numra-core = { path = "../numra-core" }

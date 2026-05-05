@@ -64,7 +64,8 @@ the hardware to run the benches at full sample size.
 
 ## What this chapter does NOT do
 
-It doesn't compare Numra against SciPy or SUNDIALS — that's the job of
-the [comparisons](./comparisons/) page (coming up). It also doesn't
-exhaust every solver on every problem; the curated set above is the
-one that actually matters when you sit down to pick a solver.
+It doesn't exhaust every solver on every problem; the curated set above
+is the one that actually matters when you sit down to pick a solver.
+
+For a head-to-head against an established library, see the
+[Numra vs SciPy](./comparisons/) page next.
