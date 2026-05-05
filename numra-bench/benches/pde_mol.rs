@@ -44,9 +44,7 @@ fn bench_pde_mol_scaling(c: &mut Criterion) {
             BenchmarkId::new("dopri5_heat_1d", n_interior),
             &n_interior,
             |b, _| {
-                b.iter(|| {
-                    DoPri5::solve(black_box(&mol), 0.0, t_final, black_box(&u0), &options)
-                })
+                b.iter(|| DoPri5::solve(black_box(&mol), 0.0, t_final, black_box(&u0), &options))
             },
         );
     }

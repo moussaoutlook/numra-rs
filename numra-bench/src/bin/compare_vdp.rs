@@ -69,7 +69,10 @@ macro_rules! run_solver {
                     samples_ns.push(elapsed);
                 }
                 Err(e) => {
-                    eprintln!("compare_vdp: {} failed rtol={} mu={}: {e}", $label, $rtol, $mu);
+                    eprintln!(
+                        "compare_vdp: {} failed rtol={} mu={}: {e}",
+                        $label, $rtol, $mu
+                    );
                     std::process::exit(2);
                 }
             }
@@ -77,8 +80,8 @@ macro_rules! run_solver {
 
         samples_ns.sort_unstable();
         let median_ns = samples_ns[samples_ns.len() / 2];
-        let mean_ns: f64 = samples_ns.iter().map(|&n| n as f64).sum::<f64>()
-            / samples_ns.len() as f64;
+        let mean_ns: f64 =
+            samples_ns.iter().map(|&n| n as f64).sum::<f64>() / samples_ns.len() as f64;
         let min_ns = samples_ns[0];
         let max_ns = *samples_ns.last().unwrap();
 
