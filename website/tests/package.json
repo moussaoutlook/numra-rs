@@ -1,0 +1,20 @@
+{
+  "name": "@numra/website-tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright regression tests for the Numra website (dark-mode FOIT, smoke checks).",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

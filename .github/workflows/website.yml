@@ -360,3 +360,67 @@ jobs:
 
       - name: Run pa11y-ci against preview URLs
         run: pa11y-ci --config "${{ steps.gen_pa11y.outputs.config }}"
+
+  # ---------------------------------------------------------- playwright
+  # Dark-mode FOIT regression suite. Audits the per-PR preview URLs so
+  # the assertions reflect the diff under review. The suite is intentionally
+  # narrow today (theme paint at domcontentloaded) — it's the safety net
+  # for the kinds of bugs we hit during the Starlight upgrade in early 2026.
+  playwright:
+    name: Playwright (dark-mode regression)
+    needs: [site, book]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: website/tests/pnpm-lock.yaml
+
+      - name: Install Playwright deps
+        working-directory: website/tests
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        working-directory: website/tests
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Resolve preview URLs
+        id: urls
+        run: |
+          site_url="${{ needs.site.outputs.preview_alias }}"
+          if [ -z "$site_url" ]; then site_url="${{ needs.site.outputs.preview_url }}"; fi
+          book_url="${{ needs.book.outputs.preview_alias }}"
+          if [ -z "$book_url" ]; then book_url="${{ needs.book.outputs.preview_url }}"; fi
+          if [ -z "$site_url" ] || [ -z "$book_url" ]; then
+            echo "::error::Missing site/book preview URL — wrangler-action did not emit one."
+            exit 1
+          fi
+          echo "site=${site_url%/}" >> "$GITHUB_OUTPUT"
+          echo "book=${book_url%/}" >> "$GITHUB_OUTPUT"
+
+      - name: Run Playwright
+        working-directory: website/tests
+        env:
+          NUMRA_SITE_URL: ${{ steps.urls.outputs.site }}
+          NUMRA_BOOK_URL: ${{ steps.urls.outputs.book }}
+        run: pnpm exec playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: website/tests/playwright-report
+          retention-days: 7
