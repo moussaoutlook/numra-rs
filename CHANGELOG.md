@@ -10,6 +10,8 @@ All notable public changes to Numra are recorded here. The project follows seman
 - Public release audit artifacts under `docs/audit/`, including API inventory, book coverage matrix, correctness test map, and release checklist.
 - CI and local audit gates for formatting, clippy, tests, docs, MSRV, and supply-chain checks.
 - `SolverResult.dense_output: Option<DenseOutput<S>>` field so callers can actually use the dense interpolant they requested via `SolverOptions::dense()`.
+- `numra` facade: top-level promotion of the canonical forward-sensitivity surface — `solve_forward_sensitivity`, `solve_forward_sensitivity_with`, `ParametricOdeSystem`, `SensitivityResult` — symmetric with the existing `compute_sensitivities` parameter-uncertainty API. Advanced building blocks (`AugmentedSystem`, `ClosureSystem`) remain reachable via the `numra::ode` submodule. The crate-level docstring distinguishes the two distinct sensitivity concepts (parameter-uncertainty vs ODE forward sensitivity) so users land on the right one from the doc index.
+- `numra/examples/robertson_sensitivity.rs`: complete worked forward-sensitivity example on the canonical Robertson stiff kinetics benchmark. Demonstrates analytical state and parameter Jacobians (with the matching `has_analytical_jacobian_*` flags), `Radau5`-driven augmented integration, the full accessor surface (`final_state`, `dyi_dpj`, `sensitivity_for_param`, `normalized_sensitivity_at`), and dimensionless influence ranking. Internal sanity checks pass on output: state mass conservation to 12 digits and `∑ ∂y/∂k_i = 0` per parameter.
 
 ### Changed
 

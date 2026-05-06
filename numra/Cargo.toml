@@ -85,3 +85,7 @@ path = "examples/dde_mackey_glass.rs"
 [[example]]
 name = "spde_heat"
 path = "examples/spde_heat.rs"
+
+[[example]]
+name = "robertson_sensitivity"
+path = "examples/robertson_sensitivity.rs"
