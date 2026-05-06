@@ -55,7 +55,7 @@
 //! ## References
 //! - Hairer, E. & Wanner, G. (1996), "Solving Ordinary Differential Equations II:
 //!   Stiff and Differential-Algebraic Problems", Springer (2nd ed.), §IV.8.
-//! - radau5.f source (E. Hairer), available at https://www.unige.ch/~hairer/.
+//! - radau5.f source (E. Hairer), available at <https://www.unige.ch/~hairer/>.
 //! - SciPy `scipy/integrate/_ivp/radau.py` (Apache-2.0 / BSD-3 implementation).
 //!
 //! Author: Moussa Leblouba
