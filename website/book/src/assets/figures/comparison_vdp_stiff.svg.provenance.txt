@@ -1,11 +1,11 @@
-Numra figure provenance — rendered 2026-05-05T08:30:19Z
+Numra figure provenance — rendered 2026-05-06T06:17:56Z
 
 Problem        : Van der Pol oscillator, mu=10, t in [0, 20]
-Solver         : Numra ESDIRK54  vs  SciPy solve_ivp(method='Radau')
+Solver         : Numra Radau5  vs  SciPy solve_ivp(method='Radau')
 Tolerance      : rtol ∈ {1e-4, 1e-6, 1e-8}, atol = rtol·1e-3
 Repro script   : website/figures/comparisons/vdp_stiff.py
 
-Numra commit   : bdb86bf
+Numra commit   : 3564573
 rustc version  : 1.92.0
 
 Hardware (CPU) : Apple M4 Max

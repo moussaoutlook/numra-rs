@@ -23,25 +23,28 @@ factorisation across the integration.](../../../assets/figures/perf_stiffness_ha
   problem gets *both* longer and stiffer — runtime should grow at
   least linearly in `μ` purely from interval length, plus more from
   step-count growth.
-- **BDF** has the cheapest per-step cost when the order can stay low
-  (the variable-order BDF starts at 1 and ramps up only when the
-  local error allows). At `μ = 1000` it tends to dominate.
-- **Radau5** is more expensive per step but more accurate, and
-  it tends to win at moderate `μ` because the controller can take
-  bigger strides than BDF.
-- **ESDIRK54** sits between the two — its singly-diagonally-implicit
-  structure means each Newton iterate factors the same Jacobian
-  block, which is a useful win when the system has structure.
+- **Radau5** dominates at every `μ` in the swept range. The 5th-order
+  L-stable Radau IIA scheme combined with the rewritten step
+  controller (Hairer–Wanner §IV.8 + Gustafsson predictive controller)
+  takes large, well-sized strides through the slow phase and adapts
+  cleanly through the transients.
+- **ESDIRK54** sits a small constant factor behind Radau5. Its
+  singly-diagonally-implicit structure lets each Newton iterate factor
+  the same Jacobian block, which is a useful win on systems where
+  factorisation dominates.
+- **BDF** is roughly flat in `μ` here — its per-step cost is small but
+  the variable-order controller lingers at low order on the slow
+  phase, so accumulated step counts dominate.
 
 ## How to choose
 
 The pragmatic rule of thumb:
 
-| Stiffness scale            | Recommended starting solver |
-|----------------------------|-----------------------------|
-| Mild stiffness or unsure   | `Radau5`                    |
-| Highly stiff, large state  | `BDF`                       |
-| Smooth coefficients        | `ESDIRK54`                  |
+| Stiffness scale                    | Recommended starting solver |
+|------------------------------------|-----------------------------|
+| Stiff IVPs and DAEs (default)      | `Radau5`                    |
+| Smooth coefficients, prefer SDIRK  | `ESDIRK54`                  |
+| Long-horizon, low-order acceptable | `BDF`                       |
 
 When in doubt, use `auto_solve_with_hints` and pass `Stiffness::High`
 — it will pick from the same list using these crossover points as

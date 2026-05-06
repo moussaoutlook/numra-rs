@@ -1,11 +1,11 @@
-Numra figure provenance — rendered 2026-05-04T10:27:15Z
+Numra figure provenance — rendered 2026-05-06T06:20:15Z
 
 Problem        : Coupled linear ODE: dy_i/dt = -alpha y_i + beta (y_{i-1} + y_{i+1}), alpha=2, beta=0.5, t in [0, 5]
 Solver         : DoPri5 (explicit) and Radau5 (implicit)
 Tolerance      : rtol = 1e-6, atol = 1e-9
 Repro script   : numra-bench/benches/solvers.rs::bench_dimension_scaling
 
-Numra commit   : 04cb123
+Numra commit   : 3564573
 rustc version  : 1.92.0
 
 Hardware (CPU) : Apple M4 Max

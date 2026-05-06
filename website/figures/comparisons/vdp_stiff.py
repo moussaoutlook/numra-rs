@@ -1,14 +1,16 @@
-"""Numra (ESDIRK54) vs SciPy (Radau) on a stiff Van der Pol oscillator.
+"""Numra (Radau5) vs SciPy (Radau) on a stiff Van der Pol oscillator.
 
 Per-SPEC §17 honest comparison: one scoped problem class, one chart, the
-caption explicitly names where Numra is slower than SciPy.
+caption explicitly names where Numra is slower than SciPy. Both sides
+run the same algorithm (3-stage Radau IIA) so the comparison isolates
+runtime overhead rather than algorithm choice.
 
 Pipeline:
     1. Compute a high-precision reference final state with SciPy Radau at
        rtol=atol=1e-12. This is treated as ground truth.
     2. For each tolerance in {1e-4, 1e-6, 1e-8}:
          - Drive the Rust binary `compare_vdp` (built from
-           numra-bench/src/bin/compare_vdp.rs) to time Numra ESDIRK54.
+           numra-bench/src/bin/compare_vdp.rs) to time Numra Radau5.
          - Run SciPy Radau in-process and time it the same way (warm-up
            run discarded, median of N reps).
          - Compute "correct digits" as -log10(relative error vs reference).
@@ -173,8 +175,8 @@ def main() -> None:
         atol = rtol * 1e-3
         print(f"\n— rtol = {rtol:.0e}, atol = {atol:.0e}")
 
-        print("  Numra ESDIRK54 …", flush=True)
-        nu = time_numra("esdirk54", rtol, atol, REPS)
+        print("  Numra Radau5 …", flush=True)
+        nu = time_numra("radau5", rtol, atol, REPS)
         nu_final = np.array([nu["final_x"], nu["final_xprime"]])
         nu["correct_digits"] = correct_digits(nu_final, ref)
         rows.append(nu)
@@ -215,13 +217,13 @@ def main() -> None:
     numra_color = style.WONG[5]   # blue
     scipy_color = style.WONG[6]   # vermilion
 
-    numra_rows = [r for r in rows if r["library"] == "numra-esdirk54"]
+    numra_rows = [r for r in rows if r["library"] == "numra-radau5"]
     scipy_rows = [r for r in rows if r["library"] == "scipy-radau"]
 
     nu_ms = [r["median_ns"] / 1e6 for r in numra_rows]
     sp_ms = [r["median_ns"] / 1e6 for r in scipy_rows]
 
-    ax1.bar(x - bar_w / 2, nu_ms, bar_w, color=numra_color, label="Numra ESDIRK54")
+    ax1.bar(x - bar_w / 2, nu_ms, bar_w, color=numra_color, label="Numra Radau5")
     ax1.bar(x + bar_w / 2, sp_ms, bar_w, color=scipy_color, label="SciPy Radau (Fortran-backed)")
     ax1.set_xticks(x)
     ax1.set_xticklabels([f"$10^{{{int(np.log10(r))}}}$" for r in TOLERANCES])
@@ -255,7 +257,7 @@ def main() -> None:
 
     prov = Provenance(
         problem=f"Van der Pol oscillator, mu={MU:g}, t in [0, {TF:g}]",
-        solver="Numra ESDIRK54  vs  SciPy solve_ivp(method='Radau')",
+        solver="Numra Radau5  vs  SciPy solve_ivp(method='Radau')",
         tol="rtol ∈ {1e-4, 1e-6, 1e-8}, atol = rtol·1e-3",
         repro_script="website/figures/comparisons/vdp_stiff.py",
         extra={
