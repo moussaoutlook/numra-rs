@@ -201,9 +201,14 @@ impl<S: Scalar> Uncertain<S> {
     }
 }
 
-/// Sensitivity coefficient for parameter analysis.
+/// Importance of one parameter for a scalar pure-function output.
+///
+/// Computed by central finite differences inside [`compute_sensitivities`].
+/// Distinct from the ODE forward-sensitivity matrix
+/// `numra_ode::SensitivityResult` (which carries `dy(t)/dp` along a trajectory):
+/// this type is for ranking parameters of a fixed scalar function `f(p) -> S`.
 #[derive(Clone, Debug)]
-pub struct Sensitivity<S: Scalar> {
+pub struct ParameterSensitivity<S: Scalar> {
     /// Parameter name
     pub name: String,
     /// Sensitivity coefficient: ∂y/∂p
@@ -212,18 +217,22 @@ pub struct Sensitivity<S: Scalar> {
     pub normalized: S,
 }
 
-/// Result of sensitivity analysis.
+/// Result of parameter-importance analysis on a scalar pure function.
+///
+/// Distinct from the ODE forward-sensitivity result type
+/// `numra_ode::SensitivityResult`. See [`ParameterSensitivity`] for the
+/// distinction.
 #[derive(Clone, Debug)]
-pub struct SensitivityResult<S: Scalar> {
+pub struct ParameterSensitivityResult<S: Scalar> {
     /// Output value at nominal parameters
     pub output: S,
     /// Sensitivities for each parameter
-    pub sensitivities: Vec<Sensitivity<S>>,
+    pub sensitivities: Vec<ParameterSensitivity<S>>,
 }
 
-impl<S: Scalar> SensitivityResult<S> {
+impl<S: Scalar> ParameterSensitivityResult<S> {
     /// Create a new sensitivity result.
-    pub fn new(output: S, sensitivities: Vec<Sensitivity<S>>) -> Self {
+    pub fn new(output: S, sensitivities: Vec<ParameterSensitivity<S>>) -> Self {
         Self {
             output,
             sensitivities,
@@ -231,7 +240,7 @@ impl<S: Scalar> SensitivityResult<S> {
     }
 
     /// Find the most sensitive parameter.
-    pub fn most_sensitive(&self) -> Option<&Sensitivity<S>> {
+    pub fn most_sensitive(&self) -> Option<&ParameterSensitivity<S>> {
         self.sensitivities
             .iter()
             .max_by(|a, b| a.normalized.abs().partial_cmp(&b.normalized.abs()).unwrap())
@@ -261,7 +270,7 @@ pub fn compute_sensitivities<S: Scalar, F>(
     params: &[S],
     names: &[&str],
     h: Option<S>,
-) -> SensitivityResult<S>
+) -> ParameterSensitivityResult<S>
 where
     F: Fn(&[S]) -> S,
 {
@@ -292,14 +301,14 @@ where
             S::ZERO
         };
 
-        sensitivities.push(Sensitivity {
+        sensitivities.push(ParameterSensitivity {
             name: name.to_string(),
             coefficient: coeff,
             normalized,
         });
     }
 
-    SensitivityResult::new(output, sensitivities)
+    ParameterSensitivityResult::new(output, sensitivities)
 }
 
 /// Interval arithmetic for bounds propagation.

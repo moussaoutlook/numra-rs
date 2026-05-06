@@ -48,7 +48,9 @@ pub mod vector;
 pub use error::{LinalgError, NumraError, NumraResult};
 pub use scalar::{from_f64_vec, to_f64_vec, Scalar};
 pub use signal::Signal;
-pub use uncertainty::{compute_sensitivities, Interval, Sensitivity, SensitivityResult, Uncertain};
+pub use uncertainty::{
+    compute_sensitivities, Interval, ParameterSensitivity, ParameterSensitivityResult, Uncertain,
+};
 pub use vector::Vector;
 
 /// Commonly used items

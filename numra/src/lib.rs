@@ -26,8 +26,8 @@ pub use numra_core::signal;
 pub use numra_core::uncertainty;
 pub use numra_core::vector;
 pub use numra_core::{
-    compute_sensitivities, Interval, LinalgError, NumraError, NumraResult, Scalar, Sensitivity,
-    SensitivityResult, Signal, Uncertain, Vector,
+    compute_sensitivities, Interval, LinalgError, NumraError, NumraResult, ParameterSensitivity,
+    ParameterSensitivityResult, Scalar, Signal, Uncertain, Vector,
 };
 pub use numra_dde as dde;
 pub use numra_fde as fde;

@@ -48,7 +48,7 @@ Legend: **Import** = typical path via facade `numra::…` unless only subcrate p
 | Vector      | `Vector`                                                                             | Vector ops trait  |
 | Signal      | `Signal`, `signal::*` (`Harmonic`, `Step`, …)                                        | Forcing / signals |
 | Errors      | `NumraError`, `NumraResult`, `LinalgError`                                           |                   |
-| Uncertainty | `Uncertain`, `Interval`, `compute_sensitivities`, `SensitivityResult`, `Sensitivity` |                   |
+| Uncertainty | `Uncertain`, `Interval`, `compute_sensitivities`, `ParameterSensitivityResult`, `ParameterSensitivity` |                   |
 
 
 ---
@@ -96,7 +96,7 @@ Legend: **Import** = typical path via facade `numra::…` unless only subcrate p
 | Auto selection          | `Auto`, `auto_solve`, `auto_solve_with_hints`, `SolverHints`, `Stiffness`, `Accuracy`                                                               |                          |
 | Problem / solver API    | `OdeProblem`, `OdeSystem`, `DaeProblem`, `Solver`, `SolverOptions`, `SolverResult`, `SolverStats`, `SolverError`                                    |                          |
 | Step / dense / events   | `StepController`, `PIController`, `DenseOutput`, `events` module                                                                                    |                          |
-| Sensitivity             | `SensitivityEquations`, `SensitivityState`, `SensitivityResult`, `AugmentedSystem`                                                                  |                          |
+| Sensitivity             | `ParametricOdeSystem`, `SensitivityResult`, `AugmentedSystem`                                                                                       |                          |
 | DAE init                | `compute_consistent_initial`, `compute_consistent_initial_tol`                                                                                      |                          |
 | Index reduction         | `analyze_dae_index`, `analyze_system`, `reduce_index`, `reduce_dae_problem`, `detect_structure`, `DaeIndexInfo`, `DaeStructure`, `ReducedDaeSystem` |                          |
 | Uncertainty wrappers    | `solve_with_uncertainty`, `solve_trajectory`, `solve_monte_carlo`, `UncertaintyMode`, `UncertainParam`, `UncertainSolverResult`                     |                          |

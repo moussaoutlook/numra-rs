@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-06 (Radau5 step-controller rewrite landed — Hairer-Wanner §IV.8 + Gustafsson predictive controller; now within ~1.5–2× of SciPy's `Radau` step counts on the reference suite).
+Last updated: 2026-05-06 (forward-sensitivity foundation landed in `numra-ode`: `ParametricOdeSystem` trait + flat column-major `SensitivityResult` + `AugmentedSystem` impl `OdeSystem`. Solve entry points, regression suite, Robertson example, and chapter ship in subsequent commits on the same branch).
 
 ---
 
@@ -121,6 +121,89 @@ This is a release-note item, not a direction-of-travel item.
 **Why it's not on the public roadmap**: speculative work. Don't promise
 adjoint until at least the forward-mode API is shipped and we know what
 shape the adjoint API should take.
+
+### Block-diagonal-aware factorisation in `AugmentedSystem`
+
+**Status**: scoped, not started. Blocked behind the rest of the forward-sensitivity work shipping.
+
+The augmented Jacobian for forward sensitivity is
+`block_diag(J_y, J_y, ..., J_y)` (CVODES *simultaneous-corrector* form,
+`N_s + 1` diagonal blocks). With block-aware LU, an implicit step
+needs a *single* factorisation of `M = (1/γh)·I_N - J_y` reused across
+all `N_s + 1` sub-systems instead of one factorisation of the full
+`N(N_s+1) × N(N_s+1)` matrix. Expected speedup is `O((N_s+1)²)` on the
+LU step, which dominates Radau5 / BDF cost on stiff problems.
+
+`numra-ode/src/sensitivity.rs::AugmentedSystem::jacobian` already
+fills only the diagonal blocks, so the saving is sitting on the table
+— it just requires Radau5 / BDF to either (a) detect block structure
+in the Jacobian buffer, or (b) accept a `BlockDiagonalJacobian` hint
+from the augmented-system path. Option (b) is cleaner: add a tagged
+trait `OdeSystemBlockDiag` (or a method on `OdeSystem` returning
+`Option<BlockSpec>`) and let solvers downcast.
+
+Out of scope for v1; revisit after the forward-sensitivity API has
+real users with measurable workloads.
+
+### JVP-based variant of `ParametricOdeSystem`
+
+**Status**: scoped, not started.
+
+`diffsol`'s analogue (Robinson et al., JOSS 11(117), 2026) uses
+Jacobian-vector products instead of materialised Jacobians, which
+unlocks matrix-free Krylov solvers and sparse Jacobians without ever
+forming `J_y`. For Numra's small-to-medium dense workloads, the
+materialised path is the right v1 choice, but a `ParametricOdeSystemJvp`
+companion trait (or a `jacobian_vec_product(t, y, v, out)` method on
+the existing trait, with a default that materialises `J_y`) would be
+the right shape for large sparse problems. Out of scope for v1.
+
+### AD-based `ParametricOdeSystem` impl using Numra's autodiff primitives
+
+**Status**: scoped, not started.
+
+SciML's `ForwardDiffSensitivity` is the modern default — eliminates
+manual Jacobian derivation entirely. We have reverse-mode AD scaffolding
+in `numra-autodiff/src/reverse.rs` and forward-mode dual numbers
+elsewhere in `numra-autodiff`; a thin adapter `AutoDiffSystem<F>`
+implementing `ParametricOdeSystem` and computing `J_y` / `J_p` via
+forward-mode AD on the closure would close most of the FD-noise
+problems users hit. Blocked on the v1 API stabilising; do not start
+before the Robertson example lands.
+
+### Staggered sensitivity correction (CVODES `CV_STAGGERED`)
+
+**Status**: scoped, not started.
+
+CVODES exposes two correction strategies: *simultaneous* (state and
+sensitivities solved in one Newton iteration on the augmented system,
+which is what v1 ships) and *staggered* (state Newton converges first,
+then sensitivities re-use the converged factorisation). Staggered is
+2-3× faster on stiff problems with `N_s ≥ 3` because the sensitivity
+sub-systems become *linear* once the state converges. SciML defaults
+to simultaneous, which is what v1 matches. Worth implementing for the
+stiff path once block-aware factorisation lands; out of scope for v1.
+
+### Per-parameter staggered correction (CVODES `CV_STAGGERED1`)
+
+**Status**: scoped, not started.
+
+A finer-grained variant of the above: each `S_{:,k}` Newton runs
+independently, which lets sparsity-aware code skip parameters with
+empty `J_p_{:,k}` columns. Useful for very large parameter sets with
+sparse coupling (PDE-discretised models). Out of scope for v1.
+
+### Separate sensitivity tolerances
+
+**Status**: scoped, not started.
+
+Parameter-ID workflows often want loose sensitivity tolerances (because
+the gradient is consumed by an outer Gauss-Newton step that is itself
+sloppy) while keeping the state tolerance tight. CVODES exposes
+`CVodeSensSStolerances`. v1 inherits state tolerances throughout
+(matches SciML's default and avoids polluting `SolverOptions`); add
+`SolverOptions::sens_rtol` / `sens_atol` later if real workflows ask
+for it.
 
 ### Stiffness auto-detection (LSODA-equivalent)
 
