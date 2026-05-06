@@ -59,6 +59,12 @@ fn exp_decay_analytical() {
         fn jacobian_p(&self, _t: f64, y: &[f64], jp: &mut [f64]) {
             jp[0] = -y[0];
         }
+        fn has_analytical_jacobian_y(&self) -> bool {
+            true
+        }
+        fn has_analytical_jacobian_p(&self) -> bool {
+            true
+        }
     }
 
     let r = solve_forward_sensitivity::<DoPri5, _, _>(
@@ -122,6 +128,12 @@ fn two_param_analytical() {
             // Column-major (n=1, np=2): jp[k*1 + 0] = ∂f_0/∂p_k.
             jp[0] = -y[0]; // ∂f/∂a
             jp[1] = 1.0; // ∂f/∂b
+        }
+        fn has_analytical_jacobian_y(&self) -> bool {
+            true
+        }
+        fn has_analytical_jacobian_p(&self) -> bool {
+            true
         }
     }
 
@@ -195,6 +207,12 @@ impl ParametricOdeSystem<f64> for LotkaVolterra {
                         // p_3 = gamma
         jp[6] = 0.0; // ∂f_0/∂γ
         jp[7] = -yy; // ∂f_1/∂γ
+    }
+    fn has_analytical_jacobian_y(&self) -> bool {
+        true
+    }
+    fn has_analytical_jacobian_p(&self) -> bool {
+        true
     }
 }
 
@@ -353,6 +371,12 @@ impl ParametricOdeSystem<f64> for Robertson {
         jp[7] = -y1 * y2;
         jp[8] = 0.0;
     }
+    fn has_analytical_jacobian_y(&self) -> bool {
+        true
+    }
+    fn has_analytical_jacobian_p(&self) -> bool {
+        true
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -450,6 +474,12 @@ impl ParametricOdeSystem<f64> for Decay {
     }
     fn jacobian_p(&self, _t: f64, y: &[f64], jp: &mut [f64]) {
         jp[0] = -y[0];
+    }
+    fn has_analytical_jacobian_y(&self) -> bool {
+        true
+    }
+    fn has_analytical_jacobian_p(&self) -> bool {
+        true
     }
 }
 
@@ -674,6 +704,12 @@ fn nontrivial_initial_sensitivity() {
         fn jacobian_p(&self, _t: f64, _y: &[f64], jp: &mut [f64]) {
             // f does not depend on p directly (p enters only through y_0).
             jp[0] = 0.0;
+        }
+        fn has_analytical_jacobian_y(&self) -> bool {
+            true
+        }
+        fn has_analytical_jacobian_p(&self) -> bool {
+            true
         }
         fn initial_sensitivity(&self, _y0: &[f64], s0: &mut [f64]) {
             // ∂y_0/∂p = 1 (column-major: s0[k*N + i]).

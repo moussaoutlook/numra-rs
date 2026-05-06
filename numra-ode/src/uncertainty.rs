@@ -40,10 +40,8 @@ use numra_core::Scalar;
 
 use crate::error::SolverError;
 use crate::problem::OdeSystem;
+use crate::sensitivity::solve_forward_sensitivity_with;
 use crate::solver::{Solver, SolverOptions, SolverResult, SolverStats};
-
-/// Finite-difference step factor for Jacobian approximations.
-const FD_EPS: f64 = 1e-7;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -147,96 +145,6 @@ impl<S: Scalar> UncertainSolverResult<S> {
 }
 
 // ---------------------------------------------------------------------------
-// Augmented system for trajectory mode
-// ---------------------------------------------------------------------------
-
-/// Augmented ODE system that integrates both the original system and the
-/// forward sensitivity equations simultaneously.
-///
-/// The augmented state is `z = [y; S_flat]` where `S_flat` is the row-major
-/// sensitivity matrix of shape `(n_states, n_params)`.
-///
-/// The augmented RHS is:
-/// - `dy/dt = f(t, y; p)`
-/// - `dS/dt = (df/dy) * S + df/dp`
-///
-/// Jacobians `df/dy` and `df/dp` are computed via forward finite differences.
-struct AugmentedOdeSystem<'a, S: Scalar, F> {
-    /// The parameterized RHS: `f(t, y, dydt, params)`.
-    model: F,
-    /// Nominal parameter values.
-    params: &'a [S],
-    /// Number of state variables.
-    n_states: usize,
-    /// Number of parameters.
-    n_params: usize,
-}
-
-impl<S: Scalar, F> OdeSystem<S> for AugmentedOdeSystem<'_, S, F>
-where
-    F: Fn(S, &[S], &mut [S], &[S]) + Send + Sync,
-{
-    fn dim(&self) -> usize {
-        self.n_states * (1 + self.n_params)
-    }
-
-    fn rhs(&self, t: S, z: &[S], dz: &mut [S]) {
-        let ns = self.n_states;
-        let np = self.n_params;
-        let eps = S::from_f64(FD_EPS);
-
-        let y = &z[..ns];
-
-        // (a) Evaluate f(t, y, p) -> dy/dt
-        let mut f0 = vec![S::ZERO; ns];
-        (self.model)(t, y, &mut f0, self.params);
-        dz[..ns].copy_from_slice(&f0);
-
-        // (b) df/dy via forward finite differences
-        let mut df_dy = vec![S::ZERO; ns * ns];
-        let mut y_pert = y.to_vec();
-        let mut f_pert = vec![S::ZERO; ns];
-        for j in 0..ns {
-            let h_j = eps * (S::ONE + y[j].abs());
-            let y_j_orig = y_pert[j];
-            y_pert[j] = y_j_orig + h_j;
-            (self.model)(t, &y_pert, &mut f_pert, self.params);
-            for i in 0..ns {
-                df_dy[i * ns + j] = (f_pert[i] - f0[i]) / h_j;
-            }
-            y_pert[j] = y_j_orig;
-        }
-
-        // (c) df/dp via forward finite differences
-        let mut df_dp = vec![S::ZERO; ns * np];
-        let mut p_pert = self.params.to_vec();
-        for k in 0..np {
-            let h_k = eps * (S::ONE + self.params[k].abs());
-            let p_k_orig = p_pert[k];
-            p_pert[k] = p_k_orig + h_k;
-            (self.model)(t, y, &mut f_pert, &p_pert);
-            for i in 0..ns {
-                df_dp[i * np + k] = (f_pert[i] - f0[i]) / h_k;
-            }
-            p_pert[k] = p_k_orig;
-        }
-
-        // (d) dS/dt = (df/dy) * S + df/dp
-        let s_flat = &z[ns..];
-        for i in 0..ns {
-            for k in 0..np {
-                let mut val = S::ZERO;
-                for j in 0..ns {
-                    val = val + df_dy[i * ns + j] * s_flat[j * np + k];
-                }
-                val = val + df_dp[i * np + k];
-                dz[ns + i * np + k] = val;
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Trajectory mode
 // ---------------------------------------------------------------------------
 
@@ -269,71 +177,63 @@ pub fn solve_trajectory<Sol, S, F>(
 where
     S: Scalar,
     Sol: Solver<S>,
-    F: Fn(S, &[S], &mut [S], &[S]) + Send + Sync,
+    F: Fn(S, &[S], &mut [S], &[S]),
 {
     let n_states = y0.len();
     let n_params = params.len();
-    let n_aug = n_states * (1 + n_params);
-
-    // Extract nominal parameter values
     let nominal_params: Vec<S> = params.iter().map(|p| p.nominal).collect();
-
-    // Build augmented system
-    let aug_sys = AugmentedOdeSystem {
-        model,
-        params: &nominal_params,
-        n_states,
-        n_params,
-    };
-
-    // Build augmented initial condition: [y0; 0...0]
-    let mut z0 = Vec::with_capacity(n_aug);
-    z0.extend_from_slice(y0);
-    z0.resize(n_aug, S::ZERO);
-
-    // Solve the augmented system with the chosen solver
-    let aug_result = Sol::solve(&aug_sys, t0, tf, &z0, options)?;
-
-    if !aug_result.success {
-        return Err(SolverError::Other(aug_result.message));
-    }
-
-    // Extract nominal trajectory and sensitivities
-    let n_times = aug_result.len();
-    let mut t_out = Vec::with_capacity(n_times);
-    let mut y_out = Vec::with_capacity(n_times * n_states);
-    let mut sigma_out = Vec::with_capacity(n_times * n_states);
-    let mut sens_out = Vec::with_capacity(n_times);
-
-    // Parameter variances
     let variances: Vec<S> = params.iter().map(|p| p.variance()).collect();
 
+    // Adapt argument order: solve_forward_sensitivity_with expects
+    // `(t, y, p, dydt)`; this module's public model has `(t, y, dydt, p)`.
+    let rhs = move |t: S, y: &[S], p: &[S], dydt: &mut [S]| {
+        model(t, y, dydt, p);
+    };
+
+    let sens =
+        solve_forward_sensitivity_with::<Sol, S, _>(rhs, y0, &nominal_params, t0, tf, options)?;
+
+    if !sens.success {
+        return Err(SolverError::Other(sens.message));
+    }
+
+    // The canonical primitive returns sensitivity in column-major (per-time
+    // block of length `n_states * n_params`, with `block[k*n_states + j] =
+    // ∂y_j/∂p_k`). The public layout for `UncertainSolverResult.sensitivities`
+    // is row-major (state-major) per
+    //   `sensitivities[i][j*n_params + k] = ∂y_j/∂p_k`.
+    // Transpose during the copy so the public-facing accessor semantics stay
+    // unchanged.
+    let n_times = sens.len();
+    let mut sens_out = Vec::with_capacity(n_times);
+    let mut sigma_out = Vec::with_capacity(n_times * n_states);
+
     for i in 0..n_times {
-        let aug_i = aug_result.y_at(i);
-        let y_i = &aug_i[..n_states];
-        let s_flat = &aug_i[n_states..n_states + n_states * n_params];
+        let block = sens.sensitivity_at(i);
+        let mut row_major = vec![S::ZERO; n_states * n_params];
+        for j in 0..n_states {
+            for k in 0..n_params {
+                row_major[j * n_params + k] = block[k * n_states + j];
+            }
+        }
+        sens_out.push(row_major);
 
-        t_out.push(aug_result.t[i]);
-        y_out.extend_from_slice(y_i);
-        sens_out.push(s_flat.to_vec());
-
-        // GUM propagation: sigma_y_j^2 = sum_k (dy_j/dp_k)^2 * sigma_p_k^2
+        // GUM propagation: σ_{y_j}^2 = Σ_k (∂y_j/∂p_k)^2 · σ_{p_k}^2.
         for j in 0..n_states {
             let mut var_j = S::ZERO;
             for k in 0..n_params {
-                let dydp = s_flat[j * n_params + k];
+                let dydp = block[k * n_states + j];
                 var_j = var_j + dydp * dydp * variances[k];
             }
             sigma_out.push(var_j.sqrt());
         }
     }
 
-    // Build the nominal SolverResult (without the sensitivity padding)
     let nominal_result = SolverResult {
-        t: t_out,
-        y: y_out,
+        t: sens.t,
+        y: sens.y,
         dim: n_states,
-        stats: aug_result.stats,
+        stats: sens.stats,
         success: true,
         message: String::new(),
         events: Vec::new(),

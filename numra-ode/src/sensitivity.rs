@@ -91,6 +91,11 @@
 //!         jp[1*2 + 0] =  y[1];        // ∂f_0/∂p_1
 //!         jp[1*2 + 1] = -y[1];        // ∂f_1/∂p_1
 //!     }
+//!
+//!     // Flag analytical so AugmentedSystem honors the overrides above
+//!     // instead of falling through to its inline-FD fast path.
+//!     fn has_analytical_jacobian_y(&self) -> bool { true }
+//!     fn has_analytical_jacobian_p(&self) -> bool { true }
 //! }
 //!
 //! let sys = Lin2 { p: [1.0, 0.5] };
@@ -232,6 +237,33 @@ pub trait ParametricOdeSystem<S: Scalar> {
             *s = S::ZERO;
         }
     }
+
+    /// Returns `true` iff [`Self::jacobian_y`] has been overridden with an
+    /// analytical implementation. Default: `false`.
+    ///
+    /// `AugmentedSystem` checks this flag inside its hot path. When `false`
+    /// (the default), it inlines its own forward-FD using reused scratch
+    /// buffers — bypassing both the trait default and any override.
+    /// When `true`, it calls `system.jacobian_y(...)` directly so the user's
+    /// analytical override is honored.
+    ///
+    /// This is the pattern used by CVODES (`set_jacobian_user_supplied`):
+    /// flagging analytical Jacobians lets the augmented-system path skip
+    /// FD scratch allocation in the common FD case while still respecting
+    /// analytical overrides in the stiff-problem case where they materially
+    /// matter. **If you override `jacobian_y`, also override this method to
+    /// return `true`** — otherwise your override is silently bypassed when
+    /// running through `solve_forward_sensitivity`.
+    fn has_analytical_jacobian_y(&self) -> bool {
+        false
+    }
+
+    /// Returns `true` iff [`Self::jacobian_p`] has been overridden with an
+    /// analytical implementation. Default: `false`. See
+    /// [`Self::has_analytical_jacobian_y`] for the rationale and contract.
+    fn has_analytical_jacobian_p(&self) -> bool {
+        false
+    }
 }
 
 /// Wraps a [`ParametricOdeSystem`] as an [`OdeSystem`] over the augmented
@@ -244,6 +276,13 @@ pub struct AugmentedSystem<S: Scalar, Sys: ParametricOdeSystem<S>> {
     pub system: Sys,
     jy_scratch: std::cell::RefCell<Vec<S>>,
     jp_scratch: std::cell::RefCell<Vec<S>>,
+    // Reusable FD scratch lifted out of the trait's per-call allocations.
+    // Touched only on the FD path (when has_analytical_jacobian_{y,p}
+    // returns false). Each RefCell is borrowed in isolation; no overlap.
+    fd_f0: std::cell::RefCell<Vec<S>>,
+    fd_f1: std::cell::RefCell<Vec<S>>,
+    fd_y_pert: std::cell::RefCell<Vec<S>>,
+    fd_p_pert: std::cell::RefCell<Vec<S>>,
 }
 
 impl<S: Scalar, Sys: ParametricOdeSystem<S>> AugmentedSystem<S, Sys> {
@@ -256,6 +295,59 @@ impl<S: Scalar, Sys: ParametricOdeSystem<S>> AugmentedSystem<S, Sys> {
             system,
             jy_scratch: std::cell::RefCell::new(vec![S::ZERO; n * n]),
             jp_scratch: std::cell::RefCell::new(vec![S::ZERO; n * np]),
+            fd_f0: std::cell::RefCell::new(vec![S::ZERO; n]),
+            fd_f1: std::cell::RefCell::new(vec![S::ZERO; n]),
+            fd_y_pert: std::cell::RefCell::new(vec![S::ZERO; n]),
+            fd_p_pert: std::cell::RefCell::new(vec![S::ZERO; np]),
+        }
+    }
+
+    /// Forward-FD `J_y` using AugmentedSystem-local scratch buffers. Only
+    /// invoked when `system.has_analytical_jacobian_y()` is `false`.
+    fn fd_jacobian_y_inline(&self, t: S, y: &[S], jy: &mut [S]) {
+        let n = self.system.n_states();
+        let p = self.system.params();
+        let h_factor = S::EPSILON.sqrt();
+        let mut f0 = self.fd_f0.borrow_mut();
+        let mut f1 = self.fd_f1.borrow_mut();
+        let mut y_pert = self.fd_y_pert.borrow_mut();
+
+        self.system.rhs_with_params(t, y, p, &mut f0);
+        y_pert.copy_from_slice(y);
+        for j in 0..n {
+            let yj = y_pert[j];
+            let h = h_factor * (S::ONE + yj.abs());
+            y_pert[j] = yj + h;
+            self.system.rhs_with_params(t, &y_pert, p, &mut f1);
+            y_pert[j] = yj;
+            for i in 0..n {
+                jy[i * n + j] = (f1[i] - f0[i]) / h;
+            }
+        }
+    }
+
+    /// Forward-FD `J_p` using AugmentedSystem-local scratch buffers. Only
+    /// invoked when `system.has_analytical_jacobian_p()` is `false`.
+    fn fd_jacobian_p_inline(&self, t: S, y: &[S], jp: &mut [S]) {
+        let n = self.system.n_states();
+        let np = self.system.n_params();
+        let p_nominal = self.system.params();
+        let h_factor = S::EPSILON.sqrt();
+        let mut f0 = self.fd_f0.borrow_mut();
+        let mut f1 = self.fd_f1.borrow_mut();
+        let mut p_pert = self.fd_p_pert.borrow_mut();
+
+        self.system.rhs_with_params(t, y, p_nominal, &mut f0);
+        p_pert.copy_from_slice(p_nominal);
+        for k in 0..np {
+            let pk = p_pert[k];
+            let h = h_factor * (S::ONE + pk.abs());
+            p_pert[k] = pk + h;
+            self.system.rhs_with_params(t, y, &p_pert, &mut f1);
+            p_pert[k] = pk;
+            for i in 0..n {
+                jp[k * n + i] = (f1[i] - f0[i]) / h;
+            }
         }
     }
 
@@ -293,11 +385,26 @@ impl<S: Scalar, Sys: ParametricOdeSystem<S>> OdeSystem<S> for AugmentedSystem<S,
         // (a) original dynamics.
         self.system.rhs(t, y, &mut dz[..n]);
 
-        // (b) Jacobians at the current state.
+        // (b) Jacobians at the current state. Analytical when the system
+        // flags it; otherwise inline FD using local scratch buffers (lifted
+        // out of the trait defaults so the integration's hot path doesn't
+        // pay per-call allocation).
         let mut jy = self.jy_scratch.borrow_mut();
         let mut jp = self.jp_scratch.borrow_mut();
-        self.system.jacobian_y(t, y, &mut jy);
-        self.system.jacobian_p(t, y, &mut jp);
+        if self.system.has_analytical_jacobian_y() {
+            self.system.jacobian_y(t, y, &mut jy);
+        } else {
+            drop(jy);
+            self.fd_jacobian_y_inline(t, y, &mut self.jy_scratch.borrow_mut());
+            jy = self.jy_scratch.borrow_mut();
+        }
+        if self.system.has_analytical_jacobian_p() {
+            self.system.jacobian_p(t, y, &mut jp);
+        } else {
+            drop(jp);
+            self.fd_jacobian_p_inline(t, y, &mut self.jp_scratch.borrow_mut());
+            jp = self.jp_scratch.borrow_mut();
+        }
 
         // (c) per-parameter sensitivity column: dS_{:,k}/dt = J_y · S_{:,k} + J_p_{:,k}.
         // Sensitivity column-major: S_{i,k} lives at z[n + k*n + i].
@@ -585,6 +692,8 @@ where
 ///     }
 ///     fn jacobian_y(&self, _t: f64, _y: &[f64], jy: &mut [f64]) { jy[0] = -self.k; }
 ///     fn jacobian_p(&self, _t: f64, y: &[f64], jp: &mut [f64]) { jp[0] = -y[0]; }
+///     fn has_analytical_jacobian_y(&self) -> bool { true }
+///     fn has_analytical_jacobian_p(&self) -> bool { true }
 /// }
 ///
 /// let r = solve_forward_sensitivity::<DoPri5, _, _>(
@@ -752,6 +861,12 @@ mod tests {
         fn jacobian_p(&self, _t: f64, y: &[f64], jp: &mut [f64]) {
             jp[0] = -y[0];
         }
+        fn has_analytical_jacobian_y(&self) -> bool {
+            true
+        }
+        fn has_analytical_jacobian_p(&self) -> bool {
+            true
+        }
     }
 
     /// 2-state, 2-parameter linear system (mirrors the module-doc example).
@@ -785,6 +900,12 @@ mod tests {
             jp[0 * 2 + 1] = 0.0;
             jp[1 * 2 + 0] = y[1];
             jp[1 * 2 + 1] = -y[1];
+        }
+        fn has_analytical_jacobian_y(&self) -> bool {
+            true
+        }
+        fn has_analytical_jacobian_p(&self) -> bool {
+            true
         }
     }
 
