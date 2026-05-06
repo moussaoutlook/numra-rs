@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-05 (actionlint workflow shipped — see `.github/workflows/actionlint.yml`).
+Last updated: 2026-05-06 (Radau5 step-controller rewrite landed — Hairer-Wanner §IV.8 + Gustafsson predictive controller; now within ~1.5–2× of SciPy's `Radau` step counts on the reference suite).
 
 ---
 
@@ -74,28 +74,6 @@ ICs without the user wiring it together by hand.
 ---
 
 ## Solvers
-
-### Rewrite the Radau5 step controller
-
-**Status**: scoped, not started. Real work, not just a cleanup.
-
-**What's there today**: `numra-ode/src/radau5.rs` ships an L-stable
-3-stage Radau IIA scheme. It runs, but the step controller is conservative
-to the point of pathology — on Van der Pol μ=10 at rtol=1e-4 it takes
-~310k accepted steps where Hairer's reference RADAU implementation takes
-hundreds. The §2.3 comparison page (`ch13-performance/comparisons.md`)
-calls this out honestly.
-
-**What needs doing**: revisit the step-size heuristic against
-Hairer & Wanner II §IV.8, especially the order-prediction and
-step-rejection logic. The Newton-iteration cap at 7 (`radau5.rs:552`) and
-the convergence-rate test at `radau5.rs:719-734` likely interact badly
-with the controller and force unnecessary restarts.
-
-**Why it's a follow-up, not a public roadmap item**: it's a *fix*, not a
-new capability. The user-visible promise is already "Radau5 works"; the
-work here makes it work *fast*, which belongs in a release note when it
-lands, not a roadmap "we plan to" entry.
 
 ### Forward sensitivity analysis — expose in solver API
 
