@@ -99,8 +99,6 @@ fn test_dopri5_radau5_agreement() {
         5.0,
         vec![1.0],
     );
-    // Use relaxed tolerances for Radau5 since its error estimator is conservative
-    // for non-stiff problems, causing many small steps with tight tolerances
     let dopri_opts = SolverOptions::default();
     let radau_opts = SolverOptions::default().rtol(1e-3).atol(1e-6);
 

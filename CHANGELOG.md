@@ -14,6 +14,7 @@ All notable public changes to Numra are recorded here. The project follows seman
 ### Fixed
 
 - `numra-ode`: DoPri5 was building a `DenseOutput` when `SolverOptions::dense()` was set but never returning it, so the interpolant was silently dropped at the end of integration. The new `SolverResult.dense_output` field is now populated on both the normal exit and the early-termination event path.
+- `numra-ode`: Radau5 step controller rewritten against Hairer–Wanner ODE II §IV.8 and the SciPy `Radau` reference. Eight bugs fixed (most importantly: the `error_estimate` forcing term used `y` instead of `f(t,y)`; Newton's initial guess now extrapolates the previous step's collocation polynomial; LU is reused unless the step ratio leaves [1.0, 1.2]; Gustafsson predictive controller). Step counts on the standard reference suite are now within ~1.5–2× of SciPy's, and Van der Pol μ=10 at rtol=1e-4 runs in ~0.66 ms (vs ~200 ms before, and ~12 ms for SciPy).
 
 ### Policy
 

@@ -126,13 +126,20 @@ fn test_esdirk54_convergence() {
 
 #[test]
 fn test_radau5_convergence() {
-    // Radau5 (5th order) achieves machine precision for y'=-y even with loose rtol,
-    // so we just verify it's accurate rather than comparing two tolerances.
-    let err = solve_exp_decay::<Radau5>(1e-3);
-    println!("Radau5: err(1e-3)={:.3e}", err);
+    let err_loose = solve_exp_decay::<Radau5>(1e-3);
+    let err_tight = solve_exp_decay::<Radau5>(1e-8);
+    println!(
+        "Radau5: err(1e-3)={:.3e}, err(1e-8)={:.3e}",
+        err_loose, err_tight
+    );
     assert!(
-        err < 1e-10,
-        "Radau5 should be very accurate for simple exponential"
+        err_tight < err_loose,
+        "Radau5: tighter tol should give better accuracy"
+    );
+    assert!(
+        err_tight < 1e-9,
+        "Radau5: should achieve ~1e-10 with rtol=1e-8 (got {:.3e})",
+        err_tight
     );
 }
 
