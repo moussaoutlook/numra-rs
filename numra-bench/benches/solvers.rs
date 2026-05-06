@@ -132,12 +132,11 @@ fn bench_stiff_solvers(c: &mut Criterion) {
 
 /// Benchmark dimension scaling on the coupled linear ODE.
 ///
-/// DoPri5 (explicit) is run across n ∈ {2, 10, 50, 200} — its per-step
-/// cost is O(n) so the n=200 case still completes inside Criterion's
-/// budget. Radau5 (implicit) factors a dense Jacobian at every Newton
-/// iterate (O(n³)); n=200 is impractical at publication-grade sampling
-/// and is omitted, keeping the implicit-vs-explicit slope comparison
-/// honest within the n ∈ {2, 10, 50} range.
+/// DoPri5 (explicit) and Radau5 (implicit) are both run across
+/// n ∈ {2, 10, 50, 200}. Radau5's dense Jacobian factorisation gives
+/// it an O(n³) per-step cost, but with the rewritten step controller
+/// (Hairer-Wanner §IV.8 + Gustafsson) the n=200 point now fits well
+/// inside Criterion's budget.
 fn bench_dimension_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("dimension_scaling");
     group
@@ -155,14 +154,9 @@ fn bench_dimension_scaling(c: &mut Criterion) {
             b.iter(|| DoPri5::solve(black_box(&problem), 0.0, 5.0, &y0, &options))
         });
 
-        // Radau5 is omitted at n=200: with a dense Jacobian factorisation
-        // the cost-per-step blows up, and a single 20s Criterion sample
-        // turns into many minutes of wall-clock for a single point.
-        if n < 200 {
-            group.bench_with_input(BenchmarkId::new("radau5", n), &n, |b, _| {
-                b.iter(|| Radau5::solve(black_box(&problem), 0.0, 5.0, &y0, &options))
-            });
-        }
+        group.bench_with_input(BenchmarkId::new("radau5", n), &n, |b, _| {
+            b.iter(|| Radau5::solve(black_box(&problem), 0.0, 5.0, &y0, &options))
+        });
     }
 
     group.finish();
