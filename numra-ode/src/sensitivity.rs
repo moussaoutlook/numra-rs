@@ -254,13 +254,27 @@ pub trait ParametricOdeSystem<S: Scalar> {
     /// matter. **If you override `jacobian_y`, also override this method to
     /// return `true`** — otherwise your override is silently bypassed when
     /// running through `solve_forward_sensitivity`.
+    ///
+    /// # Debug-build safety net
+    ///
+    /// To catch the silent-misconfiguration case (override the method,
+    /// forget the flag), `AugmentedSystem` runs a one-time consistency
+    /// check on the first RHS call: it evaluates [`Self::jacobian_y`]
+    /// (which dispatches to the user's override or the FD default) and
+    /// compares against the inline FD result. If they disagree by more
+    /// than a Frobenius-norm relative threshold of `1e-3`, the system
+    /// panics in debug builds with a message naming the missing flag
+    /// override. Release builds skip the check entirely (zero overhead).
+    /// This is a safety net, not a contract — fixing the panic by
+    /// returning `true` here is the canonical resolution.
     fn has_analytical_jacobian_y(&self) -> bool {
         false
     }
 
     /// Returns `true` iff [`Self::jacobian_p`] has been overridden with an
     /// analytical implementation. Default: `false`. See
-    /// [`Self::has_analytical_jacobian_y`] for the rationale and contract.
+    /// [`Self::has_analytical_jacobian_y`] for the rationale, contract,
+    /// and debug-build consistency check.
     fn has_analytical_jacobian_p(&self) -> bool {
         false
     }
@@ -283,6 +297,10 @@ pub struct AugmentedSystem<S: Scalar, Sys: ParametricOdeSystem<S>> {
     fd_f1: std::cell::RefCell<Vec<S>>,
     fd_y_pert: std::cell::RefCell<Vec<S>>,
     fd_p_pert: std::cell::RefCell<Vec<S>>,
+    // Debug-only: tracks whether the first-call analytical-vs-FD
+    // consistency check has run. See `check_jacobian_flags`.
+    #[cfg(debug_assertions)]
+    flag_check_done: std::cell::Cell<bool>,
 }
 
 impl<S: Scalar, Sys: ParametricOdeSystem<S>> AugmentedSystem<S, Sys> {
@@ -299,6 +317,75 @@ impl<S: Scalar, Sys: ParametricOdeSystem<S>> AugmentedSystem<S, Sys> {
             fd_f1: std::cell::RefCell::new(vec![S::ZERO; n]),
             fd_y_pert: std::cell::RefCell::new(vec![S::ZERO; n]),
             fd_p_pert: std::cell::RefCell::new(vec![S::ZERO; np]),
+            #[cfg(debug_assertions)]
+            flag_check_done: std::cell::Cell::new(false),
+        }
+    }
+
+    /// Debug-build consistency check for the analytical-Jacobian flags.
+    ///
+    /// Catches the silent-misconfiguration class of bug where a user
+    /// implements `jacobian_y` (or `jacobian_p`) analytically but forgets
+    /// to override `has_analytical_jacobian_y` (or `_p`) — in which case
+    /// the augmented hot path bypasses the analytical override entirely
+    /// and runs FD instead. The user sees "Numra is slow on my problem"
+    /// with no diagnostic path.
+    ///
+    /// On the first `rhs` call (and only then), if a flag returns `false`,
+    /// we evaluate `system.jacobian_*` (which dispatches to the user's
+    /// override or the trait's FD default) and compare against the inline
+    /// FD result. If the user did not override the method, both calls
+    /// compute FD and agree to floating-point noise. If the user did
+    /// override with analytical, the two will typically disagree well
+    /// beyond the relative threshold — and we panic with a clear message.
+    ///
+    /// The threshold is `1e-3` relative (Frobenius). FD is only accurate
+    /// to `~sqrt(eps_mach) ≈ 1.5e-8`, so 1e-3 is loose enough to absorb
+    /// honest FD-vs-analytical disagreement at the initial state without
+    /// false positives, while still catching the "forgot the flag"
+    /// scenario where the analytical and FD results differ by O(1).
+    ///
+    /// Wrapped in `#[cfg(debug_assertions)]` — release builds pay zero.
+    #[cfg(debug_assertions)]
+    fn check_jacobian_flags(&self, t: S, y: &[S]) {
+        let n = self.system.n_states();
+        let np = self.system.n_params();
+        let threshold = S::from_f64(1e-3);
+
+        if !self.system.has_analytical_jacobian_y() {
+            let mut user_jy = vec![S::ZERO; n * n];
+            let mut fd_jy = vec![S::ZERO; n * n];
+            self.system.jacobian_y(t, y, &mut user_jy);
+            self.fd_jacobian_y_inline(t, y, &mut fd_jy);
+            if jacobians_differ_significantly(&user_jy, &fd_jy, threshold) {
+                panic!(
+                    "ParametricOdeSystem implements `jacobian_y` analytically \
+                     but `has_analytical_jacobian_y()` returns `false`; the \
+                     analytical implementation is being ignored and `AugmentedSystem` \
+                     is running finite differences instead. Override \
+                     `has_analytical_jacobian_y` to return `true`. \
+                     (This check is debug-build only; release builds will \
+                     silently use FD.)"
+                );
+            }
+        }
+
+        if !self.system.has_analytical_jacobian_p() && np > 0 {
+            let mut user_jp = vec![S::ZERO; n * np];
+            let mut fd_jp = vec![S::ZERO; n * np];
+            self.system.jacobian_p(t, y, &mut user_jp);
+            self.fd_jacobian_p_inline(t, y, &mut fd_jp);
+            if jacobians_differ_significantly(&user_jp, &fd_jp, threshold) {
+                panic!(
+                    "ParametricOdeSystem implements `jacobian_p` analytically \
+                     but `has_analytical_jacobian_p()` returns `false`; the \
+                     analytical implementation is being ignored and `AugmentedSystem` \
+                     is running finite differences instead. Override \
+                     `has_analytical_jacobian_p` to return `true`. \
+                     (This check is debug-build only; release builds will \
+                     silently use FD.)"
+                );
+            }
         }
     }
 
@@ -371,6 +458,24 @@ impl<S: Scalar, Sys: ParametricOdeSystem<S>> AugmentedSystem<S, Sys> {
     }
 }
 
+/// Frobenius-norm relative comparison: returns `true` if
+/// `||a - b||_F / max(||b||_F, 1) > threshold`. Used by the debug-build
+/// analytical-vs-FD Jacobian flag check.
+#[cfg(debug_assertions)]
+fn jacobians_differ_significantly<S: Scalar>(a: &[S], b: &[S], threshold: S) -> bool {
+    debug_assert_eq!(a.len(), b.len());
+    let mut diff_sq = S::ZERO;
+    let mut b_sq = S::ZERO;
+    for i in 0..a.len() {
+        let d = a[i] - b[i];
+        diff_sq = diff_sq + d * d;
+        b_sq = b_sq + b[i] * b[i];
+    }
+    let denom = b_sq.sqrt().max(S::ONE);
+    let rel = diff_sq.sqrt() / denom;
+    rel > threshold
+}
+
 impl<S: Scalar, Sys: ParametricOdeSystem<S>> OdeSystem<S> for AugmentedSystem<S, Sys> {
     fn dim(&self) -> usize {
         self.augmented_dim()
@@ -381,6 +486,15 @@ impl<S: Scalar, Sys: ParametricOdeSystem<S>> OdeSystem<S> for AugmentedSystem<S,
         let n = self.system.n_states();
         let np = self.system.n_params();
         let y = &z[..n];
+
+        // Debug-only one-time consistency check: analytical-Jacobian flags
+        // vs the user's actual `jacobian_*` override. See
+        // `check_jacobian_flags` for rationale.
+        #[cfg(debug_assertions)]
+        if !self.flag_check_done.get() {
+            self.flag_check_done.set(true);
+            self.check_jacobian_flags(t, y);
+        }
 
         // (a) original dynamics.
         self.system.rhs(t, y, &mut dz[..n]);
@@ -482,6 +596,12 @@ impl<S: Scalar, T: ParametricOdeSystem<S>> ParametricOdeSystem<S> for &T {
     }
     fn initial_sensitivity(&self, y0: &[S], s0: &mut [S]) {
         (*self).initial_sensitivity(y0, s0)
+    }
+    fn has_analytical_jacobian_y(&self) -> bool {
+        (*self).has_analytical_jacobian_y()
+    }
+    fn has_analytical_jacobian_p(&self) -> bool {
+        (*self).has_analytical_jacobian_p()
     }
 }
 

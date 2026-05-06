@@ -740,3 +740,92 @@ fn nontrivial_initial_sensitivity() {
         max_err,
     );
 }
+
+// ---------------------------------------------------------------------------
+// Test 9 — debug-build consistency check fires on the "forgot the flag" case
+// ---------------------------------------------------------------------------
+//
+// Pins the safety net documented on `has_analytical_jacobian_y`: a system
+// that overrides `jacobian_y` analytically but leaves the flag at the
+// default `false` MUST panic in debug builds on the first RHS call. The
+// system below makes the analytical override differ from FD by O(1) at
+// the initial state so the relative-norm check trips unambiguously.
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "has_analytical_jacobian_y")]
+fn analytical_jacobian_y_flag_forgotten_panics() {
+    struct Forgetful {
+        p: [f64; 1],
+    }
+    impl ParametricOdeSystem<f64> for Forgetful {
+        fn n_states(&self) -> usize {
+            1
+        }
+        fn n_params(&self) -> usize {
+            1
+        }
+        fn params(&self) -> &[f64] {
+            &self.p
+        }
+        fn rhs_with_params(&self, _t: f64, y: &[f64], p: &[f64], dy: &mut [f64]) {
+            dy[0] = -p[0] * y[0];
+        }
+        fn jacobian_y(&self, _t: f64, _y: &[f64], jy: &mut [f64]) {
+            // Deliberately wrong analytical impl: returns 100 instead of -p[0].
+            // Forgetting `has_analytical_jacobian_y` would silently bypass this
+            // (FD path would be used), but the consistency check sees the gap.
+            jy[0] = 100.0;
+        }
+        // NOTE: no `has_analytical_jacobian_y = true` override — this is the
+        // bug we're testing the check catches.
+    }
+
+    let r = solve_forward_sensitivity::<DoPri5, _, _>(
+        &Forgetful { p: [0.5] },
+        0.0,
+        1.0,
+        &[1.0],
+        &SolverOptions::default().rtol(1e-6).atol(1e-9),
+    );
+    // Unreachable in debug builds — the panic fires inside the first
+    // `rhs` call. If we get here, the check regressed.
+    let _ = r;
+}
+
+// Pins the corresponding fix to the blanket `impl ParametricOdeSystem for &T`:
+// flag methods must forward through the reference. Without this, every test
+// using the documented `solve_forward_sensitivity::<_, _, _>(&system, ...)`
+// pattern silently bypassed analytical Jacobians.
+#[test]
+fn blanket_ref_impl_forwards_analytical_flags() {
+    struct AlwaysTrue;
+    impl ParametricOdeSystem<f64> for AlwaysTrue {
+        fn n_states(&self) -> usize {
+            1
+        }
+        fn n_params(&self) -> usize {
+            1
+        }
+        fn params(&self) -> &[f64] {
+            &[1.0]
+        }
+        fn rhs_with_params(&self, _t: f64, _y: &[f64], _p: &[f64], _dy: &mut [f64]) {}
+        fn has_analytical_jacobian_y(&self) -> bool {
+            true
+        }
+        fn has_analytical_jacobian_p(&self) -> bool {
+            true
+        }
+    }
+
+    let s = AlwaysTrue;
+    let r: &dyn ParametricOdeSystem<f64> = &s;
+    assert!(r.has_analytical_jacobian_y());
+    assert!(r.has_analytical_jacobian_p());
+    // Also exercise the blanket `&T` impl directly (not via dyn).
+    fn check<T: ParametricOdeSystem<f64>>(t: T) -> (bool, bool) {
+        (t.has_analytical_jacobian_y(), t.has_analytical_jacobian_p())
+    }
+    assert_eq!(check(&s), (true, true));
+}

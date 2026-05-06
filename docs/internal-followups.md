@@ -205,6 +205,42 @@ sloppy) while keeping the state tolerance tight. CVODES exposes
 `SolverOptions::sens_rtol` / `sens_atol` later if real workflows ask
 for it.
 
+### `ParametricOdeSystem` analytical-Jacobian flag ergonomics
+
+**Status**: scoped, not started. Debug-build safety net shipped in the
+forward-sensitivity v1 to mitigate the immediate footgun.
+
+The current trait requires overriding both the Jacobian method *and* a
+boolean flag (`has_analytical_jacobian_y` / `_p`) — and silently falls
+back to FD when the flag is left at its `false` default. This is a
+silent-misconfiguration class of bug: failing users see "Numra is slow
+on my problem" with no diagnostic path. v1 ships with a debug-build
+consistency check inside `AugmentedSystem::rhs` that compares the
+user's `jacobian_*` output to inline FD on the first call and panics if
+they diverge beyond a 1e-3 relative threshold (catches the
+"forgot the flag entirely" case where analytical and FD differ by O(1)
+without false-positive on legitimate FD-vs-analytical disagreement).
+Release builds skip the check.
+
+The check is a safety net, not an API fix. The contract is still
+"override both," and the contract itself is what makes the bug
+possible. Future options to consider when we revisit:
+
+- **Procedural macro `analytical_jacobians!`** — wraps the impl block,
+  emits both the method and the flag override from a single declaration
+  site. Lowest friction; opaque to callers reading the trait.
+- **Typestate phantom markers** — `ParametricOdeSystem<S, JyKind = FdJy>`
+  with `AnalyticalJy` as a separate type. Catches the bug at compile
+  time; doubles the trait's surface area; complicates `dyn`-friendly
+  usage.
+- **Trait redesign** returning `Result<(), FDFallback>` from
+  `jacobian_y` so "no analytical override" is an explicit return value.
+  Most rigorous; biggest breaking change; interacts awkwardly with
+  default-impl FD.
+
+All three are breaking changes. Out of scope for v1; revisit after the
+public-flip release stabilizes the trait surface (post-1.0).
+
 ### Stiffness auto-detection (LSODA-equivalent)
 
 **Status**: scoped, not started.

@@ -5,17 +5,26 @@
 //! system:
 //!
 //! ```text
-//! dS/dt = (df/dy) * S + df/dp,  S(t0) = 0
+//! dS/dt = (df/dy) · S + df/dp,  S(t0) = 0
 //! ```
 //!
-//! Jacobians `df/dy` and `df/dp` are computed via forward finite differences.
+//! As of the v0.1 sensitivity unification, this module is a thin wrapper
+//! over the canonical primitive in [`numra_ode::sensitivity`]. The
+//! [`SensitivityResult`] type is re-exported from `numra-ode` so the OCP
+//! and ODE layers share a single shape and accessor surface — no
+//! duplicated row-major-vs-column-major conversions, no parallel test
+//! suites. Jacobians `df/dy` and `df/dp` use forward finite differences
+//! by default; users with stiff problems should implement
+//! [`numra_ode::ParametricOdeSystem`] directly for analytical overrides.
 //!
 //! Author: Moussa Leblouba
 //! Date: 9 February 2026
-//! Modified: 2 May 2026
+//! Modified: 6 May 2026
 
 use numra_core::Scalar;
-use numra_ode::{DoPri5, OdeProblem, Solver, SolverOptions};
+use numra_ode::sensitivity::solve_forward_sensitivity_with;
+pub use numra_ode::SensitivityResult;
+use numra_ode::{AugmentedSystem, ClosureSystem, DoPri5, Solver, SolverOptions};
 
 use crate::error::OcpError;
 
@@ -23,145 +32,34 @@ use crate::error::OcpError;
 type ModelFn<S> = dyn Fn(S, &[S], &mut [S], &[S]);
 
 // ---------------------------------------------------------------------------
-// Result type
-// ---------------------------------------------------------------------------
-
-/// Result of forward sensitivity analysis.
-///
-/// Stores the state trajectory and sensitivity matrices at each output time.
-#[derive(Clone, Debug)]
-pub struct SensitivityResult<S: Scalar> {
-    /// Time points.
-    pub t: Vec<S>,
-    /// State trajectory (flat row-major: `y[i * n_states + j]`).
-    pub y: Vec<S>,
-    /// Sensitivity matrices at each time (flat:
-    /// `sens[i * n_states * n_params + state * n_params + param]`).
-    pub sensitivity: Vec<S>,
-    /// Number of state variables.
-    pub n_states: usize,
-    /// Number of parameters.
-    pub n_params: usize,
-}
-
-impl<S: Scalar> SensitivityResult<S> {
-    /// Return the sensitivity matrix at time index `i` as a slice of length
-    /// `n_states * n_params`.
-    pub fn sensitivity_at(&self, i: usize) -> &[S] {
-        let block = self.n_states * self.n_params;
-        let start = i * block;
-        &self.sensitivity[start..start + block]
-    }
-
-    /// Return the state vector at time index `i` as a slice of length
-    /// `n_states`.
-    pub fn y_at(&self, i: usize) -> &[S] {
-        let start = i * self.n_states;
-        &self.y[start..start + self.n_states]
-    }
-
-    /// Number of output time points.
-    pub fn len(&self) -> usize {
-        self.t.len()
-    }
-
-    /// Whether the result is empty.
-    pub fn is_empty(&self) -> bool {
-        self.t.is_empty()
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Augmented RHS helper
-// ---------------------------------------------------------------------------
-
-/// Evaluate the augmented right-hand side for the combined state+sensitivity
-/// system.
-///
-/// `z = [y; S_flat]` where `S_flat[state * np + param]`.
-/// `dz = [f(t,y,p); dS/dt_flat]`.
-#[allow(clippy::too_many_arguments)]
-fn augmented_rhs<S: Scalar>(
-    model: &ModelFn<S>,
-    t: S,
-    z: &[S],
-    dz: &mut [S],
-    params: &[S],
-    ns: usize,
-    np: usize,
-) {
-    let fd_eps = S::from_f64(1e-7);
-    let y = &z[..ns];
-
-    let mut f0 = vec![S::ZERO; ns];
-    let mut f_pert = vec![S::ZERO; ns];
-
-    // (a) f(t, y, p)
-    model(t, y, &mut f0, params);
-    dz[..ns].copy_from_slice(&f0);
-
-    // (b) df/dy via forward finite differences.
-    let mut df_dy = vec![S::ZERO; ns * ns];
-    let mut y_pert = y.to_vec();
-    for j in 0..ns {
-        let h_j = fd_eps * (S::ONE + y[j].abs());
-        let y_j_orig = y_pert[j];
-        y_pert[j] = y_j_orig + h_j;
-        model(t, &y_pert, &mut f_pert, params);
-        for i in 0..ns {
-            df_dy[i * ns + j] = (f_pert[i] - f0[i]) / h_j;
-        }
-        y_pert[j] = y_j_orig;
-    }
-
-    // (c) df/dp via forward finite differences.
-    let mut df_dp = vec![S::ZERO; ns * np];
-    let mut p_pert = params.to_vec();
-    for k in 0..np {
-        let h_k = fd_eps * (S::ONE + params[k].abs());
-        let p_k_orig = p_pert[k];
-        p_pert[k] = p_k_orig + h_k;
-        model(t, y, &mut f_pert, &p_pert);
-        for i in 0..ns {
-            df_dp[i * np + k] = (f_pert[i] - f0[i]) / h_k;
-        }
-        p_pert[k] = p_k_orig;
-    }
-
-    // (d) dS/dt = (df/dy) * S + df/dp
-    let s_flat = &z[ns..];
-    for i in 0..ns {
-        for k in 0..np {
-            let mut val = S::ZERO;
-            for j in 0..ns {
-                val += df_dy[i * ns + j] * s_flat[j * np + k];
-            }
-            val += df_dp[i * np + k];
-            dz[ns + i * np + k] = val;
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 
 /// Compute forward sensitivities of an ODE solution w.r.t. parameters.
 ///
+/// Thin wrapper over [`numra_ode::sensitivity::solve_forward_sensitivity_with`].
+/// Accepts the OCP-native `(t, y, dydt, params)` closure shape and adapts
+/// to the canonical `(t, y, p, dydt)` primitive internally.
+///
 /// # Arguments
 ///
-/// * `model` -- ODE right-hand side `f(t, y, dydt, params)`.
-/// * `y0` -- Initial state.
-/// * `params` -- Parameter vector.
-/// * `t0`, `tf` -- Integration interval `[t0, tf]`.
-/// * `t_eval` -- Optional output times. If `None`, the solver chooses
-///   adaptively.
-/// * `rtol`, `atol` -- Relative and absolute tolerances for the ODE solver.
+/// * `model` — ODE right-hand side `f(t, y, dydt, params)`.
+/// * `y0` — Initial state.
+/// * `params` — Parameter vector.
+/// * `t0`, `tf` — Integration interval `[t0, tf]`.
+/// * `output_times` — Optional output times. If `None`, the solver chooses
+///   adaptively. If provided, integration runs segment-by-segment to land
+///   exactly on each requested time.
+/// * `rtol`, `atol` — Relative and absolute tolerances for the ODE solver.
 ///
 /// # Returns
 ///
-/// A [`SensitivityResult`] containing the state trajectory and the
-/// sensitivity matrix `S(t) = dy/dp` at each output time.
+/// A [`SensitivityResult`] (re-exported from `numra-ode`) containing the
+/// state trajectory and the sensitivity matrix `S(t) = dy/dp`. The
+/// sensitivity layout is **column-major over parameters**:
+/// `sensitivity[i*(N*N_s) + k*N + j] = ∂y_j(t_i)/∂p_k`. Use the typed
+/// accessors (`sensitivity_at`, `sensitivity_for_param`, `dyi_dpj`,
+/// `final_sensitivity`) instead of indexing the flat `Vec` directly.
 #[allow(clippy::too_many_arguments)]
 pub fn forward_sensitivity<S: Scalar>(
     model: &ModelFn<S>,
@@ -169,100 +67,94 @@ pub fn forward_sensitivity<S: Scalar>(
     params: &[S],
     t0: S,
     tf: S,
-    t_eval: Option<&[S]>,
+    output_times: Option<&[S]>,
     rtol: S,
     atol: S,
 ) -> Result<SensitivityResult<S>, OcpError> {
+    let opts = SolverOptions::default().rtol(rtol).atol(atol);
+
+    match output_times {
+        None => solve_forward_sensitivity_with::<DoPri5, S, _>(
+            |t: S, y: &[S], p: &[S], dy: &mut [S]| model(t, y, dy, p),
+            y0,
+            params,
+            t0,
+            tf,
+            &opts,
+        )
+        .map_err(|e| OcpError::IntegrationFailed(e.to_string())),
+        Some(te) => integrate_at_output_times(model, y0, params, te, &opts),
+    }
+}
+
+/// Segment-by-segment integration that lands exactly on each requested
+/// output time. Drives the canonical [`AugmentedSystem`] directly so the
+/// sensitivity state can be carried across segment boundaries without
+/// re-initialising to zero.
+fn integrate_at_output_times<S: Scalar>(
+    model: &ModelFn<S>,
+    y0: &[S],
+    params: &[S],
+    te: &[S],
+    opts: &SolverOptions<S>,
+) -> Result<SensitivityResult<S>, OcpError> {
     let n_states = y0.len();
     let n_params = params.len();
-    let n_aug = n_states + n_states * n_params;
+
+    if te.is_empty() {
+        return Err(OcpError::IntegrationFailed(
+            "output_times must contain at least one entry".to_string(),
+        ));
+    }
+
+    let system = ClosureSystem::new(
+        |t: S, y: &[S], p: &[S], dy: &mut [S]| model(t, y, dy, p),
+        params.to_vec(),
+        n_states,
+    );
+    let aug = AugmentedSystem::new(system);
+    let aug_dim = aug.augmented_dim();
+    let mut z_cur = aug.initial_augmented(y0);
 
     let tiny = S::from_f64(1e-15);
 
-    // -- Build augmented initial condition: [y0; 0 ... 0] ------------------
-    let mut z0 = Vec::with_capacity(n_aug);
-    z0.extend_from_slice(y0);
-    z0.resize(n_aug, S::ZERO);
+    let mut t_out = Vec::with_capacity(te.len());
+    let mut y_out = Vec::with_capacity(te.len() * n_states);
+    let mut sens_out = Vec::with_capacity(te.len() * n_states * n_params);
 
-    let opts = SolverOptions::default().rtol(rtol).atol(atol);
+    // Record the state at the first requested time (no integration yet).
+    t_out.push(te[0]);
+    y_out.extend_from_slice(&z_cur[..n_states]);
+    sens_out.extend_from_slice(&z_cur[n_states..aug_dim]);
 
-    let mut t_out = Vec::new();
-    let mut y_out = Vec::new();
-    let mut sens_out = Vec::new();
+    let mut last_stats = numra_ode::SolverStats::new();
 
-    if let Some(te) = t_eval {
-        // -- Segment-by-segment integration at exact output times ----------
-        // DoPri5 does not respect `t_eval` in SolverOptions, so we
-        // integrate between consecutive requested times to land exactly
-        // on each one.
-        let mut z_cur = z0;
+    for seg in 0..(te.len() - 1) {
+        let t_start = te[seg];
+        let t_end = te[seg + 1];
 
-        // Record the state at the first output time.
-        t_out.push(te[0]);
-        y_out.extend_from_slice(&z_cur[..n_states]);
-        sens_out.extend_from_slice(&z_cur[n_states..n_states + n_states * n_params]);
-
-        for seg in 0..(te.len() - 1) {
-            let t_start = te[seg];
-            let t_end = te[seg + 1];
-
-            // Skip zero-length segments.
-            if (t_end - t_start).abs() < tiny {
-                t_out.push(t_end);
-                y_out.extend_from_slice(&z_cur[..n_states]);
-                sens_out.extend_from_slice(&z_cur[n_states..n_states + n_states * n_params]);
-                continue;
-            }
-
-            let ns = n_states;
-            let np = n_params;
-            let p = params.to_vec();
-            let rhs = move |t: S, z: &[S], dz: &mut [S]| {
-                augmented_rhs(model, t, z, dz, &p, ns, np);
-            };
-
-            let problem = OdeProblem::new(rhs, t_start, t_end, z_cur.clone());
-            let result = DoPri5::solve(&problem, t_start, t_end, &z_cur, &opts)
-                .map_err(|e| OcpError::IntegrationFailed(e.to_string()))?;
-
-            if !result.success {
-                return Err(OcpError::IntegrationFailed(result.message));
-            }
-
-            z_cur = result.y_final().unwrap();
-
+        if (t_end - t_start).abs() < tiny {
             t_out.push(t_end);
             y_out.extend_from_slice(&z_cur[..n_states]);
-            sens_out.extend_from_slice(&z_cur[n_states..n_states + n_states * n_params]);
+            sens_out.extend_from_slice(&z_cur[n_states..aug_dim]);
+            continue;
         }
-    } else {
-        // -- Single integration, keep all adaptive steps -------------------
-        let ns = n_states;
-        let np = n_params;
-        let p = params.to_vec();
-        let rhs = move |t: S, z: &[S], dz: &mut [S]| {
-            augmented_rhs(model, t, z, dz, &p, ns, np);
-        };
 
-        let problem = OdeProblem::new(rhs, t0, tf, z0.clone());
-        let result = DoPri5::solve(&problem, t0, tf, &z0, &opts)
+        let result = DoPri5::solve(&aug, t_start, t_end, &z_cur, opts)
             .map_err(|e| OcpError::IntegrationFailed(e.to_string()))?;
 
         if !result.success {
             return Err(OcpError::IntegrationFailed(result.message));
         }
 
-        let n_times = result.len();
-        t_out.reserve(n_times);
-        y_out.reserve(n_times * n_states);
-        sens_out.reserve(n_times * n_states * n_params);
+        z_cur = result
+            .y_final()
+            .ok_or_else(|| OcpError::IntegrationFailed("missing final state".to_string()))?;
+        last_stats = result.stats;
 
-        for i in 0..n_times {
-            t_out.push(result.t[i]);
-            let aug_i = result.y_at(i);
-            y_out.extend_from_slice(&aug_i[..n_states]);
-            sens_out.extend_from_slice(&aug_i[n_states..n_states + n_states * n_params]);
-        }
+        t_out.push(t_end);
+        y_out.extend_from_slice(&z_cur[..n_states]);
+        sens_out.extend_from_slice(&z_cur[n_states..aug_dim]);
     }
 
     Ok(SensitivityResult {
@@ -271,6 +163,9 @@ pub fn forward_sensitivity<S: Scalar>(
         sensitivity: sens_out,
         n_states,
         n_params,
+        stats: last_stats,
+        success: true,
+        message: String::new(),
     })
 }
 
@@ -281,6 +176,7 @@ pub fn forward_sensitivity<S: Scalar>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use numra_ode::OdeProblem;
 
     /// Exponential decay: dy/dt = -k*y, y(0)=1, k=0.5.
     ///
@@ -312,6 +208,8 @@ mod tests {
         // Check at t = 1, 2, 3, 4, 5 (indices 1..=5 in check_times).
         for (idx, &t) in check_times.iter().enumerate().skip(1) {
             let analytical = -t * (-k * t).exp();
+            // Column-major over params: sensitivity_at(idx)[k*N + j] with
+            // N = N_p = 1 → offset 0. Equivalent to dyi_dpj(idx, 0, 0).
             let computed = result.sensitivity_at(idx)[0];
             assert!(
                 (computed - analytical).abs() < 1e-3,
@@ -353,9 +251,10 @@ mod tests {
         // Check dy/db at t = 1, 2, 3 (parameter index 1).
         for (idx, &t) in check_times.iter().enumerate().skip(1) {
             let analytical_dydb = 1.0 - (-t).exp();
-            // Sensitivity is stored as S[state * n_params + param].
-            // state=0, param=1 => offset 1.
-            let computed = result.sensitivity_at(idx)[1];
+            // Sensitivity is stored column-major over parameters:
+            // s[k*N + j] = ∂y_j/∂p_k. Use the typed accessor instead of
+            // raw indexing to make intent obvious and layout-independent.
+            let computed = result.dyi_dpj(idx, 0, 1);
             assert!(
                 (computed - analytical_dydb).abs() < 1e-3,
                 "t={t}: computed dy/db={computed}, analytical={analytical_dydb}, err={}",
@@ -391,7 +290,8 @@ mod tests {
         )
         .expect("forward_sensitivity failed");
 
-        let sens_forward = result.sensitivity_at(1)[0];
+        // Column-major: dyi_dpj(time_idx, state, param) = ∂y_state(t_i)/∂p_param.
+        let sens_forward = result.dyi_dpj(1, 0, 0);
 
         // Central finite-difference estimate.
         let h = 1e-5;
