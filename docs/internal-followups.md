@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-06 (forward-sensitivity foundation landed in `numra-ode`: `ParametricOdeSystem` trait + flat column-major `SensitivityResult` + `AugmentedSystem` impl `OdeSystem`. Solve entry points, regression suite, Robertson example, and chapter ship in subsequent commits on the same branch).
+Last updated: 2026-05-06 (forward-sensitivity API fully shipped — `ParametricOdeSystem` trait, `solve_forward_sensitivity{,_with}` entry points, `AugmentedSystem` + `ClosureSystem`, column-major `SensitivityResult`, regression suite, Criterion bench harness, three perf figures, Robertson worked example, and the rewritten ch11-uncertainty/sensitivity-analysis book chapter all landed on `main`. The "expose forward sensitivity in solver API" follow-up below has been retired; what remains under §Solvers is downstream extensions — block-diagonal LU, JVP, AD-based, staggered, separate sens tolerances, flag ergonomics).
 
 ---
 
@@ -75,31 +75,6 @@ ICs without the user wiring it together by hand.
 
 ## Solvers
 
-### Forward sensitivity analysis — expose in solver API
-
-**Status**: ~70% built. The pieces ship; the solver API doesn't.
-
-**What's there today**:
-- `numra-ode/src/sensitivity.rs:139-303` — `SensitivityEquations` trait
-  and `AugmentedSystem` wrapper. Implements
-  `dS/dt = (∂f/∂y)·S + ∂f/∂p`. Unit-tested on Lotka-Volterra.
-- `numra-ode/src/uncertainty.rs` — already uses `AugmentedSystem`
-  internally for trajectory-mode uncertainty (GUM/first-order Taylor).
-- `numra/tests/integration_tests.rs` — `test_radau5_with_sensitivity`
-  (uses *finite-difference* sensitivity, not the augmented-system path).
-
-**What needs doing**:
-- Solver-side sugar: `solve_with_forward_sensitivity()` on every implicit
-  solver (Radau5, BDF, ESDIRK54), so users don't have to manually wrap.
-- Public examples: a worked sensitivity case in `numra/examples/`
-  (parameter sensitivity of Lorenz on σ, e.g.).
-- A short book section under ch13 or a new chapter explaining when to
-  reach for forward sensitivity vs finite differences.
-
-**Why it's not on the public roadmap**: shipping a refinement of a
-machinery that already exists doesn't read well as a roadmap "direction".
-This is a release-note item, not a direction-of-travel item.
-
 ### Adjoint sensitivity
 
 **Status**: 0%. Greenfield.
@@ -124,7 +99,8 @@ shape the adjoint API should take.
 
 ### Block-diagonal-aware factorisation in `AugmentedSystem`
 
-**Status**: scoped, not started. Blocked behind the rest of the forward-sensitivity work shipping.
+**Status**: scoped, not started. Now unblocked — the
+forward-sensitivity API has shipped.
 
 The augmented Jacobian for forward sensitivity is
 `block_diag(J_y, J_y, ..., J_y)` (CVODES *simultaneous-corrector* form,
@@ -142,8 +118,8 @@ from the augmented-system path. Option (b) is cleaner: add a tagged
 trait `OdeSystemBlockDiag` (or a method on `OdeSystem` returning
 `Option<BlockSpec>`) and let solvers downcast.
 
-Out of scope for v1; revisit after the forward-sensitivity API has
-real users with measurable workloads.
+Out of scope for v1 (the forward-sensitivity API itself has just
+shipped); revisit once it has real users with measurable workloads.
 
 ### JVP-based variant of `ParametricOdeSystem`
 
@@ -168,8 +144,10 @@ in `numra-autodiff/src/reverse.rs` and forward-mode dual numbers
 elsewhere in `numra-autodiff`; a thin adapter `AutoDiffSystem<F>`
 implementing `ParametricOdeSystem` and computing `J_y` / `J_p` via
 forward-mode AD on the closure would close most of the FD-noise
-problems users hit. Blocked on the v1 API stabilising; do not start
-before the Robertson example lands.
+problems users hit. The v1 API has now stabilised and the Robertson
+example has landed; this is unblocked but still out of v1 scope —
+revisit once we have a workload that justifies the
+`numra-autodiff` ↔ `numra-ode` integration cost.
 
 ### Staggered sensitivity correction (CVODES `CV_STAGGERED`)
 
@@ -312,10 +290,6 @@ us. Sequence: Radau5 fix → DAE ergonomics → SUNDIALS chapter.
 Same logic — `numra-linalg`'s dense path is a faer wrapper, so a
 "Numra vs ndarray-linalg" comparison is really "faer vs
 ndarray-linalg in disguise". Defer until there's a story to tell.
-
-### Sensitivity-analysis book chapter
-
-**Status**: blocked on the forward-sensitivity API work above.
 
 ---
 
