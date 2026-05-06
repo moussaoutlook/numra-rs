@@ -1,0 +1,23 @@
+Numra figure provenance — rendered 2026-05-06T16:12:31Z
+
+Problem        : Robertson stiff kinetics (k1=0.04, k2=3e7, k3=1e4), N=3 states, N_s=3 params, y0=[1, 0, 0]
+Solver         : Radau5 / BDF (NDF) / DoPri5 / Tsit5 — see chart for t_final
+Tolerance      : rtol=1e-6, atol=1e-9
+Repro script   : numra-bench/benches/sensitivity.rs::bench_sensitivity_solver_choice
+
+Numra commit   : 5888a45
+rustc version  : 1.92.0
+
+Hardware (CPU) : Apple M4 Max
+Hardware (RAM) : 128 GB
+OS             : Darwin 24.6.0 (arm64)
+
+Python         : 3.14.3
+matplotlib     : 3.10.9
+
+Extra:
+  explicit_t_final: 1.0
+  implicit_t_final: 40.0
+  jacobian_mode : analytical (J_y row-major + J_p column-major, both flagged)
+  measurement   : 20.0 s per point
+  warmup        : 3.0 s per point

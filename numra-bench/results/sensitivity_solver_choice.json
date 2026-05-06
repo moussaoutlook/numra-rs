@@ -1,0 +1,41 @@
+{
+  "group": "sensitivity_solver_choice",
+  "samples": [
+    {
+      "bench": "bdf",
+      "ci_high_ns": 253781.06391538522,
+      "ci_low_ns": 252587.05998105783,
+      "mean_ns": 253168.6990442493,
+      "n_samples": 0,
+      "param": "robertson",
+      "stddev_ns": 3062.43629712712
+    },
+    {
+      "bench": "dopri5",
+      "ci_high_ns": 168378.8781833275,
+      "ci_low_ns": 167199.9092549688,
+      "mean_ns": 167761.92040435752,
+      "n_samples": 0,
+      "param": "robertson_t1",
+      "stddev_ns": 3019.1122089946757
+    },
+    {
+      "bench": "radau5",
+      "ci_high_ns": 690639.0804295714,
+      "ci_low_ns": 688263.3939624337,
+      "mean_ns": 689429.4508868275,
+      "n_samples": 0,
+      "param": "robertson",
+      "stddev_ns": 6110.276150857177
+    },
+    {
+      "bench": "tsit5",
+      "ci_high_ns": 148718.51096712737,
+      "ci_low_ns": 147947.44075201944,
+      "mean_ns": 148337.74163841252,
+      "n_samples": 0,
+      "param": "robertson_t1",
+      "stddev_ns": 1980.4543106744297
+    }
+  ]
+}

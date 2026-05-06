@@ -1,0 +1,32 @@
+{
+  "group": "sensitivity_jacobian_mode",
+  "samples": [
+    {
+      "bench": "radau5",
+      "ci_high_ns": 2606173.5012442525,
+      "ci_low_ns": 2593520.6885746317,
+      "mean_ns": 2599580.871428074,
+      "n_samples": 0,
+      "param": "analytical_y",
+      "stddev_ns": 32447.988029570064
+    },
+    {
+      "bench": "radau5",
+      "ci_high_ns": 2527942.458776263,
+      "ci_low_ns": 2514173.896450663,
+      "mean_ns": 2521073.226468486,
+      "n_samples": 0,
+      "param": "analytical_yp",
+      "stddev_ns": 35279.098327447806
+    },
+    {
+      "bench": "radau5",
+      "ci_high_ns": 3002325.0270602508,
+      "ci_low_ns": 2987328.5753766024,
+      "mean_ns": 2994856.6362497294,
+      "n_samples": 0,
+      "param": "fd",
+      "stddev_ns": 38413.18232651298
+    }
+  ]
+}

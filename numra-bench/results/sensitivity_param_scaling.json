@@ -1,0 +1,41 @@
+{
+  "group": "sensitivity_param_scaling",
+  "samples": [
+    {
+      "bench": "dopri5",
+      "ci_high_ns": 38033.77440928523,
+      "ci_low_ns": 37827.70410121354,
+      "mean_ns": 37931.9888533975,
+      "n_samples": 0,
+      "param": "1",
+      "stddev_ns": 528.7657469230645
+    },
+    {
+      "bench": "dopri5",
+      "ci_high_ns": 41467.7608804315,
+      "ci_low_ns": 41292.87736600784,
+      "mean_ns": 41386.42444738988,
+      "n_samples": 0,
+      "param": "2",
+      "stddev_ns": 450.37835737681496
+    },
+    {
+      "bench": "dopri5",
+      "ci_high_ns": 86147.1853144377,
+      "ci_low_ns": 85854.78991597923,
+      "mean_ns": 85997.85961799971,
+      "n_samples": 0,
+      "param": "4",
+      "stddev_ns": 747.1960162610086
+    },
+    {
+      "bench": "dopri5",
+      "ci_high_ns": 179637.1907348693,
+      "ci_low_ns": 178592.96339934474,
+      "mean_ns": 179099.96395227432,
+      "n_samples": 0,
+      "param": "8",
+      "stddev_ns": 2679.8610438708597
+    }
+  ]
+}

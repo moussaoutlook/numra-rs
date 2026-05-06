@@ -1,0 +1,22 @@
+Numra figure provenance — rendered 2026-05-06T16:12:30Z
+
+Problem        : Damped harmonic oscillator with N_s additive sinusoidal forcings, N=2 states, t in [0, 10], y0=[1, 0]
+Solver         : DoPri5 (adaptive explicit RK with PI controller) on the augmented system
+Tolerance      : rtol=1e-8, atol=1e-10
+Repro script   : numra-bench/benches/sensitivity.rs::bench_sensitivity_param_scaling
+
+Numra commit   : 5888a45
+rustc version  : 1.92.0
+
+Hardware (CPU) : Apple M4 Max
+Hardware (RAM) : 128 GB
+OS             : Darwin 24.6.0 (arm64)
+
+Python         : 3.14.3
+matplotlib     : 3.10.9
+
+Extra:
+  jacobian_mode : analytical (J_y row-major + J_p column-major, both flagged)
+  measurement   : 20.0 s per point
+  n_points      : 4
+  warmup        : 3.0 s per point

@@ -1,0 +1,23 @@
+Numra figure provenance — rendered 2026-05-06T16:12:31Z
+
+Problem        : Lotka–Volterra (alpha=1.0, beta=0.1, delta=0.075, gamma=1.5), N=2 states, N_s=4 params, y0=[10, 5], t in [0, 5]
+Solver         : Radau5 (5th-order implicit Runge–Kutta on the augmented system)
+Tolerance      : rtol=1e-8, atol=1e-10
+Repro script   : numra-bench/benches/sensitivity.rs::bench_sensitivity_jacobian_mode
+
+Numra commit   : 5888a45
+rustc version  : 1.92.0
+
+Hardware (CPU) : Apple M4 Max
+Hardware (RAM) : 128 GB
+OS             : Darwin 24.6.0 (arm64)
+
+Python         : 3.14.3
+matplotlib     : 3.10.9
+
+Extra:
+  analytical_y_mode: analytical J_y, FD J_p
+  analytical_yp_mode: analytical J_y and J_p, both flags set
+  fd_mode       : trait-default forward FD on both J_y and J_p
+  measurement   : 20.0 s per point
+  warmup        : 3.0 s per point
