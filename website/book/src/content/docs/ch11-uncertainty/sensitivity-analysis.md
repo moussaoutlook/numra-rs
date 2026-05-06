@@ -21,8 +21,8 @@ Knowing $ S(t) $ — not just at one time but as a trajectory — is the
 foundation of parameter estimation, optimal experimental design,
 gradient-based calibration, and uncertainty quantification along an
 ODE solution. Numra computes it via the simultaneous-corrector
-augmented-system formulation introduced by CVODES; the rest of this
-page documents the math, the API, the result layout, and the
+augmented-system formulation as documented in CVODES; the rest of
+this page documents the math, the API, the result layout, and the
 performance characteristics.
 
 :::tip[Two distinct sensitivity concepts]
@@ -409,11 +409,30 @@ The general guidance:
 | Severely stiff (rate constants spanning $> 4 $ decades) | **Radau5** | **BDF** (NDF / `ode15s`-style) |
 | DAE (index ≤ 1) | **Radau5** | **BDF** |
 
-If you don't pick explicitly, [`auto_solve`](https://docs.rs/numra/latest/numra/ode/fn.auto_solve.html)
-applies the same heuristics. For the augmented system specifically,
-`auto_solve` is conservative and prefers an implicit solver whenever
-the underlying state Jacobian shows stiffness — sensitivity equations
-inherit the state's stiffness exactly, so this default is usually right.
+If you don't want to pick explicitly, the
+[`Auto`](https://docs.rs/numra/latest/numra/ode/struct.Auto.html)
+solver type applies the same heuristics — pass it as the solver
+type parameter to `solve_forward_sensitivity` exactly like any
+concrete solver:
+
+<!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
+```rust
+use numra::ode::{Auto, SolverOptions};
+use numra::solve_forward_sensitivity;
+
+let r = solve_forward_sensitivity::<Auto, f64, _>(&system, t0, tf, &y0, &opts)?;
+```
+
+`Auto` performs lightweight stiffness detection on the augmented
+system's RHS and routes to Tsit5/Esdirk54/BDF or Radau5 accordingly.
+Sensitivity equations inherit the state's stiffness exactly, so the
+auto-selection that's right for the bare state is also right for
+the augmented system in nearly all cases. The standalone
+[`auto_solve`](https://docs.rs/numra/latest/numra/ode/fn.auto_solve.html)
+convenience function operates on a plain `OdeSystem` and returns
+`SolverResult<S>`, not `SensitivityResult<S>` — use the `Auto`
+type-parameter form above when you want auto-selection inside the
+sensitivity pipeline.
 
 ## Performance
 
@@ -603,6 +622,22 @@ Forward sensitivity composes cleanly with the rest of the workspace:
 
 Anything that previously rolled its own augmented-system loop in the
 workspace has been ported over. There is one source of truth.
+
+## A note on Rust peers
+
+The closest peer in the Rust ecosystem is
+[`diffsol`](https://docs.rs/diffsol) (Robinson et al., *Journal of
+Open Source Software* 11(117), 2026), which implements forward and
+adjoint sensitivity using a builder API with Jacobian–vector products
+and Enzyme-based AD via its DiffSL DSL — better suited to large
+sparse problems and matrix-free Krylov solvers. Numra's design is
+trait-based with full Jacobian matrices, suitable for small-to-medium
+dense problems and aimed at making the augmented-system semantics
+visible at the API surface (the column-major sensitivity layout, the
+analytical-Jacobian flag contract, the debug-build safety net) rather
+than abstracted behind a builder. The two libraries cover overlapping
+but distinct sweet spots; the canonical reference for the
+augmented-system formulation remains SUNDIALS CVODES.
 
 ## Reference
 
