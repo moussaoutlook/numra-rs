@@ -129,8 +129,9 @@
 
 use numra_core::Scalar;
 
+use crate::error::SolverError;
 use crate::problem::OdeSystem;
-use crate::solver::SolverStats;
+use crate::solver::{Solver, SolverOptions, SolverStats};
 
 /// An ODE system parameterised by a parameter vector `p`.
 ///
@@ -347,6 +348,36 @@ impl<S: Scalar, Sys: ParametricOdeSystem<S>> OdeSystem<S> for AugmentedSystem<S,
     }
 }
 
+/// Forwarding impl: a reference to a parametric system is itself a parametric
+/// system. Lets [`solve_forward_sensitivity`] accept `&Sys` without taking
+/// ownership of the user's data.
+impl<S: Scalar, T: ParametricOdeSystem<S>> ParametricOdeSystem<S> for &T {
+    fn n_states(&self) -> usize {
+        (*self).n_states()
+    }
+    fn n_params(&self) -> usize {
+        (*self).n_params()
+    }
+    fn params(&self) -> &[S] {
+        (*self).params()
+    }
+    fn rhs_with_params(&self, t: S, y: &[S], p: &[S], dydt: &mut [S]) {
+        (*self).rhs_with_params(t, y, p, dydt)
+    }
+    fn rhs(&self, t: S, y: &[S], dydt: &mut [S]) {
+        (*self).rhs(t, y, dydt)
+    }
+    fn jacobian_y(&self, t: S, y: &[S], jac: &mut [S]) {
+        (*self).jacobian_y(t, y, jac)
+    }
+    fn jacobian_p(&self, t: S, y: &[S], jp: &mut [S]) {
+        (*self).jacobian_p(t, y, jp)
+    }
+    fn initial_sensitivity(&self, y0: &[S], s0: &mut [S]) {
+        (*self).initial_sensitivity(y0, s0)
+    }
+}
+
 /// Result of an ODE forward-sensitivity solve.
 ///
 /// Layout matches the conventions in the [module-level docs](self):
@@ -475,6 +506,221 @@ impl<S: Scalar> SensitivityResult<S> {
         }
         out
     }
+}
+
+/// Closure-shaped adapter for [`solve_forward_sensitivity_with`].
+///
+/// Wraps a closure of shape `Fn(t, y, p, dydt)` and a fixed parameter vector
+/// into a [`ParametricOdeSystem`] using FD-default Jacobians. Public so that
+/// callers writing a one-shot harness can construct it explicitly when they
+/// need to share it across multiple solver invocations.
+pub struct ClosureSystem<S: Scalar, F> {
+    rhs: F,
+    params: Vec<S>,
+    n_states: usize,
+}
+
+impl<S: Scalar, F> ClosureSystem<S, F>
+where
+    F: Fn(S, &[S], &[S], &mut [S]),
+{
+    /// Build a closure-backed [`ParametricOdeSystem`].
+    pub fn new(rhs: F, params: Vec<S>, n_states: usize) -> Self {
+        Self {
+            rhs,
+            params,
+            n_states,
+        }
+    }
+}
+
+impl<S: Scalar, F> ParametricOdeSystem<S> for ClosureSystem<S, F>
+where
+    F: Fn(S, &[S], &[S], &mut [S]),
+{
+    fn n_states(&self) -> usize {
+        self.n_states
+    }
+    fn n_params(&self) -> usize {
+        self.params.len()
+    }
+    fn params(&self) -> &[S] {
+        &self.params
+    }
+    fn rhs_with_params(&self, t: S, y: &[S], p: &[S], dydt: &mut [S]) {
+        (self.rhs)(t, y, p, dydt)
+    }
+}
+
+/// Compute the forward sensitivity matrix `S(t) = ∂y(t) / ∂p` of an ODE
+/// solution using any [`Solver`].
+///
+/// Builds the augmented state `z = [y; vec(S)]` (column-major sensitivity
+/// flattening; see [module-level docs](self)), drives `Sol` over the
+/// augmented system, and splits the trajectory back into `y` and
+/// sensitivity blocks at every output time the solver produced.
+///
+/// # Errors
+///
+/// Returns whatever error `Sol::solve` raises. If the underlying integration
+/// returns `success = false` (e.g. step-size collapse or max-steps reached),
+/// the returned [`SensitivityResult`] propagates that with empty trajectory
+/// vectors and the solver's diagnostic message.
+///
+/// # Example
+///
+/// ```
+/// use numra_ode::sensitivity::{solve_forward_sensitivity, ParametricOdeSystem};
+/// use numra_ode::{DoPri5, SolverOptions};
+///
+/// // dy/dt = -k * y, y(0) = 1, k = 0.5.
+/// // Analytical: y(t) = exp(-k t), ∂y/∂k = -t exp(-k t).
+/// struct Decay { k: f64 }
+/// impl ParametricOdeSystem<f64> for Decay {
+///     fn n_states(&self) -> usize { 1 }
+///     fn n_params(&self) -> usize { 1 }
+///     fn params(&self) -> &[f64] { std::slice::from_ref(&self.k) }
+///     fn rhs_with_params(&self, _t: f64, y: &[f64], p: &[f64], dy: &mut [f64]) {
+///         dy[0] = -p[0] * y[0];
+///     }
+///     fn jacobian_y(&self, _t: f64, _y: &[f64], jy: &mut [f64]) { jy[0] = -self.k; }
+///     fn jacobian_p(&self, _t: f64, y: &[f64], jp: &mut [f64]) { jp[0] = -y[0]; }
+/// }
+///
+/// let r = solve_forward_sensitivity::<DoPri5, _, _>(
+///     &Decay { k: 0.5 },
+///     0.0, 2.0,
+///     &[1.0],
+///     &SolverOptions::default().rtol(1e-8).atol(1e-10),
+/// ).unwrap();
+///
+/// let last = r.len() - 1;
+/// let dy_dk = r.dyi_dpj(last, 0, 0);
+/// let analytical = -r.t[last] * (-0.5 * r.t[last]).exp();
+/// assert!((dy_dk - analytical).abs() < 1e-5);
+/// ```
+pub fn solve_forward_sensitivity<Sol, S, Sys>(
+    system: &Sys,
+    t0: S,
+    tf: S,
+    y0: &[S],
+    options: &SolverOptions<S>,
+) -> Result<SensitivityResult<S>, SolverError>
+where
+    Sol: Solver<S>,
+    S: Scalar,
+    Sys: ParametricOdeSystem<S>,
+{
+    let n = system.n_states();
+    let np = system.n_params();
+    assert_eq!(
+        y0.len(),
+        n,
+        "solve_forward_sensitivity: y0.len() = {} but n_states = {}",
+        y0.len(),
+        n,
+    );
+    assert_eq!(
+        system.params().len(),
+        np,
+        "solve_forward_sensitivity: params().len() = {} but n_params = {}",
+        system.params().len(),
+        np,
+    );
+
+    let aug = AugmentedSystem::new(system);
+    let z0 = aug.initial_augmented(y0);
+    let aug_dim = aug.augmented_dim();
+
+    let aug_result = Sol::solve(&aug, t0, tf, &z0, options)?;
+
+    if !aug_result.success {
+        return Ok(SensitivityResult {
+            t: Vec::new(),
+            y: Vec::new(),
+            sensitivity: Vec::new(),
+            n_states: n,
+            n_params: np,
+            stats: aug_result.stats,
+            success: false,
+            message: aug_result.message,
+        });
+    }
+
+    let n_times = aug_result.len();
+    let mut t = Vec::with_capacity(n_times);
+    let mut y = Vec::with_capacity(n_times * n);
+    let mut sensitivity = Vec::with_capacity(n_times * n * np);
+
+    for i in 0..n_times {
+        t.push(aug_result.t[i]);
+        let block_start = i * aug_dim;
+        let state_block = &aug_result.y[block_start..block_start + n];
+        let sens_block = &aug_result.y[block_start + n..block_start + aug_dim];
+        y.extend_from_slice(state_block);
+        sensitivity.extend_from_slice(sens_block);
+    }
+
+    Ok(SensitivityResult {
+        t,
+        y,
+        sensitivity,
+        n_states: n,
+        n_params: np,
+        stats: aug_result.stats,
+        success: true,
+        message: String::new(),
+    })
+}
+
+/// Closure-shaped convenience wrapper around [`solve_forward_sensitivity`].
+///
+/// Wraps `rhs(t, y, p, dydt)` plus a parameter vector into an internal
+/// [`ClosureSystem`] (FD-default Jacobians) and forwards. Suitable for
+/// one-shot analyses, tests, and REPL-style scripts. For production usage
+/// — particularly stiff problems where analytical Jacobians materially
+/// change runtime — implement [`ParametricOdeSystem`] directly and call
+/// [`solve_forward_sensitivity`].
+///
+/// # Example
+///
+/// ```
+/// use numra_ode::{DoPri5, SolverOptions};
+/// use numra_ode::sensitivity::solve_forward_sensitivity_with;
+///
+/// // dy/dt = -k * y, y(0) = 1, k = 0.5.
+/// let r = solve_forward_sensitivity_with::<DoPri5, f64, _>(
+///     |_t, y, p, dy| { dy[0] = -p[0] * y[0]; },
+///     &[1.0],
+///     &[0.5],
+///     0.0, 2.0,
+///     &SolverOptions::default().rtol(1e-8).atol(1e-10),
+/// ).unwrap();
+///
+/// let last = r.len() - 1;
+/// let dy_dk = r.dyi_dpj(last, 0, 0);
+/// let analytical: f64 = -r.t[last] * (-0.5 * r.t[last]).exp();
+/// assert!((dy_dk - analytical).abs() < 1e-4);
+/// ```
+pub fn solve_forward_sensitivity_with<Sol, S, F>(
+    rhs: F,
+    y0: &[S],
+    params: &[S],
+    t0: S,
+    tf: S,
+    options: &SolverOptions<S>,
+) -> Result<SensitivityResult<S>, SolverError>
+where
+    Sol: Solver<S>,
+    S: Scalar,
+    F: Fn(S, &[S], &[S], &mut [S]),
+{
+    let system = ClosureSystem {
+        rhs,
+        params: params.to_vec(),
+        n_states: y0.len(),
+    };
+    solve_forward_sensitivity::<Sol, S, _>(&system, t0, tf, y0, options)
 }
 
 #[cfg(test)]
@@ -743,5 +989,113 @@ mod tests {
         assert!((norm[0] - 1.0).abs() < 1e-12);
         // y_1 = 0 → reported as zero rather than ∞.
         assert_eq!(norm[1], 0.0);
+    }
+
+    // ---------------------------------------------------------------
+    // Solve entry-point sanity tests.
+    //
+    // The full solver-coverage matrix lives in
+    // numra-ode/tests/sensitivity_regression.rs (commit 3).
+    // ---------------------------------------------------------------
+
+    use crate::DoPri5;
+    use crate::SolverOptions;
+
+    #[test]
+    fn solve_forward_sensitivity_with_dopri5_matches_analytical_decay() {
+        // dy/dt = -k y, y(0) = 1, k = 0.5.
+        // Analytical: ∂y/∂k(t) = -t · exp(-k t).
+        let result = solve_forward_sensitivity_with::<DoPri5, f64, _>(
+            |_t, y, p, dy| {
+                dy[0] = -p[0] * y[0];
+            },
+            &[1.0],
+            &[0.5],
+            0.0,
+            2.0,
+            &SolverOptions::default().rtol(1e-8).atol(1e-10),
+        )
+        .expect("solve failed");
+
+        assert!(result.success);
+        assert_eq!(result.n_states, 1);
+        assert_eq!(result.n_params, 1);
+        let last = result.len() - 1;
+        let dy_dk = result.dyi_dpj(last, 0, 0);
+        let t_last = result.t[last];
+        let analytical = -t_last * (-0.5 * t_last).exp();
+        assert!(
+            (dy_dk - analytical).abs() < 1e-5,
+            "computed {dy_dk}, analytical {analytical}, |err| = {}",
+            (dy_dk - analytical).abs()
+        );
+    }
+
+    #[test]
+    fn solve_trait_form_matches_closure_form() {
+        let trait_result = solve_forward_sensitivity::<DoPri5, _, _>(
+            &ExpDecay { k: 0.5 },
+            0.0,
+            2.0,
+            &[1.0],
+            &SolverOptions::default().rtol(1e-9).atol(1e-12),
+        )
+        .expect("trait solve failed");
+
+        let closure_result = solve_forward_sensitivity_with::<DoPri5, f64, _>(
+            |_t, y, p, dy| {
+                dy[0] = -p[0] * y[0];
+            },
+            &[1.0],
+            &[0.5],
+            0.0,
+            2.0,
+            &SolverOptions::default().rtol(1e-9).atol(1e-12),
+        )
+        .expect("closure solve failed");
+
+        // Trait form has analytical Jacobians; closure form falls back to FD.
+        // Both must converge to the same answer at the final time, modulo FD
+        // noise.
+        let n_t = trait_result.len();
+        let n_c = closure_result.len();
+        let trait_final = trait_result.dyi_dpj(n_t - 1, 0, 0);
+        let closure_final = closure_result.dyi_dpj(n_c - 1, 0, 0);
+        assert!(
+            (trait_final - closure_final).abs() < 1e-5,
+            "trait {trait_final} vs closure {closure_final}, |err| = {}",
+            (trait_final - closure_final).abs()
+        );
+    }
+
+    #[test]
+    fn solve_propagates_solver_failure_as_unsuccessful_result() {
+        // Forcing max_steps = 1 against a multi-step problem makes the
+        // underlying solver return success = false (or an error). We assert
+        // that solve_forward_sensitivity surfaces this without panicking.
+        let opts = SolverOptions::default().rtol(1e-9).atol(1e-12).max_steps(1);
+
+        let outcome = solve_forward_sensitivity_with::<DoPri5, f64, _>(
+            |_t, y, p, dy| {
+                dy[0] = -p[0] * y[0];
+            },
+            &[1.0],
+            &[0.5],
+            0.0,
+            10.0,
+            &opts,
+        );
+
+        match outcome {
+            Ok(r) => {
+                assert!(!r.success, "expected unsuccessful result, got success");
+                assert!(r.t.is_empty());
+                assert!(r.y.is_empty());
+                assert!(r.sensitivity.is_empty());
+            }
+            Err(_) => {
+                // Some solvers return Err directly for max_steps; that's also acceptable.
+            }
+        }
     }
 }

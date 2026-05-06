@@ -107,7 +107,10 @@ pub use radau5::Radau5;
 // Automatic selection
 pub use auto::{auto_solve, auto_solve_with_hints, Accuracy, Auto, SolverHints, Stiffness};
 
-pub use sensitivity::{AugmentedSystem, ParametricOdeSystem, SensitivityResult};
+pub use sensitivity::{
+    solve_forward_sensitivity, solve_forward_sensitivity_with, AugmentedSystem, ClosureSystem,
+    ParametricOdeSystem, SensitivityResult,
+};
 
 pub use dae_init::{compute_consistent_initial, compute_consistent_initial_tol};
 
