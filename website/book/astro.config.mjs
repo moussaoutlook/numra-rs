@@ -193,6 +193,7 @@ export default defineConfig({
           label: 'Uncertainty & Sensitivity',
           items: [
             { label: 'Error Propagation', slug: 'ch11-uncertainty/error-propagation' },
+            { label: 'Parameter Importance', slug: 'ch11-uncertainty/parameter-importance' },
             { label: 'Sensitivity Analysis', slug: 'ch11-uncertainty/sensitivity-analysis' },
             { label: 'Interval Arithmetic', slug: 'ch11-uncertainty/interval-arithmetic' },
             { label: 'Monte Carlo with ODEs', slug: 'ch11-uncertainty/monte-carlo-odes' },
