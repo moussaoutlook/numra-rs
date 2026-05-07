@@ -416,11 +416,7 @@ mod tests {
     /// Trait-default FD Jacobian helper, identical to the one in mol2d.rs.
     /// Used as the agreement reference for the analytical-override
     /// regression — keeps the test self-contained.
-    fn fd_jacobian<Sys: numra_ode::OdeSystem<f64>>(
-        sys: &Sys,
-        t: f64,
-        y: &[f64],
-    ) -> Vec<f64> {
+    fn fd_jacobian<Sys: numra_ode::OdeSystem<f64>>(sys: &Sys, t: f64, y: &[f64]) -> Vec<f64> {
         let n = sys.dim();
         let eps = 1e-8;
         let mut jac = vec![0.0; n * n];

@@ -115,9 +115,7 @@ fn bench_mol2d_radau5_jacobian_path(c: &mut Criterion) {
     let opts = SolverOptions::default().rtol(1e-6).atol(1e-9);
 
     group.bench_function("analytical_jacobian", |b| {
-        b.iter(|| {
-            Radau5::solve(black_box(&mol_analytical), 0.0, t_final, &u0, &opts)
-        })
+        b.iter(|| Radau5::solve(black_box(&mol_analytical), 0.0, t_final, &u0, &opts))
     });
 
     group.bench_function("fd_jacobian", |b| {
@@ -127,5 +125,9 @@ fn bench_mol2d_radau5_jacobian_path(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_pde_mol_scaling, bench_mol2d_radau5_jacobian_path);
+criterion_group!(
+    benches,
+    bench_pde_mol_scaling,
+    bench_mol2d_radau5_jacobian_path
+);
 criterion_main!(benches);

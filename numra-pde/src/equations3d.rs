@@ -145,9 +145,7 @@ mod tests {
                     let x = grid.x_grid.points()[ii + 1];
                     let y = grid.y_grid.points()[jj + 1];
                     let z = grid.z_grid.points()[kk + 1];
-                    let r2 = (x - 0.5) * (x - 0.5)
-                        + (y - 0.5) * (y - 0.5)
-                        + (z - 0.5) * (z - 0.5);
+                    let r2 = (x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5) + (z - 0.5) * (z - 0.5);
                     if r2 < 0.05 {
                         u0[kk * (nx_int * ny_int) + jj * nx_int + ii] = 0.5;
                     }

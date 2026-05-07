@@ -258,9 +258,7 @@ fn bench_jacobian_unification(c: &mut Criterion) {
         );
         let opts = SolverOptions::default().rtol(1e-8).atol(1e-10);
         group.bench_function("radau5_robertson", |b| {
-            b.iter(|| {
-                Radau5::solve(black_box(&robertson), 0.0, 40.0, &[1.0, 0.0, 0.0], &opts)
-            })
+            b.iter(|| Radau5::solve(black_box(&robertson), 0.0, 40.0, &[1.0, 0.0, 0.0], &opts))
         });
         group.bench_function("bdf_robertson", |b| {
             b.iter(|| Bdf::solve(black_box(&robertson), 0.0, 40.0, &[1.0, 0.0, 0.0], &opts))
@@ -283,11 +281,9 @@ fn bench_jacobian_unification(c: &mut Criterion) {
             y0.clone(),
         );
         let opts = SolverOptions::default().rtol(1e-6).atol(1e-8);
-        group.bench_with_input(
-            BenchmarkId::new("radau5_vdp_rtol1e-6", mu),
-            &mu,
-            |b, _| b.iter(|| Radau5::solve(black_box(&problem), 0.0, tf, &y0, &opts)),
-        );
+        group.bench_with_input(BenchmarkId::new("radau5_vdp_rtol1e-6", mu), &mu, |b, _| {
+            b.iter(|| Radau5::solve(black_box(&problem), 0.0, tf, &y0, &opts))
+        });
     }
 
     // 3. Linear 2D smooth (small-n smooth case).

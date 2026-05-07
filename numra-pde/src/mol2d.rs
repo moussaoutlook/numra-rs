@@ -382,11 +382,7 @@ mod tests {
     /// for the analytical-override regression. Inlined here rather than
     /// pulled from numra-ode to avoid a circular test dep; bit-identical
     /// to the OdeSystem::jacobian default.
-    fn fd_jacobian<Sys: numra_ode::OdeSystem<f64>>(
-        sys: &Sys,
-        t: f64,
-        y: &[f64],
-    ) -> Vec<f64> {
+    fn fd_jacobian<Sys: numra_ode::OdeSystem<f64>>(sys: &Sys, t: f64, y: &[f64]) -> Vec<f64> {
         let n = sys.dim();
         let eps = 1e-8;
         let mut jac = vec![0.0; n * n];
@@ -447,8 +443,8 @@ mod tests {
         // off-diagonal entries should match the operator-only baseline.
         let grid = Grid2D::uniform(0.0, 1.0, 5, 0.0, 1.0, 5);
         let bc = BoundaryConditions2D::all_zero_dirichlet();
-        let mol = MOLSystem2D::heat(grid, 0.05_f64, &bc)
-            .with_reaction(|_t, _x, _y, u: f64| -u * u * u);
+        let mol =
+            MOLSystem2D::heat(grid, 0.05_f64, &bc).with_reaction(|_t, _x, _y, u: f64| -u * u * u);
         let n = mol.dim();
         let y: Vec<f64> = (0..n).map(|i| 0.1 + (i as f64) * 0.01).collect();
 
