@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-06 (forward-sensitivity API fully shipped — `ParametricOdeSystem` trait, `solve_forward_sensitivity{,_with}` entry points, `AugmentedSystem` + `ClosureSystem`, column-major `SensitivityResult`, regression suite, Criterion bench harness, three perf figures, Robertson worked example, and the rewritten ch11-uncertainty/sensitivity-analysis book chapter all landed on `main`. The "expose forward sensitivity in solver API" follow-up below has been retired; what remains under §Solvers is downstream extensions — block-diagonal LU, JVP, AD-based, staggered, separate sens tolerances, flag ergonomics).
+Last updated: 2026-05-07 (`MOLSystem3D` wrapper landed: `numra-pde/src/mol3d.rs` mirrors `mol2d.rs` exactly — `heat`/`laplacian`/`with_operator`/`with_reaction` constructors, optional pointwise reaction term, `OdeSystem` impl, `build_full_solution` using `Grid3D::linear_index`. Backed by new `Operator3DCoefficients` + `assemble_operator_3d` in `sparse_assembly.rs`; `assemble_laplacian_3d` now delegates to the general assembler, mirroring the 2D pattern. 5 new tests pass plus existing 3D Laplacian regressions. The 3D-MOL bullet under §Audit-driven scope corrections has been removed; remaining PDE gaps acknowledged there are multi-component coupled PDEs and an elliptic static solver path. Earlier landing 2026-05-06: forward-sensitivity API.
 
 ---
 
@@ -25,14 +25,20 @@ the code, they catch the same correction without redoing the audit.
 
 **The original draft claim**: ship 2D MOL plus FE in a Q1-2027-ish bucket.
 
-**What the audit found** (2026-05-05):
+**What the audit found** (2026-05-05; updated 2026-05-07):
 - 2D MOL **already ships** — `numra-pde/src/mol2d.rs`, `equations2d.rs`
   with `HeatEquation2D`, `ReactionDiffusion2D`, Fisher, advection-diffusion;
   sparse 5-point Laplacian in `sparse_assembly.rs`; all four BC types
   tested.
-- 3D has `Grid3D` + `BoundaryConditions3D` + 3D Laplacian assembly in
-  `sparse_assembly.rs:228+`, but **no `MOLSystem3D`** wrapper — the
-  pieces are there, the time-stepping integration isn't wired up.
+- 3D MOL **also now ships** (added 2026-05-07) — `numra-pde/src/mol3d.rs`
+  provides `MOLSystem3D::heat` / `::laplacian` / `::with_operator` /
+  `::with_reaction`, backed by the new `Operator3DCoefficients` +
+  `assemble_operator_3d` (general 7-point stencil with first-derivative
+  central-difference terms). `assemble_laplacian_3d` now delegates to
+  the general assembler, mirroring the 2D file's organisation. No
+  `equations3d.rs` convenience layer yet — multi-component coupled 3D
+  PDEs ("HeatEquation3D", "ReactionDiffusion3D" wrappers) remain on the
+  list below.
 - `Wave1D` is a documented stub (`equations.rs:129-151`) — a struct
   exists with a comment that it "would need the `PdeSystem` trait to
   support systems".
@@ -41,10 +47,11 @@ the code, they catch the same correction without redoing the audit.
 **Correction**: "FE" was aspirational, not a gap to slot into a roadmap
 without scoping the algorithm choice (CG-FEM? DG? hp-adaptive?). The
 real, concrete PDE gaps to keep on the public roadmap as one bullet
-("Expand PDE capabilities") are: 3D MOL wrapper, multi-component coupled
-PDEs (hyperbolic / wave systems become first-class), elliptic static
-solver path. FE is either a separate multi-quarter project or a
-deliberate "not now".
+("Expand PDE capabilities") are now: multi-component coupled PDEs
+(hyperbolic / wave systems become first-class, including a real `Wave1D`),
+3D `equations3d.rs` convenience constructors mirroring `equations2d.rs`,
+and an elliptic static solver path. FE is either a separate multi-quarter
+project or a deliberate "not now".
 
 ### "DAE: index-2+ in Q4"
 
@@ -229,6 +236,113 @@ detection during the integration", and the §2.3 comparison page
 acknowledges this is where SciPy beats Numra for first-time users picking
 the wrong solver. Worth doing as a Numra-native algorithm rather than
 porting LSODA.
+
+---
+
+## PDE
+
+These follow-ups were surfaced during the `MOLSystem3D` landing
+(2026-05-07). They apply equally to `MOLSystem2D` — the 3D wrapper
+mirrors the 2D wrapper exactly, so neither dimension regresses
+relative to the other, but both share the same gaps relative to the
+broader Numra solver surface. Listed here so that when we close them,
+we close them for both wrappers in the same PR.
+
+### MOL systems don't implement `JacobianProvider`
+
+**Status**: scoped, not started. Affects `MOLSystem2D`, `MOLSystem3D`,
+and the 1D `MOLSystem` (`numra-pde/src/mol.rs`).
+
+When a stiff solver (Radau5, BDF) integrates an MOL system, it falls
+back to finite-difference Jacobian construction even though the
+linear part of the Jacobian is *literally already in memory* — the
+assembled sparse operator (`MOLSystem{2,3}D::operator`) is exactly
+∂(L[u])/∂u. The reaction term contributes a diagonal block: for a
+pointwise reaction `R(t, x, y, z, u)`, ∂R/∂u is itself a diagonal
+matrix because R doesn't couple grid points.
+
+**What needs doing**:
+- Implement `JacobianProvider<S>` for `MOLSystem2D`, `MOLSystem3D`,
+  and `MOLSystem`. Return the assembled operator plus, when a
+  reaction is registered, the diagonal Jacobian contribution. The
+  reaction Jacobian is the awkward part: the current closure
+  signature is `Fn(t, x, y, z, u) -> S`, which gives the value but
+  not ∂R/∂u. Two options:
+  1. **FD on the reaction closure only** — exact for the linear
+     operator (which dominates), FD-noise contained to the diagonal
+     reaction contribution. Cheapest fix, biggest immediate win.
+  2. **Add a `with_reaction_jacobian` constructor** that takes a
+     second closure for ∂R/∂u. Optional; falls back to (1) when
+     not supplied.
+- Wire the operator into `JacobianProvider::sparsity_pattern()` so
+  Radau5 / BDF can exploit the band structure (5 nnz/row in 2D,
+  7 nnz/row in 3D plus diagonal for the reaction).
+
+**Why it matters**: stiff PDE problems (Fisher-KPP near saturation,
+Allen-Cahn, advection-diffusion-reaction with stiff chemistry) are
+exactly where Numra's Radau5 / BDF should beat explicit DoPri5, but
+right now the FD-Jacobian fallback eats the win. Closing this gap
+makes the stiff path *useful* for PDEs rather than nominally
+supported.
+
+**Out of scope for v1**; revisit alongside the broader sparse-Jacobian
+work in `numra-ode`. Cite this entry when sequencing.
+
+### MOL systems don't implement `ParametricOdeSystem`
+
+**Status**: scoped, not started. Affects all three MOL wrappers.
+
+Forward sensitivity (just shipped, 2026-05-06) requires
+`ParametricOdeSystem` — an ODE system parameterised by a `&[S]` of
+parameters with `jacobian_y` and `jacobian_p` methods. None of the
+MOL wrappers implement it, which means a user cannot ask "how does
+my Fisher-KPP solution depend on the diffusion coefficient and the
+reaction rate?" without writing the parametric system by hand.
+
+**What needs doing**:
+- A `ParametricMOLSystem{2,3}D` variant (or a generic-over-parameter
+  extension of the existing wrappers) where:
+  - `alpha` becomes a parameter slot rather than a stored constant.
+  - The reaction closure takes `(t, x, y, z, u, &[S])` instead of
+    `(t, x, y, z, u)`.
+  - Re-assembly happens lazily inside `rhs` when parameters change,
+    or — better — `jacobian_p` is computed analytically because for
+    the heat-equation case it's just the assembled Laplacian times
+    the state.
+- Decide whether this is a separate type or a flag on the existing
+  type. Separate type avoids polluting the v1 ergonomic surface;
+  paying for parametricity should be opt-in.
+
+**Composes with**: §Solvers / AD-based `ParametricOdeSystem` impl —
+once that adapter ships, a parametric MOL wrapper could use AD on
+the reaction closure to get `∂R/∂p` for free, removing the manual
+Jacobian-derivation burden.
+
+**Out of scope for v1**; revisit when forward sensitivity has its
+first PDE-shaped user workload.
+
+### Reaction-term composability with the analytical-Jacobian path
+
+**Status**: noted, blocks the two items above.
+
+The current `with_reaction(|t, x, y, z, u| ...)` closure signature
+returns only the reaction *value*, not its Jacobian or its parameter
+derivatives. That's fine for the explicit-RHS path but it's the
+single piece of friction blocking *both* `JacobianProvider` and
+`ParametricOdeSystem` impls from being painless. When we revisit
+either, this signature is the API decision to make first.
+
+**Options**:
+- Add sibling closures (`with_reaction_jacobian_u`,
+  `with_reaction_jacobian_p`) that default to FD on the value
+  closure when not supplied.
+- Switch to a trait-based reaction (`trait Reaction<S> { fn value(...);
+  fn jac_u(...); fn jac_p(...); }`) with a default FD impl. More
+  rigorous; bigger surface area; consistent with how
+  `ParametricOdeSystem` already works.
+
+Either is a non-breaking addition. Pick when the first of the two
+gaps above is being closed.
 
 ---
 

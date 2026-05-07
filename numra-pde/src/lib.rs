@@ -76,6 +76,7 @@ mod equations2d;
 mod grid;
 mod mol;
 mod mol2d;
+mod mol3d;
 pub mod moving;
 mod sparse_assembly;
 
@@ -87,8 +88,9 @@ pub use equations2d::{AdvectionDiffusion2D, HeatEquation2D, ReactionDiffusion2D}
 pub use grid::{Grid1D, Grid2D, Grid3D};
 pub use mol::{MOLSystem, PdeSystem};
 pub use mol2d::MOLSystem2D;
+pub use mol3d::MOLSystem3D;
 pub use moving::{Bound, CoordinateTransform, Domain1D, MovingBound, StefanCondition};
 pub use sparse_assembly::{
-    assemble_laplacian_2d, assemble_laplacian_3d, assemble_operator_2d, Operator2DCoefficients,
-    SparseScalar,
+    assemble_laplacian_2d, assemble_laplacian_3d, assemble_operator_2d, assemble_operator_3d,
+    Operator2DCoefficients, Operator3DCoefficients, SparseScalar,
 };

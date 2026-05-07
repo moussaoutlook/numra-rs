@@ -219,6 +219,67 @@ pub fn assemble_operator_2d<S: SparseScalar>(
     Ok((matrix, rhs))
 }
 
+/// Coefficients for a general 3D operator:
+///   a*u_xx + b*u_yy + c*u_zz + d*u_x + e*u_y + f*u_z + g*u
+#[derive(Clone, Debug)]
+pub struct Operator3DCoefficients<S: Scalar> {
+    /// Coefficient for u_xx (second x-derivative)
+    pub a: S,
+    /// Coefficient for u_yy (second y-derivative)
+    pub b: S,
+    /// Coefficient for u_zz (second z-derivative)
+    pub c: S,
+    /// Coefficient for u_x (first x-derivative)
+    pub d: S,
+    /// Coefficient for u_y (first y-derivative)
+    pub e: S,
+    /// Coefficient for u_z (first z-derivative)
+    pub f: S,
+    /// Coefficient for u (zeroth order)
+    pub g: S,
+}
+
+impl<S: Scalar> Operator3DCoefficients<S> {
+    /// Pure Laplacian: u_xx + u_yy + u_zz
+    pub fn laplacian() -> Self {
+        Self {
+            a: S::ONE,
+            b: S::ONE,
+            c: S::ONE,
+            d: S::ZERO,
+            e: S::ZERO,
+            f: S::ZERO,
+            g: S::ZERO,
+        }
+    }
+
+    /// Scaled Laplacian: alpha * (u_xx + u_yy + u_zz)
+    pub fn scaled_laplacian(alpha: S) -> Self {
+        Self {
+            a: alpha,
+            b: alpha,
+            c: alpha,
+            d: S::ZERO,
+            e: S::ZERO,
+            f: S::ZERO,
+            g: S::ZERO,
+        }
+    }
+
+    /// Advection-diffusion: D*(u_xx + u_yy + u_zz) - vx*u_x - vy*u_y - vz*u_z
+    pub fn advection_diffusion(diffusion: S, vx: S, vy: S, vz: S) -> Self {
+        Self {
+            a: diffusion,
+            b: diffusion,
+            c: diffusion,
+            d: -vx,
+            e: -vy,
+            f: -vz,
+            g: S::ZERO,
+        }
+    }
+}
+
 /// Interior-point linear index for 3D grid.
 #[inline]
 fn interior_index_3d(i: usize, j: usize, k: usize, nx_int: usize, ny_int: usize) -> usize {
@@ -235,6 +296,22 @@ pub fn assemble_laplacian_3d<S: SparseScalar>(
     grid: &Grid3D<S>,
     bc: &BoundaryConditions3D<S>,
 ) -> Result<(SparseMatrix<S>, Vec<S>), LinalgError> {
+    let coeffs = Operator3DCoefficients::laplacian();
+    assemble_operator_3d(grid, &coeffs, bc)
+}
+
+/// Assemble a general 3D FDM operator as a sparse matrix.
+///
+/// Operator: a*u_xx + b*u_yy + c*u_zz + d*u_x + e*u_y + f*u_z + g*u
+///
+/// Uses second-order central differences on a uniform grid.
+///
+/// Returns `(operator, rhs_contribution)`.
+pub fn assemble_operator_3d<S: SparseScalar>(
+    grid: &Grid3D<S>,
+    coeffs: &Operator3DCoefficients<S>,
+    bc: &BoundaryConditions3D<S>,
+) -> Result<(SparseMatrix<S>, Vec<S>), LinalgError> {
     let nx = grid.x_grid.len();
     let ny = grid.y_grid.len();
     let nz = grid.z_grid.len();
@@ -249,9 +326,20 @@ pub fn assemble_laplacian_3d<S: SparseScalar>(
     let inv_dx2 = S::ONE / (dx * dx);
     let inv_dy2 = S::ONE / (dy * dy);
     let inv_dz2 = S::ONE / (dz * dz);
+    let inv_2dx = S::ONE / (S::from_f64(2.0) * dx);
+    let inv_2dy = S::ONE / (S::from_f64(2.0) * dy);
+    let inv_2dz = S::ONE / (S::from_f64(2.0) * dz);
     let two = S::from_f64(2.0);
 
-    let center = -two * inv_dx2 - two * inv_dy2 - two * inv_dz2;
+    // Stencil coefficients for the general operator
+    let center =
+        -two * coeffs.a * inv_dx2 - two * coeffs.b * inv_dy2 - two * coeffs.c * inv_dz2 + coeffs.g;
+    let x_plus = coeffs.a * inv_dx2 + coeffs.d * inv_2dx; // u_{i+1,j,k}
+    let x_minus = coeffs.a * inv_dx2 - coeffs.d * inv_2dx; // u_{i-1,j,k}
+    let y_plus = coeffs.b * inv_dy2 + coeffs.e * inv_2dy; // u_{i,j+1,k}
+    let y_minus = coeffs.b * inv_dy2 - coeffs.e * inv_2dy; // u_{i,j-1,k}
+    let z_plus = coeffs.c * inv_dz2 + coeffs.f * inv_2dz; // u_{i,j,k+1}
+    let z_minus = coeffs.c * inv_dz2 - coeffs.f * inv_2dz; // u_{i,j,k-1}
 
     let mut triplets = Vec::with_capacity(7 * n_int);
     let mut rhs = vec![S::ZERO; n_int];
@@ -268,90 +356,90 @@ pub fn assemble_laplacian_3d<S: SparseScalar>(
                 if ii == 0 {
                     if bc.x_min.is_dirichlet() {
                         let bval = bc.x_min.value(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] + inv_dx2 * bval;
+                        rhs[row] = rhs[row] + x_minus * bval;
                     } else {
-                        triplets.push((row, row, inv_dx2));
+                        triplets.push((row, row, x_minus));
                         let flux = bc.x_min.flux(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] + inv_dx2 * two * dx * flux;
+                        rhs[row] = rhs[row] + x_minus * two * dx * flux;
                     }
                 } else {
                     let col = interior_index_3d(ii - 1, jj, kk, nx_int, ny_int);
-                    triplets.push((row, col, inv_dx2));
+                    triplets.push((row, col, x_minus));
                 }
 
                 // x+1
                 if ii == nx_int - 1 {
                     if bc.x_max.is_dirichlet() {
                         let bval = bc.x_max.value(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] + inv_dx2 * bval;
+                        rhs[row] = rhs[row] + x_plus * bval;
                     } else {
-                        triplets.push((row, row, inv_dx2));
+                        triplets.push((row, row, x_plus));
                         let flux = bc.x_max.flux(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] - inv_dx2 * two * dx * flux;
+                        rhs[row] = rhs[row] - x_plus * two * dx * flux;
                     }
                 } else {
                     let col = interior_index_3d(ii + 1, jj, kk, nx_int, ny_int);
-                    triplets.push((row, col, inv_dx2));
+                    triplets.push((row, col, x_plus));
                 }
 
                 // y-1
                 if jj == 0 {
                     if bc.y_min.is_dirichlet() {
                         let bval = bc.y_min.value(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] + inv_dy2 * bval;
+                        rhs[row] = rhs[row] + y_minus * bval;
                     } else {
-                        triplets.push((row, row, inv_dy2));
+                        triplets.push((row, row, y_minus));
                         let flux = bc.y_min.flux(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] + inv_dy2 * two * dy * flux;
+                        rhs[row] = rhs[row] + y_minus * two * dy * flux;
                     }
                 } else {
                     let col = interior_index_3d(ii, jj - 1, kk, nx_int, ny_int);
-                    triplets.push((row, col, inv_dy2));
+                    triplets.push((row, col, y_minus));
                 }
 
                 // y+1
                 if jj == ny_int - 1 {
                     if bc.y_max.is_dirichlet() {
                         let bval = bc.y_max.value(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] + inv_dy2 * bval;
+                        rhs[row] = rhs[row] + y_plus * bval;
                     } else {
-                        triplets.push((row, row, inv_dy2));
+                        triplets.push((row, row, y_plus));
                         let flux = bc.y_max.flux(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] - inv_dy2 * two * dy * flux;
+                        rhs[row] = rhs[row] - y_plus * two * dy * flux;
                     }
                 } else {
                     let col = interior_index_3d(ii, jj + 1, kk, nx_int, ny_int);
-                    triplets.push((row, col, inv_dy2));
+                    triplets.push((row, col, y_plus));
                 }
 
                 // z-1
                 if kk == 0 {
                     if bc.z_min.is_dirichlet() {
                         let bval = bc.z_min.value(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] + inv_dz2 * bval;
+                        rhs[row] = rhs[row] + z_minus * bval;
                     } else {
-                        triplets.push((row, row, inv_dz2));
+                        triplets.push((row, row, z_minus));
                         let flux = bc.z_min.flux(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] + inv_dz2 * two * dz * flux;
+                        rhs[row] = rhs[row] + z_minus * two * dz * flux;
                     }
                 } else {
                     let col = interior_index_3d(ii, jj, kk - 1, nx_int, ny_int);
-                    triplets.push((row, col, inv_dz2));
+                    triplets.push((row, col, z_minus));
                 }
 
                 // z+1
                 if kk == nz_int - 1 {
                     if bc.z_max.is_dirichlet() {
                         let bval = bc.z_max.value(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] + inv_dz2 * bval;
+                        rhs[row] = rhs[row] + z_plus * bval;
                     } else {
-                        triplets.push((row, row, inv_dz2));
+                        triplets.push((row, row, z_plus));
                         let flux = bc.z_max.flux(S::ZERO).unwrap_or(S::ZERO);
-                        rhs[row] = rhs[row] - inv_dz2 * two * dz * flux;
+                        rhs[row] = rhs[row] - z_plus * two * dz * flux;
                     }
                 } else {
                     let col = interior_index_3d(ii, jj, kk + 1, nx_int, ny_int);
-                    triplets.push((row, col, inv_dz2));
+                    triplets.push((row, col, z_plus));
                 }
             }
         }
