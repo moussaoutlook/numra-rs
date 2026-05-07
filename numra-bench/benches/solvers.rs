@@ -223,6 +223,95 @@ fn bench_tolerance_scaling(c: &mut Criterion) {
     group.finish();
 }
 
+/// Regression bench for the Jacobian-unification work
+/// (`OdeSystem::jacobian` consumed by Radau5 / BDF instead of
+/// solver-inlined FD). Locks in coverage on three workload shapes the
+/// alloc + extra-rhs overhead is most likely to be visible on:
+///
+/// - Robertson at rtol=1e-8 / atol=1e-10: canonical stiff stress test
+///   where Jacobian rebuilds are frequent.
+/// - Van der Pol at μ=10 and μ=1000, rtol=1e-6: stiff small-`n` (n=2),
+///   tightened from the legacy `bench_stiff_solvers` tolerance to make
+///   alloc cost visible.
+/// - Linear 2D smooth at rtol=1e-6: small-`n` smooth case where
+///   per-call alloc is the largest fraction of total wall-clock.
+fn bench_jacobian_unification(c: &mut Criterion) {
+    let mut group = c.benchmark_group("jacobian_unification");
+    group
+        .measurement_time(MEASUREMENT_TIME)
+        .warm_up_time(WARM_UP_TIME);
+
+    // 1. Robertson: y1' = -k1*y1 + k3*y2*y3,
+    //                y2' =  k1*y1 - k2*y2^2 - k3*y2*y3,
+    //                y3' =  k2*y2^2.
+    {
+        let k = [0.04_f64, 3.0e7, 1.0e4];
+        let robertson = OdeProblem::new(
+            move |_t, y: &[f64], dy: &mut [f64]| {
+                dy[0] = -k[0] * y[0] + k[2] * y[1] * y[2];
+                dy[1] = k[0] * y[0] - k[1] * y[1] * y[1] - k[2] * y[1] * y[2];
+                dy[2] = k[1] * y[1] * y[1];
+            },
+            0.0,
+            40.0,
+            vec![1.0, 0.0, 0.0],
+        );
+        let opts = SolverOptions::default().rtol(1e-8).atol(1e-10);
+        group.bench_function("radau5_robertson", |b| {
+            b.iter(|| {
+                Radau5::solve(black_box(&robertson), 0.0, 40.0, &[1.0, 0.0, 0.0], &opts)
+            })
+        });
+        group.bench_function("bdf_robertson", |b| {
+            b.iter(|| Bdf::solve(black_box(&robertson), 0.0, 40.0, &[1.0, 0.0, 0.0], &opts))
+        });
+    }
+
+    // 2. Van der Pol at the user-specified rtol=1e-6 (tighter than the
+    //    legacy bench).
+    for mu in [10.0_f64, 1000.0] {
+        let mu_v = mu;
+        let y0 = vec![2.0_f64, 0.0];
+        let tf = 2.0 * mu;
+        let problem = OdeProblem::new(
+            move |_t, y: &[f64], dy: &mut [f64]| {
+                dy[0] = y[1];
+                dy[1] = mu_v * (1.0 - y[0] * y[0]) * y[1] - y[0];
+            },
+            0.0,
+            tf,
+            y0.clone(),
+        );
+        let opts = SolverOptions::default().rtol(1e-6).atol(1e-8);
+        group.bench_with_input(
+            BenchmarkId::new("radau5_vdp_rtol1e-6", mu),
+            &mu,
+            |b, _| b.iter(|| Radau5::solve(black_box(&problem), 0.0, tf, &y0, &opts)),
+        );
+    }
+
+    // 3. Linear 2D smooth (small-n smooth case).
+    //    y1' = -y1 + y2,  y2' = -y1 - y2.  Eigenvalues -1 ± i.
+    //    Pure smooth dynamics, no stiffness; isolates per-call alloc cost.
+    {
+        let problem = OdeProblem::new(
+            |_t, y: &[f64], dy: &mut [f64]| {
+                dy[0] = -y[0] + y[1];
+                dy[1] = -y[0] - y[1];
+            },
+            0.0,
+            10.0,
+            vec![1.0, 0.0],
+        );
+        let opts = SolverOptions::default().rtol(1e-6).atol(1e-8);
+        group.bench_function("radau5_smooth2d", |b| {
+            b.iter(|| Radau5::solve(black_box(&problem), 0.0, 10.0, &[1.0, 0.0], &opts))
+        });
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_dopri5_lorenz,
@@ -230,6 +319,7 @@ criterion_group!(
     bench_stiff_solvers,
     bench_dimension_scaling,
     bench_dense_output,
-    bench_tolerance_scaling
+    bench_tolerance_scaling,
+    bench_jacobian_unification
 );
 criterion_main!(benches);

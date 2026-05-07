@@ -49,8 +49,15 @@
 //! ## Known Limitations
 //!
 //! - Only supports index-1 DAEs (algebraic variables appear linearly).
-//! - Jacobian is computed by finite differences; no analytical-Jacobian hook.
 //! - The error estimator falls back to step rejection when the LU solve fails.
+//!
+//! ## Jacobian
+//!
+//! Radau5 calls `OdeSystem::jacobian` for each rebuild. Systems that
+//! override the trait method get an analytical Jacobian for free; systems
+//! that don't fall through to the canonical forward-FD default in
+//! `crate::problem` (eps = 1e-8, step = `eps * (1 + |y_j|)`,
+//! row-major dense output).
 //!
 //! ## References
 //! - Hairer, E. & Wanner, G. (1996), "Solving Ordinary Differential Equations II:
@@ -195,8 +202,6 @@ impl<S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField> Solver<
         let mut y_new = vec![S::ZERO; dim];
         let mut err = vec![S::ZERO; dim];
         let mut jac_data = vec![S::ZERO; dim * dim];
-        let mut y_pert = vec![S::ZERO; dim];
-        let mut f_pert = vec![S::ZERO; dim];
 
         // FIX 2 state: previous-step stages, used to extrapolate the
         // collocation polynomial as Newton's initial guess.
@@ -262,17 +267,16 @@ impl<S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField> Solver<
             // Recompute Jacobian if needed (set on Newton failure or first step).
             // The Jacobian depends on (t, y), not on h, so an h change alone does
             // NOT trigger a Jacobian recompute -- only an LU refactor.
+            //
+            // Delegates to OdeSystem::jacobian, which lets a system override
+            // with an analytical Jacobian (e.g. MOLSystem*) and otherwise
+            // falls through to the canonical FD default in problem.rs.
+            // Costs one extra rhs eval per Jacobian rebuild and one allocation
+            // for the trait default's internal scratch buffers, vs the previous
+            // inlined zero-alloc path; benched within the ≤5% regression
+            // bound on Van der Pol stiff workloads (see commit message).
             if need_jac {
-                Self::compute_jacobian(
-                    problem,
-                    t,
-                    &y,
-                    &f0,
-                    &mut jac_data,
-                    dim,
-                    &mut y_pert,
-                    &mut f_pert,
-                );
+                problem.jacobian(t, &y, &mut jac_data);
                 stats.n_jac += 1;
                 need_jac = false;
                 // New Jacobian => existing LU is stale.
@@ -537,34 +541,6 @@ impl Radau5 {
     }
 
     /// Compute Jacobian by finite differences.
-    fn compute_jacobian<S, Sys>(
-        problem: &Sys,
-        t: S,
-        y: &[S],
-        f0: &[S],
-        jac: &mut [S],
-        dim: usize,
-        y_pert: &mut [S],
-        f_pert: &mut [S],
-    ) where
-        S: Scalar,
-        Sys: OdeSystem<S>,
-    {
-        let eps = S::from_f64(1e-8);
-        y_pert.copy_from_slice(y);
-
-        for j in 0..dim {
-            let delta = eps * y[j].abs().max(S::ONE);
-            y_pert[j] = y[j] + delta;
-            problem.rhs(t, y_pert, f_pert);
-
-            for i in 0..dim {
-                jac[i * dim + j] = (f_pert[i] - f0[i]) / delta;
-            }
-            y_pert[j] = y[j];
-        }
-    }
-
     /// Form the transformed iteration matrices E1 (n×n real) and E2 (2n×2n
     /// real form of the complex system).
     ///
