@@ -379,6 +379,255 @@ use numra_pde::boundary2d::BoundaryConditions2D;
 The 2D MOL system uses sparse matrix assembly for the spatial operators, and the
 resulting ODE system can be solved with the same solvers as the 1D case.
 
+## 3D Problems
+
+For 3D PDEs on box domains, Numra provides `MOLSystem3D` -- a structural twin
+of `MOLSystem2D` extended with a third spatial axis. The same constructors,
+the same `OdeSystem` integration, the same reaction hook -- everything that
+works in 2D works in 3D. The spatial discretisation uses a 7-point stencil
+(centre $-$ 6 face neighbours) assembled as a sparse matrix.
+
+### API shape
+
+The four primary constructors mirror their 2D counterparts:
+
+<!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
+```rust
+use numra_pde::{
+    BoundaryConditions3D, Grid3D, MOLSystem3D, Operator3DCoefficients,
+};
+
+// 3D heat equation: u_t = alpha * Laplacian(u)
+let mol = MOLSystem3D::heat(grid.clone(), alpha, &bc);
+
+// Pure Laplacian: u_t = Laplacian(u)
+let mol = MOLSystem3D::laplacian(grid.clone(), &bc);
+
+// General linear operator: a*u_xx + b*u_yy + c*u_zz + d*u_x + e*u_y + f*u_z + g*u
+let coeffs = Operator3DCoefficients::advection_diffusion(0.01, 1.0, 0.0, 0.0);
+let mol = MOLSystem3D::with_operator(grid.clone(), &coeffs, &bc);
+
+// Add a pointwise reaction term: u_t = L[u] + R(t, x, y, z, u)
+let mol = MOLSystem3D::heat(grid.clone(), alpha, &bc)
+    .with_reaction(|_t, _x, _y, _z, u| u * (1.0 - u));
+```
+
+`MOLSystem3D` implements `OdeSystem<S>` directly, so it composes with every
+solver in `numra-ode` -- `DoPri5`, `Radau5`, `Bdf`, `Tsit5`, `Verner` --
+without adapter glue.
+
+### Example: 3D heat equation with an analytic solution
+
+For the cube $[0, 1]^3$ with zero Dirichlet boundaries and initial condition
+
+$$
+u(x, y, z, 0) = \sin(\pi x)\sin(\pi y)\sin(\pi z),
+$$
+
+the exact solution is $u(x, y, z, t) = u(x, y, z, 0) \exp(-3\pi^2 \alpha t)$.
+This is the standard sanity check for any 3D parabolic discretisation:
+
+<!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
+```rust
+use numra_pde::{BoundaryConditions3D, Grid3D, MOLSystem3D};
+use numra_ode::{DoPri5, Solver, SolverOptions};
+
+let alpha = 0.01_f64;
+let n = 13;
+let grid = Grid3D::uniform(0.0, 1.0, n, 0.0, 1.0, n, 0.0, 1.0, n);
+let bc = BoundaryConditions3D::all_zero_dirichlet();
+let mol = MOLSystem3D::heat(grid.clone(), alpha, &bc);
+
+// Initial condition on interior points (column-major: x varies fastest)
+let nx_int = n - 2;
+let ny_int = n - 2;
+let nz_int = n - 2;
+let n_int = nx_int * ny_int * nz_int;
+
+let pi = std::f64::consts::PI;
+let mut u0 = vec![0.0; n_int];
+for kk in 0..nz_int {
+    for jj in 0..ny_int {
+        for ii in 0..nx_int {
+            let x = grid.x_grid.points()[ii + 1];
+            let y = grid.y_grid.points()[jj + 1];
+            let z = grid.z_grid.points()[kk + 1];
+            u0[kk * (nx_int * ny_int) + jj * nx_int + ii] =
+                (pi * x).sin() * (pi * y).sin() * (pi * z).sin();
+        }
+    }
+}
+
+let options = SolverOptions::default().rtol(1e-6).atol(1e-9);
+let result = DoPri5::solve(&mol, 0.0, 0.5, &u0, &options).unwrap();
+let y_final = result.y_final().unwrap();
+
+// Compare to the analytic decay at the cube centre
+let decay = (-3.0 * pi * pi * alpha * 0.5).exp();
+let mid = (nz_int / 2) * (nx_int * ny_int) + (ny_int / 2) * nx_int + (nx_int / 2);
+println!("computed = {:.6}, exact = {:.6}", y_final[mid], decay);
+```
+
+A $13^3$ grid is coarse for visual quality but is enough for the centre-cell
+relative error to come in below $5\%$, which is the regression bound used in
+the test suite (`numra-pde/src/mol3d.rs::test_mol3d_heat_decay`). Refine to
+$25^3$ or $33^3$ for production work; expect memory to scale as $N^3$ and
+runtime as $N^3$ per RHS evaluation (sparse matvec with seven nonzeros per row).
+
+### Example: 3D Fisher--KPP with a reaction term
+
+The Fisher--Kolmogorov--Petrovsky--Piskunov equation in 3D models invasion
+fronts with logistic growth:
+
+$$
+\frac{\partial u}{\partial t} = D \, \nabla^2 u + r \, u(1 - u).
+$$
+
+With a small initial bump in the centre of the cube, the solution spreads
+outward as a roughly spherical wavefront:
+
+<!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
+```rust
+use numra_pde::{BoundaryConditions3D, Grid3D, MOLSystem3D};
+use numra_ode::{DoPri5, Solver, SolverOptions};
+
+let n = 21;
+let grid = Grid3D::uniform(0.0, 1.0, n, 0.0, 1.0, n, 0.0, 1.0, n);
+let bc = BoundaryConditions3D::all_zero_dirichlet();
+
+// D = 0.01, growth rate r = 1.0
+let mol = MOLSystem3D::heat(grid.clone(), 0.01_f64, &bc)
+    .with_reaction(|_t, _x, _y, _z, u| u * (1.0 - u));
+
+// IC: small spherical bump near the cube centre
+let nx_int = n - 2;
+let ny_int = n - 2;
+let nz_int = n - 2;
+let n_int = nx_int * ny_int * nz_int;
+
+let mut u0 = vec![0.0_f64; n_int];
+for kk in 0..nz_int {
+    for jj in 0..ny_int {
+        for ii in 0..nx_int {
+            let x = grid.x_grid.points()[ii + 1];
+            let y = grid.y_grid.points()[jj + 1];
+            let z = grid.z_grid.points()[kk + 1];
+            let r2 = (x - 0.5).powi(2) + (y - 0.5).powi(2) + (z - 0.5).powi(2);
+            if r2 < 0.05 {
+                u0[kk * (nx_int * ny_int) + jj * nx_int + ii] = 0.5;
+            }
+        }
+    }
+}
+
+let options = SolverOptions::default().rtol(1e-4);
+let result = DoPri5::solve(&mol, 0.0, 0.5, &u0, &options).unwrap();
+```
+
+The reaction closure signature is `Fn(t, x, y, z, u) -> S`, identical to the
+2D version with a `z` axis added. It runs once per interior grid point per
+RHS evaluation; keep it cheap.
+
+### Example: 3D advection--diffusion via a custom operator
+
+For problems that don't fit `heat` or `laplacian`, `Operator3DCoefficients`
+exposes the full general operator
+$a u_{xx} + b u_{yy} + c u_{zz} + d u_x + e u_y + f u_z + g u$:
+
+<!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
+```rust
+use numra_pde::{
+    BoundaryConditions3D, Grid3D, MOLSystem3D, Operator3DCoefficients,
+};
+
+let grid = Grid3D::uniform(0.0, 1.0, 21, 0.0, 1.0, 21, 0.0, 1.0, 21);
+let bc = BoundaryConditions3D::all_zero_dirichlet();
+
+// Advection-diffusion: D=0.01, velocity field (1, 0, 0)
+let coeffs = Operator3DCoefficients::advection_diffusion(0.01_f64, 1.0, 0.0, 0.0);
+let mol = MOLSystem3D::with_operator(grid, &coeffs, &bc);
+```
+
+Two things to know about this constructor:
+
+- **First-derivative terms use central differences.** This is the same choice
+  as `assemble_operator_2d`. Central differencing is non-monotone on
+  advection-dominated regimes; if your Péclet number is high you'll see
+  oscillations and should expect to switch to upwind discretisation outside
+  the built-in path. We don't ship upwind in v1.
+- **The operator is asymmetric when any first-derivative coefficient is
+  non-zero.** Symmetric solvers (e.g. CG) won't work directly; the standard
+  Krylov path for non-symmetric operators is GMRES.
+
+### Boundary conditions in 3D
+
+`BoundaryConditions3D` carries one BC per face of the box:
+
+<!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
+```rust
+use numra_pde::boundary::BoxedBC;
+use numra_pde::BoundaryConditions3D;
+
+// All Dirichlet = 0
+let bc = BoundaryConditions3D::<f64>::all_zero_dirichlet();
+
+// Same Dirichlet value everywhere
+let bc = BoundaryConditions3D::all_dirichlet(1.0_f64);
+
+// Mixed: hot left face, cold right face, insulated top/bottom/front/back
+let bc = BoundaryConditions3D {
+    x_min: BoxedBC::dirichlet(1.0_f64),
+    x_max: BoxedBC::dirichlet(0.0),
+    y_min: BoxedBC::neumann(0.0),
+    y_max: BoxedBC::neumann(0.0),
+    z_min: BoxedBC::neumann(0.0),
+    z_max: BoxedBC::neumann(0.0),
+};
+```
+
+All four BC kinds (Dirichlet, Neumann, Robin via `BoxedBC`) work on every face;
+each face is independent.
+
+### Reconstructing the full 3D solution
+
+The MOL system stores only interior values in column-major order
+($x$ varies fastest, then $y$, then $z$). Use `build_full_solution` to put
+boundary values back in for visualisation or post-processing:
+
+<!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
+```rust
+let result = DoPri5::solve(&mol, 0.0, t_final, &u0, &options).unwrap();
+let u_interior = result.y_final().unwrap();
+
+// nx*ny*nz entries; index with grid.linear_index(i, j, k)
+let u_full = mol.build_full_solution(&u_interior);
+
+// Read a value at full-grid index (i, j, k)
+let (i, j, k) = (5, 5, 5);
+let v = u_full[mol.grid().linear_index(i, j, k)];
+```
+
+`build_full_solution` fills boundary cells with zero in v1 (Dirichlet-zero
+assumption); for non-zero boundary data, write the boundary slices yourself
+using `BoundaryConditions3D` if you need them in the output array.
+
+### Memory and runtime scaling
+
+3D MOL is honest about its costs:
+
+| Grid | Interior points | Sparse operator nnz | Recommendation |
+|---|---|---|---|
+| $9^3$ | $343$ | $\sim 2{,}400$ | `DoPri5`; runs in milliseconds |
+| $17^3$ | $3{,}375$ | $\sim 23{,}600$ | `DoPri5` for explicit, `Radau5` for stiff |
+| $33^3$ | $29{,}791$ | $\sim 209{,}000$ | `Radau5` if stiff; expect seconds per solve |
+| $65^3$ | $250{,}047$ | $\sim 1{,}750{,}000$ | Stiff path mandatory; expect minutes |
+
+Scaling rule of thumb: dense Jacobian factorisation in `Radau5` / `Bdf` costs
+$O(N^3)$ in the interior dimension, so going from $33^3$ ($N \approx 30k$) to
+$65^3$ ($N \approx 250k$) makes implicit solves $\sim 600\times$ more
+expensive. Sparse-Jacobian-aware factorisation for MOL is on the follow-up
+list; until then, keep grids modest for stiff 3D problems.
+
 ## Working with Results
 
 The MOL system produces standard ODE results. To reconstruct the full spatial solution
