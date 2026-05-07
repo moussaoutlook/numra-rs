@@ -48,14 +48,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <article class="direction">
         <h3>Expand PDE capabilities</h3>
         <p>
-          Method of lines on 1D and 2D grids is solid today —
+          Method of lines on 1D, 2D, and 3D grids is solid today —
           parabolic problems (heat, diffusion, reaction-diffusion,
           advection-diffusion) work with all four boundary-condition
-          types and second/fourth-order stencils. The growth areas are
-          3D method-of-lines, multi-component / coupled-PDE systems
-          (so hyperbolic and wave equations are first-class), an
-          elliptic static solver path, and more discretisation choices
-          beyond finite differences.
+          types via the second-order stencils that ship in the MOL
+          pipeline. The growth areas are multi-component /
+          coupled-PDE systems (so hyperbolic and wave equations
+          become first-class), an elliptic static solver path, wiring
+          the existing fourth-order stencil helpers through the MOL
+          assemblers, and more discretisation choices beyond finite
+          differences.
         </p>
       </article>
 
