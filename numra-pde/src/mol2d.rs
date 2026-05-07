@@ -149,6 +149,69 @@ impl<S: SparseScalar> OdeSystem<S> for MOLSystem2D<S> {
             }
         }
     }
+
+    /// Analytical Jacobian: copy the assembled sparse spatial operator
+    /// (which already equals ∂(L[u])/∂u by construction) into the row-major
+    /// dense buffer the solver expects, then add the reaction term's
+    /// contribution to the diagonal.
+    ///
+    /// The reaction Jacobian is diagonal *because* the reaction is
+    /// pointwise: `R(t, x_i, y_j, u_i)` depends only on the local state
+    /// `u_i`, so `∂R_i/∂u_k` is identically zero for any `k != i`. Off-
+    /// diagonal entries cannot be populated by a pointwise reaction, no
+    /// matter what the closure contains. This is what makes the
+    /// FD-on-the-diagonal fallback affordable: one extra closure call per
+    /// interior point versus the `O(N)` rhs evaluations the trait-default
+    /// FD would need to populate the same entries through perturbation.
+    /// If a future reaction model couples grid points (nonlocal /
+    /// integro-PDE / multi-component), the trait default's full FD path is
+    /// the correct fallback — but that's out of scope for v1.
+    fn jacobian(&self, t: S, y: &[S], jac: &mut [S]) {
+        let n = self.n_interior();
+        let nn = n * n;
+
+        // Zero the dense buffer; the sparse operator only fills nonzero
+        // entries below.
+        for v in jac.iter_mut().take(nn) {
+            *v = S::ZERO;
+        }
+
+        // Linear operator: walk the CSC representation directly, writing
+        // each (row, col) pair to its row-major position. Avoids the
+        // intermediate DenseMatrix allocation that .to_dense() would do.
+        let col_ptrs = self.operator.col_ptrs();
+        let row_indices = self.operator.row_indices();
+        let values = self.operator.values();
+        for j in 0..n {
+            let start = col_ptrs[j];
+            let end = col_ptrs[j + 1];
+            for idx in start..end {
+                let i = row_indices[idx];
+                jac[i * n + j] = values[idx];
+            }
+        }
+
+        // Reaction: diagonal-only FD. Same eps formula as the trait default
+        // (eps * (1 + |u|), eps = 1e-8) so the partial-FD-partial-analytical
+        // mix stays numerically consistent.
+        if let Some(ref reaction) = self.reaction {
+            let eps = S::from_f64(1e-8);
+            let nx_int = self.grid.nx_interior();
+            for jj in 0..self.grid.ny_interior() {
+                for ii in 0..nx_int {
+                    let idx = jj * nx_int + ii;
+                    let x = self.grid.x_grid.points()[ii + 1];
+                    let y_coord = self.grid.y_grid.points()[jj + 1];
+                    let u = y[idx];
+                    let h = eps * (S::ONE + u.abs());
+                    let r0 = reaction(t, x, y_coord, u);
+                    let r1 = reaction(t, x, y_coord, u + h);
+                    let dr_du = (r1 - r0) / h;
+                    jac[idx * n + idx] = jac[idx * n + idx] + dr_du;
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -313,5 +376,143 @@ mod tests {
         // Boundary should be 0.0
         assert!(u_full[0].abs() < 1e-10);
         assert!(u_full[4].abs() < 1e-10);
+    }
+
+    /// Helper: trait-default FD Jacobian, used as the agreement reference
+    /// for the analytical-override regression. Inlined here rather than
+    /// pulled from numra-ode to avoid a circular test dep; bit-identical
+    /// to the OdeSystem::jacobian default.
+    fn fd_jacobian<Sys: numra_ode::OdeSystem<f64>>(
+        sys: &Sys,
+        t: f64,
+        y: &[f64],
+    ) -> Vec<f64> {
+        let n = sys.dim();
+        let eps = 1e-8;
+        let mut jac = vec![0.0; n * n];
+        let mut y_pert = y.to_vec();
+        let mut f0 = vec![0.0; n];
+        let mut f1 = vec![0.0; n];
+        sys.rhs(t, y, &mut f0);
+        for j in 0..n {
+            let yj = y_pert[j];
+            let h = eps * (1.0 + yj.abs());
+            y_pert[j] = yj + h;
+            sys.rhs(t, &y_pert, &mut f1);
+            y_pert[j] = yj;
+            for i in 0..n {
+                jac[i * n + j] = (f1[i] - f0[i]) / h;
+            }
+        }
+        jac
+    }
+
+    #[test]
+    fn test_mol2d_jacobian_agrees_with_fd_no_reaction() {
+        // Pure linear PDE — analytical and FD must agree to roundoff plus
+        // FD truncation, well below 1e-5 in absolute terms.
+        let grid = Grid2D::uniform(0.0, 1.0, 7, 0.0, 1.0, 7);
+        let bc = BoundaryConditions2D::all_zero_dirichlet();
+        let mol = MOLSystem2D::heat(grid, 0.01_f64, &bc);
+        let n = mol.dim();
+
+        // Non-trivial state so the FD perturbations matter.
+        let y: Vec<f64> = (0..n).map(|i| ((i + 1) as f64).sin()).collect();
+
+        let mut jac_analytical = vec![0.0; n * n];
+        OdeSystem::jacobian(&mol, 0.0, &y, &mut jac_analytical);
+        let jac_fd = fd_jacobian(&mol, 0.0, &y);
+
+        for i in 0..n {
+            for j in 0..n {
+                let a = jac_analytical[i * n + j];
+                let f = jac_fd[i * n + j];
+                let tol = 1e-5_f64.max(1e-5 * a.abs());
+                assert!(
+                    (a - f).abs() < tol,
+                    "Jacobian mismatch at ({},{}): analytical={}, fd={}",
+                    i,
+                    j,
+                    a,
+                    f
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_mol2d_jacobian_agrees_with_fd_with_reaction() {
+        // Reaction R(u) = -u^3, so dR/du = -3 u^2. The diagonal-FD path
+        // should land within FD truncation of this analytical value, and
+        // off-diagonal entries should match the operator-only baseline.
+        let grid = Grid2D::uniform(0.0, 1.0, 5, 0.0, 1.0, 5);
+        let bc = BoundaryConditions2D::all_zero_dirichlet();
+        let mol = MOLSystem2D::heat(grid, 0.05_f64, &bc)
+            .with_reaction(|_t, _x, _y, u: f64| -u * u * u);
+        let n = mol.dim();
+        let y: Vec<f64> = (0..n).map(|i| 0.1 + (i as f64) * 0.01).collect();
+
+        let mut jac_analytical = vec![0.0; n * n];
+        OdeSystem::jacobian(&mol, 0.0, &y, &mut jac_analytical);
+        let jac_fd = fd_jacobian(&mol, 0.0, &y);
+
+        for i in 0..n {
+            for j in 0..n {
+                let a = jac_analytical[i * n + j];
+                let f = jac_fd[i * n + j];
+                assert!(
+                    (a - f).abs() < 1e-4,
+                    "Jacobian mismatch at ({},{}): analytical={}, fd={}",
+                    i,
+                    j,
+                    a,
+                    f
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_mol2d_radau5_uses_analytical_jacobian() {
+        // End-to-end composability: solve a stiff 2D heat problem with
+        // Radau5 and confirm success. The analytical-Jacobian override
+        // means Radau5 stops paying for the N+1 rhs evaluations FD would
+        // need per Jacobian rebuild; the test asserts it still produces
+        // a correct answer — the perf win is verified separately by the
+        // numra-bench harness.
+        use numra_ode::{Radau5, Solver, SolverOptions};
+        let n = 9;
+        let grid = Grid2D::uniform(0.0, 1.0, n, 0.0, 1.0, n);
+        let bc = BoundaryConditions2D::all_zero_dirichlet();
+        let mol = MOLSystem2D::heat(grid.clone(), 0.5_f64, &bc); // large alpha => stiff
+
+        let nx_int = n - 2;
+        let pi = std::f64::consts::PI;
+        let mut u0 = vec![0.0; nx_int * nx_int];
+        for jj in 0..nx_int {
+            for ii in 0..nx_int {
+                let x = grid.x_grid.points()[ii + 1];
+                let yc = grid.y_grid.points()[jj + 1];
+                u0[jj * nx_int + ii] = (pi * x).sin() * (pi * yc).sin();
+            }
+        }
+
+        let options = SolverOptions::default().rtol(1e-6).atol(1e-9);
+        let result = Radau5::solve(&mol, 0.0, 0.05, &u0, &options).unwrap();
+        assert!(result.success);
+
+        // Compare to analytical decay at the centre.
+        let y_final = result.y_final().unwrap();
+        let mid = (nx_int / 2) * nx_int + (nx_int / 2);
+        let exact = (-2.0 * pi * pi * 0.5_f64 * 0.05).exp();
+        // Coarse 9² grid limits FD accuracy to a few percent at the centre.
+        let rel_err = (y_final[mid] - exact).abs() / exact;
+        assert!(
+            rel_err < 0.05,
+            "computed={}, exact={}, rel_err={}",
+            y_final[mid],
+            exact,
+            rel_err
+        );
     }
 }
