@@ -389,7 +389,11 @@ works in 2D works in 3D. The spatial discretisation uses a 7-point stencil
 
 ### API shape
 
-The four primary constructors mirror their 2D counterparts:
+`MOLSystem3D` provides four primary constructors mirroring their 2D
+counterparts; for the most common equations there is also a higher-level
+`equations3d` builder layer (`HeatEquation3D`, `AdvectionDiffusion3D`,
+`ReactionDiffusion3D`) that wraps the constructors below with named
+parameters.
 
 <!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
 ```rust
@@ -410,6 +414,29 @@ let mol = MOLSystem3D::with_operator(grid.clone(), &coeffs, &bc);
 // Add a pointwise reaction term: u_t = L[u] + R(t, x, y, z, u)
 let mol = MOLSystem3D::heat(grid.clone(), alpha, &bc)
     .with_reaction(|_t, _x, _y, _z, u| u * (1.0 - u));
+```
+
+For the named-equation builders:
+
+<!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
+```rust
+use numra_pde::{
+    AdvectionDiffusion3D, BoundaryConditions3D, Grid3D,
+    HeatEquation3D, ReactionDiffusion3D,
+};
+
+// Heat equation
+let mol = HeatEquation3D::build(grid.clone(), alpha, &bc);
+
+// Advection-diffusion with velocity (vx, vy, vz)
+let mol = AdvectionDiffusion3D::build(grid.clone(), 0.01, 1.0, 0.0, 0.0, &bc);
+
+// Custom reaction term
+let mol = ReactionDiffusion3D::build(grid.clone(), 0.01, &bc,
+    |_t, _x, _y, _z, u| -0.5 * u);
+
+// Fisher-KPP shorthand: D = 0.01, growth rate r = 1.0
+let mol = ReactionDiffusion3D::fisher(grid.clone(), 0.01, 1.0, &bc);
 ```
 
 `MOLSystem3D` implements `OdeSystem<S>` directly, so it composes with every
