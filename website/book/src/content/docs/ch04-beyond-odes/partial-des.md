@@ -638,6 +638,37 @@ let v = u_full[mol.grid().linear_index(i, j, k)];
 assumption); for non-zero boundary data, write the boundary slices yourself
 using `BoundaryConditions3D` if you need them in the output array.
 
+### Implicit solvers get an analytical Jacobian for free
+
+`MOLSystem2D` and `MOLSystem3D` both override `OdeSystem::jacobian` --
+the assembled sparse spatial operator already *is* $\partial L[u]/\partial u$, so
+the override is a direct copy from CSC into the dense buffer the solver
+expects. Pointwise reaction terms add a diagonal contribution
+($\partial R_i/\partial u_j$ is non-zero only when $j = i$, so off-diagonal entries
+cannot be populated by a pointwise reaction); the diagonal-FD fallback
+costs one closure call per interior point instead of the $O(N)$ rhs
+evaluations the trait-default FD path would need.
+
+The practical consequence: when you solve an MOL system with `Radau5`,
+`Bdf`, or any other implicit solver in `numra-ode`, the solver uses the
+analytical Jacobian without you doing anything. There's no opt-in.
+There's no flag.
+
+The wall-clock impact is bounded because Radau5 caches the Jacobian
+across steps when Newton converges quickly. On the canonical stiff 2D
+heat-with-reaction workload (Allen-Cahn-like, $\alpha = 0.5$, $19^2 = 361$
+interior points, $\text{rtol} = 10^{-6}$), the analytical path is **~2.8%
+faster** than the FD-Jacobian fallback. Magnitudes will vary with
+problem size, stiffness, grid resolution, and how aggressively the
+solver rebuilds the Jacobian — workloads with frequent Jacobian rebuilds
+(stiffer problems, looser tolerances triggering more rejected steps,
+larger interior dimensions where the FD sweep cost grows) see larger
+relative wins.
+
+The full performance bench lives at
+`numra-bench/benches/pde_mol.rs::bench_mol2d_radau5_jacobian_path` and
+runs on every CI invocation of `cargo bench`.
+
 ### Memory and runtime scaling
 
 3D MOL is honest about its costs:
