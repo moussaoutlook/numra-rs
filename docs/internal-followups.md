@@ -10,7 +10,18 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-07 (`MOLSystem3D` wrapper landed: `numra-pde/src/mol3d.rs` mirrors `mol2d.rs` exactly — `heat`/`laplacian`/`with_operator`/`with_reaction` constructors, optional pointwise reaction term, `OdeSystem` impl, `build_full_solution` using `Grid3D::linear_index`. Backed by new `Operator3DCoefficients` + `assemble_operator_3d` in `sparse_assembly.rs`; `assemble_laplacian_3d` now delegates to the general assembler, mirroring the 2D pattern. 5 new tests pass plus existing 3D Laplacian regressions. The 3D-MOL bullet under §Audit-driven scope corrections has been removed; remaining PDE gaps acknowledged there are multi-component coupled PDEs and an elliptic static solver path. Earlier landing 2026-05-06: forward-sensitivity API.
+Last updated: 2026-05-07.
+
+## Recently retired
+
+One-line entries for follow-ups that landed and were removed from the
+file. Kept here so a future reader can find the closure record without
+git-archaeology.
+
+- **Jacobian unification & MOL analytical Jacobians** — shipped 2026-05-07. `Radau5` and `Bdf` now route through `OdeSystem::jacobian`; FD step formula unified to `eps * (1 + |y_j|)`; `MOLSystem2D` / `MOLSystem3D` override with CSC-to-dense copy of the spatial operator + diagonal-FD reaction term. ~2.8% measured win on stiff 2D heat-with-reaction; full neutrality on non-MOL systems. See CHANGELOG.
+- **`equations3d` convenience builders** — shipped 2026-05-07. `HeatEquation3D::build`, `AdvectionDiffusion3D::build`, `ReactionDiffusion3D::{build, fisher}` mirroring `equations2d.rs`.
+- **`MOLSystem3D` wrapper** — shipped 2026-05-07. `mol3d.rs` mirrors `mol2d.rs` exactly; backed by new `Operator3DCoefficients` and `assemble_operator_3d`. The audit-driven 3D-MOL gap is closed.
+- **Forward-sensitivity API** — shipped 2026-05-06. `ParametricOdeSystem` trait, `solve_forward_sensitivity{,_with}`, `AugmentedSystem`, `SensitivityResult`, regression suite, Criterion harness, three perf figures, Robertson example, ch11-uncertainty/sensitivity-analysis chapter rewrite.
 
 ---
 
@@ -237,6 +248,16 @@ acknowledges this is where SciPy beats Numra for first-time users picking
 the wrong solver. Worth doing as a Numra-native algorithm rather than
 porting LSODA.
 
+**Increased value as of 2026-05-07**: the Jacobian-unification work
+(MOL systems supplying analytical Jacobians, both stiff solvers
+consuming them automatically) widened the explicit-vs-implicit cost
+asymmetry on PDE workloads. Previously, picking `Radau5` over
+`DoPri5` on a stiff PDE meant trading explicit-step efficiency for
+the FD-Jacobian penalty; that penalty is now gone for MOL systems,
+so the implicit path is uniformly preferable on stiff PDEs. A user
+who picks the wrong solver loses more wall-clock today than they did
+before — auto-detection has more to recover.
+
 ---
 
 ## PDE
@@ -248,56 +269,16 @@ relative to the other, but both share the same gaps relative to the
 broader Numra solver surface. Listed here so that when we close them,
 we close them for both wrappers in the same PR.
 
-### MOL systems don't implement `JacobianProvider`
-
-**Status**: scoped, not started. Affects `MOLSystem2D`, `MOLSystem3D`,
-and the 1D `MOLSystem` (`numra-pde/src/mol.rs`).
-
-When a stiff solver (Radau5, BDF) integrates an MOL system, it falls
-back to finite-difference Jacobian construction even though the
-linear part of the Jacobian is *literally already in memory* — the
-assembled sparse operator (`MOLSystem{2,3}D::operator`) is exactly
-∂(L[u])/∂u. The reaction term contributes a diagonal block: for a
-pointwise reaction `R(t, x, y, z, u)`, ∂R/∂u is itself a diagonal
-matrix because R doesn't couple grid points.
-
-**What needs doing**:
-- Implement `JacobianProvider<S>` for `MOLSystem2D`, `MOLSystem3D`,
-  and `MOLSystem`. Return the assembled operator plus, when a
-  reaction is registered, the diagonal Jacobian contribution. The
-  reaction Jacobian is the awkward part: the current closure
-  signature is `Fn(t, x, y, z, u) -> S`, which gives the value but
-  not ∂R/∂u. Two options:
-  1. **FD on the reaction closure only** — exact for the linear
-     operator (which dominates), FD-noise contained to the diagonal
-     reaction contribution. Cheapest fix, biggest immediate win.
-  2. **Add a `with_reaction_jacobian` constructor** that takes a
-     second closure for ∂R/∂u. Optional; falls back to (1) when
-     not supplied.
-- Wire the operator into `JacobianProvider::sparsity_pattern()` so
-  Radau5 / BDF can exploit the band structure (5 nnz/row in 2D,
-  7 nnz/row in 3D plus diagonal for the reaction).
-
-**Why it matters**: stiff PDE problems (Fisher-KPP near saturation,
-Allen-Cahn, advection-diffusion-reaction with stiff chemistry) are
-exactly where Numra's Radau5 / BDF should beat explicit DoPri5, but
-right now the FD-Jacobian fallback eats the win. Closing this gap
-makes the stiff path *useful* for PDEs rather than nominally
-supported.
-
-**Out of scope for v1**; revisit alongside the broader sparse-Jacobian
-work in `numra-ode`. Cite this entry when sequencing.
-
 ### MOL systems don't implement `ParametricOdeSystem`
 
 **Status**: scoped, not started. Affects all three MOL wrappers.
 
-Forward sensitivity (just shipped, 2026-05-06) requires
-`ParametricOdeSystem` — an ODE system parameterised by a `&[S]` of
-parameters with `jacobian_y` and `jacobian_p` methods. None of the
-MOL wrappers implement it, which means a user cannot ask "how does
-my Fisher-KPP solution depend on the diffusion coefficient and the
-reaction rate?" without writing the parametric system by hand.
+Forward sensitivity requires `ParametricOdeSystem` — an ODE system
+parameterised by a `&[S]` of parameters with `jacobian_y` and
+`jacobian_p` methods. None of the MOL wrappers implement it, which
+means a user cannot ask "how does my Fisher-KPP solution depend on
+the diffusion coefficient and the reaction rate?" without writing the
+parametric system by hand.
 
 **What needs doing**:
 - A `ParametricMOLSystem{2,3}D` variant (or a generic-over-parameter
@@ -321,28 +302,79 @@ Jacobian-derivation burden.
 **Out of scope for v1**; revisit when forward sensitivity has its
 first PDE-shaped user workload.
 
-### Reaction-term composability with the analytical-Jacobian path
+### 1D `MOLSystem` analytical Jacobian
 
-**Status**: noted, blocks the two items above.
+**Status**: scoped, not started. Affects `numra-pde/src/mol.rs`.
 
-The current `with_reaction(|t, x, y, z, u| ...)` closure signature
-returns only the reaction *value*, not its Jacobian or its parameter
-derivatives. That's fine for the explicit-RHS path but it's the
-single piece of friction blocking *both* `JacobianProvider` and
-`ParametricOdeSystem` impls from being painless. When we revisit
-either, this signature is the API decision to make first.
+The 2D and 3D MOL wrappers store the assembled spatial operator as a
+`SparseMatrix<S>` and override `OdeSystem::jacobian` with a direct
+copy from CSC. The 1D `MOLSystem` is different — it uses the
+`PdeSystem` trait + `FDM` discretisation and does not pre-assemble
+an operator. When a stiff solver picks 1D MOL, it pays full FD-
+Jacobian cost even though the underlying derivative structure (band-
+3 tridiagonal + diagonal reaction) is implicit in the discretisation.
 
-**Options**:
-- Add sibling closures (`with_reaction_jacobian_u`,
-  `with_reaction_jacobian_p`) that default to FD on the value
-  closure when not supplied.
-- Switch to a trait-based reaction (`trait Reaction<S> { fn value(...);
-  fn jac_u(...); fn jac_p(...); }`) with a default FD impl. More
-  rigorous; bigger surface area; consistent with how
-  `ParametricOdeSystem` already works.
+**Recommended approach when picked up**: cache the assembled
+tridiagonal operator in a `OnceLock<SparseMatrix<S>>` field on
+`MOLSystem`, populated on first `jacobian()` call. Subsequent calls
+are zero-cost copies. The `OnceLock` choice over `RefCell`/`Mutex`
+keeps the type `Send + Sync` without unsafe code and avoids the
+mutex contention path that would otherwise show up in parallel
+solver use; the trade-off is that the operator is built lazily once
+per `MOLSystem` rather than upfront — measurable only on cold solves.
 
-Either is a non-breaking addition. Pick when the first of the two
-gaps above is being closed.
+The reaction Jacobian inherits the same diagonal-FD pattern as 2D/3D
+(see "Non-pointwise reaction Jacobians" below for when that
+assumption breaks). Don't relitigate the cache-strategy decision when
+the work is picked up.
+
+### Non-pointwise reaction Jacobians
+
+**Status**: scoped, not started. Triggered when (and only when) a
+user wants a reaction term that *does* couple grid points.
+
+The diagonal-FD reaction-Jacobian path that ships in the current
+`MOLSystem{2,3}D::jacobian` is rigorously correct for *pointwise*
+reactions: `R(t, x_i, ..., u_i)` depends only on local state, so
+`∂R_i/∂u_m` is identically zero for `m ≠ i`. The diagonal property
+holds by construction, not by approximation.
+
+**The remaining gap is for non-pointwise reaction models**:
+- **Nonlocal coupling** — reactions of the form `R(t, x, u(x), ∫K(x,x')u(x')dx')`
+  appearing in chemotaxis, neural field equations, and some predator–prey
+  spatial models.
+- **Integro-PDE reactions** — `R` is itself a spatial integral of `u`.
+- **Multi-component PDEs** — the reaction in component `i` depends on
+  components `j ≠ i` at the same grid point (still local in space,
+  but not pointwise in the `MOLSystem*` sense which is single-component).
+
+For these, the current `Fn(t, x, y, z, u) -> S` closure signature is
+insufficient and the diagonal-only Jacobian path is wrong. Two
+sub-cases need different treatment:
+- **Multi-component pointwise** is the easy lift: extend the closure
+  to `Fn(t, x, y, z, &[S]) -> Vec<S>` and treat the local Jacobian as
+  a `c × c` block at each grid point (where `c` is the number of
+  components). The block is supplied either by sibling closures or
+  by a trait. Diagonal-block analytical fall-through preserves the
+  `O(1)` rebuild cost.
+- **True nonlocal reactions** require the trait-default full FD
+  fallback in `OdeSystem::jacobian`. Document the constraint in the
+  MOL chapter; a user can always override `OdeSystem::jacobian` on
+  a custom wrapper.
+
+**API decision** to make when revisiting: closures vs. a trait.
+Closures are non-breaking additions (sibling closures
+`with_reaction_jacobian_u`, etc.); a `trait Reaction<S>` is more
+rigorous, bigger surface area, and consistent with how
+`ParametricOdeSystem` already works (defaulted FD impls for
+non-overriders). Likely the right call is a trait once the
+multi-component requirement is concrete.
+
+**Why this is filed narrowly now**: the broader "reaction-term
+composability" framing has been retired — the diagonal-FD path
+makes the v1 pointwise case painless. The remaining specific gap is
+the non-pointwise case, and there's no concrete user demand for it
+yet, so revisit when one materialises.
 
 ---
 
