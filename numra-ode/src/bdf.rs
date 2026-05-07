@@ -477,9 +477,15 @@ impl Bdf {
         };
         let mass_ref = mass_data.as_deref();
 
-        // Jacobian + LU.
+        // Jacobian + LU. Delegates to OdeSystem::jacobian, which lets a
+        // system override with an analytical Jacobian (e.g. MOLSystem*) and
+        // otherwise falls through to the canonical FD default in
+        // problem.rs. Costs one extra rhs evaluation per Jacobian rebuild
+        // vs the previous inlined path because the trait default
+        // recomputes f0 internally; that overhead is dominated by the LU
+        // on every problem we care about.
         let mut jac = vec![S::ZERO; dim * dim];
-        self.compute_jacobian(problem, t, y0, &f_eval, &mut jac, dim);
+        problem.jacobian(t, y0, &mut jac);
         stats.n_jac += 1;
         let mut current_jac = true;
         let mut lu: Option<LUFactorization<S>> = None;
@@ -620,7 +626,7 @@ impl Bdf {
                     // wasted enormous numbers of steps.
                     problem.rhs(t_new, &y_predict, &mut f_eval);
                     stats.n_eval += 1;
-                    self.compute_jacobian(problem, t_new, &y_predict, &f_eval, &mut jac, dim);
+                    problem.jacobian(t_new, &y_predict, &mut jac);
                     stats.n_jac += 1;
                     current_jac = true;
                     lu = None;
@@ -848,33 +854,6 @@ impl Bdf {
             S::from_f64(0.01) * d0 / d1
         };
         h0.min(options.h_max).max(options.h_min)
-    }
-
-    fn compute_jacobian<S, Sys>(
-        &self,
-        problem: &Sys,
-        t: S,
-        y: &[S],
-        f0: &[S],
-        jac: &mut [S],
-        dim: usize,
-    ) where
-        S: Scalar,
-        Sys: OdeSystem<S>,
-    {
-        let eps = S::from_f64(1e-8);
-        let mut y_pert = y.to_vec();
-        let mut f_pert = vec![S::ZERO; dim];
-        for j in 0..dim {
-            let yj = y[j];
-            let h = eps * (S::ONE + yj.abs());
-            y_pert[j] = yj + h;
-            problem.rhs(t, &y_pert, &mut f_pert);
-            y_pert[j] = yj;
-            for i in 0..dim {
-                jac[i * dim + j] = (f_pert[i] - f0[i]) / h;
-            }
-        }
     }
 
     /// Build  M − c·J  (or  I − c·J  for ODEs).
