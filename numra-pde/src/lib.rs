@@ -77,7 +77,9 @@ mod equations3d;
 mod grid;
 mod mol;
 mod mol2d;
+mod mol2d_parametric;
 mod mol3d;
+mod mol3d_parametric;
 pub mod moving;
 mod sparse_assembly;
 
@@ -90,7 +92,9 @@ pub use equations3d::{AdvectionDiffusion3D, HeatEquation3D, ReactionDiffusion3D}
 pub use grid::{Grid1D, Grid2D, Grid3D};
 pub use mol::{MOLSystem, PdeSystem};
 pub use mol2d::MOLSystem2D;
+pub use mol2d_parametric::ParametricMOLSystem2D;
 pub use mol3d::MOLSystem3D;
+pub use mol3d_parametric::ParametricMOLSystem3D;
 pub use moving::{Bound, CoordinateTransform, Domain1D, MovingBound, StefanCondition};
 pub use sparse_assembly::{
     assemble_laplacian_2d, assemble_laplacian_3d, assemble_operator_2d, assemble_operator_3d,
