@@ -669,6 +669,124 @@ The full performance bench lives at
 `numra-bench/benches/pde_mol.rs::bench_mol2d_radau5_jacobian_path` and
 runs on every CI invocation of `cargo bench`.
 
+### Forward sensitivity on PDE problems
+
+`ParametricMOLSystem2D` and `ParametricMOLSystem3D` wrap a 2D / 3D
+heat-equation MOL discretisation as a `ParametricOdeSystem`, letting you
+compute $\partial u/\partial p$ for parameters $p = [\alpha, p_{R,0}, p_{R,1}, \ldots]$
+through the same `solve_forward_sensitivity` entry point that ODE users
+already know. No hand-rolled parametric system; no manual Jacobian
+derivation.
+
+The parameter layout is fixed: slot 0 is the diffusion coefficient
+$\alpha$; remaining slots are reaction parameters supplied alongside the
+reaction closure. The closure receives the *full* parameter slice so
+it can reference $p[0]$ for the diffusion coefficient or $p[1..]$ for
+its own reaction-specific parameters.
+
+**Example: fitting a Fisher–KPP diffusion + growth-rate pair**
+
+Suppose you have observed concentration data and want to know how the
+solution depends on the diffusion coefficient $\alpha$ and the logistic
+growth rate $r$ — the canonical setup for parameter-identification
+workflows on reaction-diffusion problems.
+
+<!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
+```rust
+use numra_ode::sensitivity::solve_forward_sensitivity;
+use numra_ode::{Radau5, SolverOptions};
+use numra_pde::{BoundaryConditions2D, Grid2D, ParametricMOLSystem2D};
+
+let n = 21;
+let grid = Grid2D::uniform(0.0, 1.0, n, 0.0, 1.0, n);
+let bc = BoundaryConditions2D::all_zero_dirichlet();
+
+// Parameters: [alpha=0.01 (diffusion), r=1.0 (growth rate)]
+let mol = ParametricMOLSystem2D::heat_with_reaction(
+    grid.clone(),
+    0.01_f64,           // alpha nominal
+    &bc,
+    vec![1.0],          // reaction params: just [r]
+    |_t, _x, _y, u, p: &[f64]| {
+        // p[0] is alpha; p[1] is the growth rate
+        p[1] * u * (1.0 - u)
+    },
+);
+
+// Initial condition: a small bump in the centre
+let nx_int = n - 2;
+let n_int = nx_int * nx_int;
+let mut u0 = vec![0.0_f64; n_int];
+for jj in 0..nx_int {
+    for ii in 0..nx_int {
+        let x = grid.x_grid.points()[ii + 1];
+        let y = grid.y_grid.points()[jj + 1];
+        let r2 = (x - 0.5).powi(2) + (y - 0.5).powi(2);
+        if r2 < 0.04 {
+            u0[jj * nx_int + ii] = 0.5;
+        }
+    }
+}
+
+let opts = SolverOptions::default().rtol(1e-6).atol(1e-9);
+let result = solve_forward_sensitivity::<Radau5, f64, _>(
+    &mol, 0.0, 0.5, &u0, &opts,
+).unwrap();
+
+// ∂u/∂α at the final time, at the cube centre
+let mid = (nx_int / 2) * nx_int + (nx_int / 2);
+let last_t = result.t.len() - 1;
+let du_dalpha = result.dyi_dpj(last_t, mid, 0);
+let du_dr     = result.dyi_dpj(last_t, mid, 1);
+println!("∂u/∂α = {du_dalpha:.6}");
+println!("∂u/∂r = {du_dr:.6}");
+```
+
+**What's analytical and what isn't**
+
+The implementation exploits the linearity of the spatial operator in
+$\alpha$: the assembled Laplacian scales exactly as $\alpha \cdot L_0$, and the
+boundary RHS contribution scales the same way (including for Neumann
+ghost-point flux terms — the ghost-point construction makes the flux
+contribution $\alpha$-scaled automatically when the operator is a pure
+Laplacian). So the parametric system pre-assembles $L_0$ and `bc_rhs_0`
+once and scales by $\alpha$ at runtime. No per-call matrix re-assembly.
+
+This means:
+
+- $\partial(\text{rhs})/\partial y$ is fully analytical: $\alpha \cdot L_0$ plus a diagonal
+  reaction contribution (FD on the closure, single call per interior
+  point thanks to the pointwise-reaction property).
+- $\partial(\text{rhs})/\partial \alpha$ is analytical: $L_0 \cdot y + \mathrm{bc\_rhs}_0$.
+- $\partial(\text{rhs})/\partial p_{R,k}$ is FD-on-the-closure with the matching parameter
+  slot perturbed (one closure call per interior point per reaction
+  parameter).
+
+All four `has_analytical_jacobian_*` flags are set correctly, so the
+augmented-system hot path takes the analytical route.
+
+**Scope and what's deferred**
+
+`ParametricMOLSystem*` v1 ships heat-equation parametrisation: a single
+parameter slot for $\alpha$. Full operator parametrisation — separate
+slots for the diffusion coefficient $D$ and the velocity $(v_x, v_y)$ in
+advection–diffusion, where the operator is *not* linear in any single
+coefficient — would require per-parameter-change re-assembly and is
+deferred. Tracked in `internal-followups.md` under §PDE.
+
+For workflows where the parameters drive a custom operator that doesn't
+fit the heat-equation shape, the escape hatch is to implement
+`ParametricOdeSystem` directly — the full trait surface is in the
+`ch11-uncertainty/sensitivity-analysis` chapter.
+
+**Bench coverage**
+
+`numra-bench/benches/pde_mol.rs::bench_mol2d_forward_sensitivity` runs
+the parametric path on a stiff 2D heat-with-reaction workload at
+$N_s \in \{1, 2, 3\}$ parameters. The current cost is dominated by dense
+LU on the $N_{\text{int}}(1 + N_s)$-dimensional augmented system; future
+block-diagonal-LU work will reduce this.
+
 ### Memory and runtime scaling
 
 3D MOL is honest about its costs:

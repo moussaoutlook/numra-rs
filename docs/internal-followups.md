@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-07.
+Last updated: 2026-05-08.
 
 ## Recently retired
 
@@ -18,6 +18,7 @@ One-line entries for follow-ups that landed and were removed from the
 file. Kept here so a future reader can find the closure record without
 git-archaeology.
 
+- **Parametric MOL systems for forward sensitivity** — shipped 2026-05-08. `ParametricMOLSystem2D` and `ParametricMOLSystem3D` (numra-pde) wrap the heat-equation MOL discretisation as `ParametricOdeSystem`. Parameter layout `[α, reaction_p_0, ...]`; analytical state Jacobian (`α · L0` + diagonal reaction FD), analytical α-column of `J_p` (`L0·y + bc_rhs_0`), all four flag overrides set. Linearity of the Laplacian operator means a single pre-assembled `L0` and `bc_rhs_0` cover both Dirichlet and Neumann BCs without splitting. v1 scope is alpha-on-Laplacian only; full operator parametrisation (D + velocity in advection-diffusion) is the remaining gap, narrowed below.
 - **Jacobian unification & MOL analytical Jacobians** — shipped 2026-05-07. `Radau5` and `Bdf` now route through `OdeSystem::jacobian`; FD step formula unified to `eps * (1 + |y_j|)`; `MOLSystem2D` / `MOLSystem3D` override with CSC-to-dense copy of the spatial operator + diagonal-FD reaction term. ~2.8% measured win on stiff 2D heat-with-reaction; full neutrality on non-MOL systems. See CHANGELOG.
 - **`equations3d` convenience builders** — shipped 2026-05-07. `HeatEquation3D::build`, `AdvectionDiffusion3D::build`, `ReactionDiffusion3D::{build, fisher}` mirroring `equations2d.rs`.
 - **`MOLSystem3D` wrapper** — shipped 2026-05-07. `mol3d.rs` mirrors `mol2d.rs` exactly; backed by new `Operator3DCoefficients` and `assemble_operator_3d`. The audit-driven 3D-MOL gap is closed.
@@ -269,38 +270,59 @@ relative to the other, but both share the same gaps relative to the
 broader Numra solver surface. Listed here so that when we close them,
 we close them for both wrappers in the same PR.
 
-### MOL systems don't implement `ParametricOdeSystem`
+### Full operator parametrisation in MOL
 
-**Status**: scoped, not started. Affects all three MOL wrappers.
+**Status**: scoped, not started. v1 (heat-equation parametrisation,
+single α slot) ships in `ParametricMOLSystem{2,3}D`; this entry tracks
+the remaining gap.
 
-Forward sensitivity requires `ParametricOdeSystem` — an ODE system
-parameterised by a `&[S]` of parameters with `jacobian_y` and
-`jacobian_p` methods. None of the MOL wrappers implement it, which
-means a user cannot ask "how does my Fisher-KPP solution depend on
-the diffusion coefficient and the reaction rate?" without writing the
-parametric system by hand.
+`ParametricMOLSystem*` v1 supports parametrising the diffusion
+coefficient α and any number of reaction parameters, but the operator
+itself is restricted to a *scaled Laplacian* — all interior coefficients
+share a single α factor. This is sufficient for the most common
+workloads (heat, Fisher-KPP, Allen-Cahn). It is *not* sufficient for
+problems where multiple operator coefficients are independently
+parametric:
 
-**What needs doing**:
-- A `ParametricMOLSystem{2,3}D` variant (or a generic-over-parameter
-  extension of the existing wrappers) where:
-  - `alpha` becomes a parameter slot rather than a stored constant.
-  - The reaction closure takes `(t, x, y, z, u, &[S])` instead of
-    `(t, x, y, z, u)`.
-  - Re-assembly happens lazily inside `rhs` when parameters change,
-    or — better — `jacobian_p` is computed analytically because for
-    the heat-equation case it's just the assembled Laplacian times
-    the state.
-- Decide whether this is a separate type or a flag on the existing
-  type. Separate type avoids polluting the v1 ergonomic surface;
-  paying for parametricity should be opt-in.
+- **Advection-diffusion** with parametric diffusion `D` and parametric
+  velocity `(v_x, v_y)`. The operator is `D · ∇² - v_x ∂_x - v_y ∂_y`,
+  not linear in any single coefficient.
+- **Anisotropic diffusion** with `D_x ≠ D_y`, where two independent
+  diffusion parameters parameterise different stencil entries.
+- **Cross-diffusion / reaction-diffusion-advection** with multiple
+  independent operator parameters.
+
+**What needs doing**: extend the parametric MOL surface to support a
+user-supplied `Operator2DCoefficients = f(params)` mapping. Each rhs /
+jacobian call re-assembles the operator from the current parameters.
+Two implementation paths:
+
+1. **Re-assembly per call**: simplest. Costs one full
+   `assemble_operator_2d` per parameter change. Cheap on small grids
+   (`n_int < 1000`) where assembly is microseconds; expensive on large
+   grids. The hot path of `solve_forward_sensitivity` calls
+   `jacobian_p` infrequently (once per Jacobian rebuild), so the cost
+   may be tolerable in practice — needs benching.
+2. **Coefficient-decomposition**: pre-assemble the operator components
+   once (`L_xx`, `L_yy`, `L_x`, `L_y`, `M_0`) and combine at runtime as
+   `α · L_xx + β · L_yy + ...`. Mirrors the linearity exploitation in
+   the v1 alpha-on-Laplacian path. Requires `assemble_operator_2d` to
+   support per-component disassembly — a non-trivial refactor of the
+   stencil construction code.
+
+Path 1 is the fast lift for the next user; path 2 is the
+performant-at-scale answer.
 
 **Composes with**: §Solvers / AD-based `ParametricOdeSystem` impl —
-once that adapter ships, a parametric MOL wrapper could use AD on
-the reaction closure to get `∂R/∂p` for free, removing the manual
-Jacobian-derivation burden.
+once that adapter ships, the user-supplied
+`Operator2DCoefficients = f(params)` mapping could be AD-differentiated
+to give `∂coeffs/∂params` automatically, removing the manual
+parameter-Jacobian derivation. Combined with path 2 above, the result
+would be analytical `J_p` for any user-specified linear operator.
 
-**Out of scope for v1**; revisit when forward sensitivity has its
-first PDE-shaped user workload.
+**Out of scope for v1 of the parametric MOL work**; revisit when a
+real workload (advection-diffusion identification, anisotropic
+diffusion estimation) materialises.
 
 ### 1D `MOLSystem` analytical Jacobian
 
