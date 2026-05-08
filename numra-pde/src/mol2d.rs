@@ -151,7 +151,7 @@ impl<S: SparseScalar> OdeSystem<S> for MOLSystem2D<S> {
     }
 
     /// Analytical Jacobian: copy the assembled sparse spatial operator
-    /// (which already equals ∂(L[u])/∂u by construction) into the row-major
+    /// (which already equals `∂(L[u])/∂u` by construction) into the row-major
     /// dense buffer the solver expects, then add the reaction term's
     /// contribution to the diagonal.
     ///
