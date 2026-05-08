@@ -9,10 +9,11 @@
 //! Author: Moussa Leblouba
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use numra_ode::sensitivity::solve_forward_sensitivity;
 use numra_ode::{DoPri5, OdeSystem, Radau5, Solver, SolverOptions};
 use numra_pde::{
     boundary::DirichletBC, BoundaryConditions2D, Grid1D, Grid2D, HeatEquation1D, MOLSystem,
-    MOLSystem2D,
+    MOLSystem2D, ParametricMOLSystem2D,
 };
 use std::time::Duration;
 
@@ -125,9 +126,112 @@ fn bench_mol2d_radau5_jacobian_path(c: &mut Criterion) {
     group.finish();
 }
 
+/// Forward-sensitivity bench for `ParametricMOLSystem2D`. Measures wall-
+/// clock for `solve_forward_sensitivity` on a stiff 2D heat-with-reaction
+/// problem at three parameter counts (N_s = 1, 2, 3), confirming the
+/// expected linear scaling in N_s and providing a regression baseline.
+fn bench_mol2d_forward_sensitivity(c: &mut Criterion) {
+    let mut group = c.benchmark_group("mol2d_forward_sensitivity");
+    group
+        .sample_size(20)
+        .measurement_time(MEASUREMENT_TIME)
+        .warm_up_time(WARM_UP_TIME);
+
+    let n = 11_usize; // 9² = 81 interior points
+    let alpha = 0.5_f64;
+    let bc = BoundaryConditions2D::all_zero_dirichlet();
+
+    let nx_int = n - 2;
+    let n_int = nx_int * nx_int;
+    let pi = std::f64::consts::PI;
+    let make_u0 = |grid: &Grid2D<f64>| -> Vec<f64> {
+        (0..n_int)
+            .map(|idx| {
+                let ii = idx % nx_int;
+                let jj = idx / nx_int;
+                let x = grid.x_grid.points()[ii + 1];
+                let y = grid.y_grid.points()[jj + 1];
+                (pi * x).sin() * (pi * y).sin()
+            })
+            .collect()
+    };
+
+    let t_final = 0.05_f64;
+    let opts = SolverOptions::default().rtol(1e-6).atol(1e-9);
+
+    // N_s = 1: just α.
+    {
+        let grid = Grid2D::uniform(0.0, 1.0, n, 0.0, 1.0, n);
+        let u0 = make_u0(&grid);
+        let mol = ParametricMOLSystem2D::heat(grid, alpha, &bc);
+        group.bench_function(BenchmarkId::new("ns", 1), |b| {
+            b.iter(|| {
+                solve_forward_sensitivity::<Radau5, f64, _>(
+                    black_box(&mol),
+                    0.0,
+                    t_final,
+                    &u0,
+                    &opts,
+                )
+            })
+        });
+    }
+
+    // N_s = 2: α + 1 reaction parameter.
+    {
+        let grid = Grid2D::uniform(0.0, 1.0, n, 0.0, 1.0, n);
+        let u0 = make_u0(&grid);
+        let mol = ParametricMOLSystem2D::heat_with_reaction(
+            grid,
+            alpha,
+            &bc,
+            vec![1.0],
+            |_t, _x, _y, u, p: &[f64]| -p[1] * u * u * u,
+        );
+        group.bench_function(BenchmarkId::new("ns", 2), |b| {
+            b.iter(|| {
+                solve_forward_sensitivity::<Radau5, f64, _>(
+                    black_box(&mol),
+                    0.0,
+                    t_final,
+                    &u0,
+                    &opts,
+                )
+            })
+        });
+    }
+
+    // N_s = 3: α + 2 reaction parameters.
+    {
+        let grid = Grid2D::uniform(0.0, 1.0, n, 0.0, 1.0, n);
+        let u0 = make_u0(&grid);
+        let mol = ParametricMOLSystem2D::heat_with_reaction(
+            grid,
+            alpha,
+            &bc,
+            vec![1.0, 0.1],
+            |_t, _x, _y, u, p: &[f64]| -p[1] * u * u * u + p[2] * u,
+        );
+        group.bench_function(BenchmarkId::new("ns", 3), |b| {
+            b.iter(|| {
+                solve_forward_sensitivity::<Radau5, f64, _>(
+                    black_box(&mol),
+                    0.0,
+                    t_final,
+                    &u0,
+                    &opts,
+                )
+            })
+        });
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_pde_mol_scaling,
-    bench_mol2d_radau5_jacobian_path
+    bench_mol2d_radau5_jacobian_path,
+    bench_mol2d_forward_sensitivity
 );
 criterion_main!(benches);
