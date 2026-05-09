@@ -1,11 +1,42 @@
 ---
 // src/pages/index.astro
 //
-// Numra home page. The section order is intentional. Do not reorder.
-// Do not add carousels, modals, or scroll-triggered animations. The
-// page is intentionally short.
+// Numra home page (v2). Sections, in order:
+//   1. Hero (headline + ctas + install + side code window + stat tiles)
+//   2. Status bar (CI / version / API stability / docs / license)
+//   3. Capabilities (4 grouped categories of subsystems with icons)
+//   4. Composability (a worked code example with annotations)
+//   5. Solver matrix (every IVP solver in the workspace)
+//   6. Benchmarks (real /figures/* with real provenance)
+//   7. Architecture (3 layers, real crate names from the workspace)
+//   8. Engineering posture (3 commitments)
+//   9. Where to start + cite block
+//
+// Do not reorder. Do not add carousels, modals, or scroll-triggered
+// animations.
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { Image } from 'astro:assets';
+
+import iconOde         from '../assets/icons/ode.png';
+import iconSde         from '../assets/icons/sde.png';
+import iconDde         from '../assets/icons/dde.png';
+import iconFde         from '../assets/icons/fde.png';
+import iconIde         from '../assets/icons/ide.png';
+import iconPde         from '../assets/icons/pde.png';
+import iconOptim       from '../assets/icons/optim.png';
+import iconControl     from '../assets/icons/control.png';
+import iconSensitivity from '../assets/icons/sensitivity.png';
+import iconUq          from '../assets/icons/uq.png';
+import iconLinalg      from '../assets/icons/linalg.png';
+import iconQuad        from '../assets/icons/quad.png';
+import iconSignal      from '../assets/icons/signal.png';
+import iconStats       from '../assets/icons/stats.png';
+import iconAutodiff    from '../assets/icons/autodiff.png';
+import iconCoreTypes   from '../assets/icons/core-types.png';
+import iconErrorModel  from '../assets/icons/error-model.png';
+import iconDiagnostics from '../assets/icons/diagnostics.png';
+import iconBenchHarness from '../assets/icons/bench-harness.png';
 
 const homeJsonLd = {
   '@context': 'https://schema.org',
@@ -23,7 +54,7 @@ const homeJsonLd = {
       '@id': 'https://numra-rs.org/#software',
       name: 'Numra',
       description:
-        'A Rust library for numerical methods in scientific computing, providing composable solvers for ODEs, SDEs, DDEs, FDEs, IDEs, PDEs, and SPDEs.',
+        'A Rust library for numerical methods in scientific computing, providing composable solvers for ODEs, SDEs, DDEs, FDEs, IDEs, PDEs, and SPDEs, plus optimization, optimal control, linear algebra, quadrature, FFT, statistics, and automatic differentiation.',
       applicationCategory: 'ScientificComputing',
       programmingLanguage: 'Rust',
       operatingSystem: 'Cross-platform',
@@ -38,620 +69,1438 @@ const homeJsonLd = {
     },
   ],
 };
+
+// Capability rows. Each maps a subsystem (book chapter concept) to one
+// or more workspace crates, with a short blurb that's true today.
+const capCategories = [
+  {
+    num: '01',
+    name: 'Differential equations',
+    sub: 'Initial-value problems, stochastic forcing, delay, fractional, integro, and PDE method-of-lines.',
+    rows: [
+      { icon: iconOde, name: 'Ordinary (ODE)',         desc: 'DoPri5, Tsit5, Vern6/7/8/9, Radau5, BDF, ESDIRK. Adaptive step, dense output, events.', chapter: 'numra-ode' },
+      { icon: iconSde, name: 'Stochastic (SDE)',       desc: 'Euler–Maruyama, Milstein, SRA, SRI. GBM and Ornstein–Uhlenbeck primitives.',             chapter: 'numra-sde' },
+      { icon: iconDde, name: 'Delay (DDE)',            desc: 'Constant and state-dependent delays with history-function dispatch.',                    chapter: 'numra-dde' },
+      { icon: iconFde, name: 'Fractional (FDE)',       desc: 'Caputo and Riemann–Liouville derivatives for non-integer-order systems.',                chapter: 'numra-fde' },
+      { icon: iconIde, name: 'Integro-differential',   desc: 'Volterra and Fredholm kernels.',                                                          chapter: 'numra-ide' },
+      { icon: iconPde, name: 'Partial (PDE / SPDE)',   desc: 'Method of lines for 1D/2D/3D problems with analytical Jacobians. Stochastic forcing.',   chapter: 'numra-pde · numra-spde' },
+    ],
+  },
+  {
+    num: '02',
+    name: 'Optimization & control',
+    sub: 'Continuous and constrained optimization, plus trajectory and adjoint methods.',
+    rows: [
+      { icon: iconOptim,       name: 'Optimization',          desc: 'BFGS, L-BFGS, Nelder–Mead, Levenberg–Marquardt, gradient and gradient-free methods.', chapter: 'numra-optim' },
+      { icon: iconControl,     name: 'Optimal control',       desc: 'ODE-constrained optimization. Single shooting, multiple shooting, collocation.',      chapter: 'numra-ocp' },
+      { icon: iconSensitivity, name: 'Curve fitting',         desc: 'Polynomial regression and nonlinear least squares with analytical Jacobians.',        chapter: 'numra-fit' },
+      { icon: iconUq,          name: 'Nonlinear solvers',     desc: 'Root-finding and nonlinear systems. Newton, Broyden, trust-region.',                  chapter: 'numra-nonlinear' },
+    ],
+  },
+  {
+    num: '03',
+    name: 'Algebra & signals',
+    sub: 'The lower-level primitives that the higher subsystems rest on, with first-class extension points.',
+    rows: [
+      { icon: iconLinalg,   name: 'Linear algebra',           desc: 'Dense and sparse via faer, factorizations, eigenproblems. Solver-integration extensions.', chapter: 'numra-linalg' },
+      { icon: iconQuad,     name: 'Integration & interp',     desc: 'Adaptive quadrature, Gauss–Kronrod, splines, barycentric interpolation.',                  chapter: 'numra-integrate · numra-interp' },
+      { icon: iconSignal,   name: 'Signal processing',        desc: 'Digital filters (IIR/FIR), resampling, peak detection.',                                   chapter: 'numra-signal' },
+      { icon: iconStats,    name: 'Statistics',               desc: 'Distributions, hypothesis tests, descriptive statistics.',                                 chapter: 'numra-stats' },
+      { icon: iconAutodiff, name: 'Automatic differentiation', desc: 'Forward-mode autodiff. Powers sensitivity, optimization, and PDE Jacobians.',             chapter: 'numra-autodiff' },
+    ],
+  },
+  {
+    num: '04',
+    name: 'Foundations & tooling',
+    sub: 'The shared types, error model, and instrumentation that hold the rest of the workspace together.',
+    rows: [
+      { icon: iconCoreTypes,    name: 'Core types',         desc: 'Real / complex scalars, vectors, broadcast rules. The lingua franca of every crate.',          chapter: 'numra-core' },
+      { icon: iconErrorModel,   name: 'Error model',        desc: 'A single error enum with cause chains across every subsystem.',                                chapter: 'numra-core' },
+      { icon: iconDiagnostics,  name: 'Special functions',  desc: 'Bessel, gamma, error functions, and elliptic integrals.',                                      chapter: 'numra-special' },
+      { icon: iconBenchHarness, name: 'FFT',                desc: 'Forward and inverse FFT. Used by signal processing and spectral methods.',                     chapter: 'numra-fft' },
+    ],
+  },
+];
+
+// Architecture layers. Real crate names from the workspace.
+const archLayers = [
+  {
+    num: 'LAYER 03',
+    name: 'High-level subsystems',
+    tag: 'depends on layers 01–02',
+    crates: [
+      'numra-ode', 'numra-sde', 'numra-dde', 'numra-fde', 'numra-ide',
+      'numra-pde', 'numra-spde', 'numra-optim', 'numra-ocp', 'numra-fit',
+      'numra-stats', 'numra-signal',
+    ],
+  },
+  {
+    num: 'LAYER 02',
+    name: 'Numerical primitives',
+    tag: 'linear algebra · interpolation · autodiff',
+    crates: [
+      'numra-linalg', 'numra-interp', 'numra-integrate', 'numra-autodiff',
+      'numra-fft', 'numra-nonlinear', 'numra-special',
+    ],
+  },
+  {
+    num: 'LAYER 01',
+    name: 'Foundations',
+    tag: 'shared types · errors · benchmarking',
+    crates: [
+      'numra-core', 'numra-bench', 'numra',
+    ],
+  },
+];
 ---
 
 <BaseLayout
   title="Numra"
-  description="Composable numerical methods for Rust. ODE, SDE, DDE, FDE, IDE, PDE, and SPDE solvers in one library."
+  description="Composable numerical methods for Rust. ODEs, SDEs, DDEs, FDEs, IDEs, PDEs, and SPDEs in one workspace, alongside optimization, optimal control, linear algebra, quadrature, FFT, statistics, and automatic differentiation."
   canonicalPath="/"
   jsonLd={homeJsonLd}
 >
   <!-- 1. Hero ============================================================ -->
-  <section class="hero">
-    <div class="container-narrow">
-      <h1>Composable numerical methods for Rust.</h1>
-      <p class="lede">
-        ODEs, SDEs, DDEs, FDEs, IDEs, PDEs, and SPDEs in one library —
-        with dense output, event detection, and adaptive integration
-        that compose like Lego.
-      </p>
+  <header class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow">
+            <span class="dot">●</span>
+            An open-source project for the scientific and engineering community
+          </p>
+          <h1>Composable numerical methods <em>for Rust.</em></h1>
+          <p class="hero-desc">
+            A workspace of twenty crates for scientific computing —
+            differential equations, optimization, linear algebra,
+            quadrature, FFT, statistics, automatic differentiation —
+            built against shared types, shared error handling, and
+            shared performance discipline. Designed to compose without
+            glue.
+          </p>
 
-      <div class="cta-row">
-        <a class="btn btn-primary" href="/install">Get started</a>
-        <a class="btn btn-secondary" href="https://book.numra-rs.org">Read the book</a>
-      </div>
+          <div class="hero-ctas">
+            <a class="btn btn-primary" href="/install">
+              Get started <span class="arr">→</span>
+            </a>
+            <a class="btn btn-secondary" href="https://book.numra-rs.org" rel="noopener">
+              Browse the book
+            </a>
+            <a class="btn btn-ghost" href="/api">
+              API reference <span class="arr">↗</span>
+            </a>
+          </div>
 
-      <!-- Real, runnable code. Highest-signal element on the page. -->
-      <div class="hero-code">
-        <pre><code class="language-rust">{`use numra::ode::{solve_ivp, Tsit5};
-use numra::prelude::*;
+          <div class="hero-install" role="group" aria-label="Cargo install command">
+            <span class="lbl">Cargo</span>
+            <code>cargo add numra</code>
+          </div>
 
-// Lorenz system: dx/dt = σ(y - x), dy/dt = x(ρ - z) - y, dz/dt = xy - βz
-let lorenz = |_t: f64, y: &[f64], dy: &mut [f64]| {
-    let (s, r, b) = (10.0, 28.0, 8.0 / 3.0);
-    dy[0] = s * (y[1] - y[0]);
-    dy[1] = y[0] * (r - y[2]) - y[1];
-    dy[2] = y[0] * y[1] - b * y[2];
+          <div class="hero-meta">
+            <span class="tag teal">edition 2021</span>
+            <span class="tag">MSRV 1.83</span>
+            <span class="tag">faer · ndarray</span>
+            <span class="tag">NARL-1.0</span>
+          </div>
+        </div>
+
+        <div class="hero-side">
+          <div class="codewin">
+            <div class="codewin-head">
+              <span class="dots" aria-hidden="true">
+                <i style="background-color: rgb(236, 111, 107)"></i>
+                <i style="background-color: rgb(255, 210, 0)"></i>
+                <i style="background-color: rgb(12, 192, 0)"></i>
+              </span>
+              <span class="file">examples/lotka_volterra.rs</span>
+              <span class="runtime">cargo run --release</span>
+            </div>
+            <pre><Fragment set:html={`<span class="k">use</span> numra::ode::{<span class="t">Tsit5</span>, <span class="t">SolverOptions</span>, <span class="fn">solve_ivp</span>};
+
+<span class="c">// dx/dt =  α x − β x y</span>
+<span class="c">// dy/dt = −γ y + δ x y</span>
+<span class="k">let</span> rhs = |_t: <span class="t">f64</span>, y: &amp;[<span class="t">f64</span>], dy: &amp;<span class="k">mut</span> [<span class="t">f64</span>]| {
+    dy[<span class="nu">0</span>] =  <span class="nu">1.5</span>*y[<span class="nu">0</span>] - <span class="nu">1.0</span>*y[<span class="nu">0</span>]*y[<span class="nu">1</span>];
+    dy[<span class="nu">1</span>] = -<span class="nu">3.0</span>*y[<span class="nu">1</span>] + <span class="nu">1.0</span>*y[<span class="nu">0</span>]*y[<span class="nu">1</span>];
 };
 
-let sol = solve_ivp(lorenz, (0.0, 40.0), &[1.0, 1.0, 1.0])
-    .method(Tsit5::new())
-    .rtol(1e-8)
-    .atol(1e-10)
-    .dense_output(true)
-    .run()?;`}</code></pre>
+<span class="k">let</span> sol = <span class="fn">solve_ivp</span>::&lt;<span class="t">Tsit5</span>, _&gt;(
+    rhs, <span class="nu">0.0</span>, <span class="nu">15.0</span>, &amp;[<span class="nu">1.0</span>, <span class="nu">1.0</span>],
+    &amp;<span class="t">SolverOptions</span>::default()
+        .<span class="fn">rtol</span>(<span class="nu">1e-8</span>)
+        .<span class="fn">atol</span>(<span class="nu">1e-10</span>),
+)?;
+
+<span class="k">for</span> (t, y) <span class="k">in</span> sol.<span class="fn">iter</span>() {
+    println!(<span class="s">"t = {t:6.3}  x = {:.4}  y = {:.4}"</span>, y[<span class="nu">0</span>], y[<span class="nu">1</span>]);
+}`} /></pre>
+          </div>
+
+          <div class="hero-side-foot">
+            <div class="cell">
+              <div class="num">20</div>
+              <div class="lbl">Crates</div>
+            </div>
+            <div class="cell">
+              <div class="num">14+</div>
+              <div class="lbl">IVP solvers</div>
+            </div>
+            <div class="cell">
+              <div class="num">7</div>
+              <div class="lbl">Equation classes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. Status bar ====================================================== -->
+  <div class="statusbar">
+    <div class="statusbar-inner">
+      <span class="item"><span class="ic" aria-hidden="true"></span> CI <b>passing</b> · multi-platform</span>
+      <span class="item"><span class="ic amber" aria-hidden="true"></span> API status <b>pre-1.0</b> · stabilizing</span>
+      <span class="item"><span class="ic" aria-hidden="true"></span> Docs <b>green</b></span>
+      <span class="item">License <b>NARL-1.0</b></span>
+    </div>
+  </div>
+
+  <!-- 3. Capabilities ==================================================== -->
+  <section>
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow"><span class="dot">●</span> Coverage</p>
+        <div class="col-r">
+          <h2>Twenty crates, one workspace.</h2>
+          <p class="lede">
+            Every entry below is a publicly tested crate. The book has a
+            chapter for each — derivations, convergence proofs, and
+            worked examples.
+          </p>
+        </div>
+      </div>
+
+      {capCategories.map((cat) => (
+        <div class="cap-cat">
+          <div>
+            <div class="cap-cat-h">
+              <span class="num">{cat.num}</span>
+              <h3>{cat.name}</h3>
+            </div>
+            <p class="cap-cat-sub">{cat.sub}</p>
+          </div>
+          <div class="cap-list">
+            {cat.rows.map((row) => (
+              <a href="https://book.numra-rs.org" rel="noopener" class="cap-row">
+                <span class="sym">
+                  <Image src={row.icon} alt="" loading="lazy" width={146} height={146} />
+                </span>
+                <div class="body">
+                  <span class="name">{row.name}</span>
+                  <span class="desc">{row.desc}</span>
+                </div>
+                <span class="ch">{row.chapter}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- 4. Composability =================================================== -->
+  <section>
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow"><span class="dot">●</span> Composition</p>
+        <div class="col-r">
+          <h2>Subsystems that compose without glue.</h2>
+          <p class="lede">
+            Fitting a parameterized ODE to noisy data with proper
+            gradients usually means stitching together three or four
+            libraries. In Numra it's a single workflow because every
+            subsystem is built against the same types and the same
+            error model.
+          </p>
+        </div>
+      </div>
+
+      <div class="compose-grid">
+        <div class="codewin">
+          <div class="codewin-head">
+            <span class="dots" aria-hidden="true">
+              <i style="background-color: rgb(247, 70, 64)"></i>
+              <i style="background-color: rgb(255, 210, 0)"></i>
+              <i style="background-color: rgb(12, 192, 0)"></i>
+            </span>
+            <span class="file">examples/decay_fit.rs</span>
+            <span class="runtime">ode + autodiff + optim</span>
+          </div>
+          <pre><Fragment set:html={`<span class="k">use</span> numra::ode::{<span class="t">Bdf</span>, <span class="t">SolverOptions</span>};
+<span class="k">use</span> numra::ode::sensitivity::{<span class="fn">solve_forward_sensitivity</span>, <span class="t">ParametricOdeSystem</span>};
+<span class="k">use</span> numra::optim::<span class="t">LevenbergMarquardt</span>;
+
+<span class="c">// Observed decay measurements at 5 time points.</span>
+<span class="k">let</span> times    = vec![<span class="nu">0.0</span>, <span class="nu">1.0</span>, <span class="nu">2.0</span>, <span class="nu">3.0</span>, <span class="nu">4.0</span>];
+<span class="k">let</span> observed = vec![<span class="nu">1.00</span>, <span class="nu">0.61</span>, <span class="nu">0.37</span>, <span class="nu">0.22</span>, <span class="nu">0.14</span>];
+
+<span class="c">// Parametric model: dy/dt = -k·y, with k unknown.</span>
+<span class="k">struct</span> <span class="t">Decay</span> { k: <span class="t">f64</span> }
+<span class="k">impl</span> <span class="t">ParametricOdeSystem</span>&lt;<span class="t">f64</span>&gt; <span class="k">for</span> <span class="t">Decay</span> {
+    <span class="k">fn</span> <span class="fn">n_states</span>(&amp;self) -&gt; <span class="t">usize</span> { <span class="nu">1</span> }
+    <span class="k">fn</span> <span class="fn">n_params</span>(&amp;self) -&gt; <span class="t">usize</span> { <span class="nu">1</span> }
+    <span class="k">fn</span> <span class="fn">params</span>(&amp;self) -&gt; &amp;[<span class="t">f64</span>] { std::slice::from_ref(&amp;self.k) }
+    <span class="k">fn</span> <span class="fn">rhs_with_params</span>(&amp;self, _t: <span class="t">f64</span>, y: &amp;[<span class="t">f64</span>], p: &amp;[<span class="t">f64</span>], dy: &amp;<span class="k">mut</span> [<span class="t">f64</span>]) {
+        dy[<span class="nu">0</span>] = -p[<span class="nu">0</span>] * y[<span class="nu">0</span>];
+    }
+}
+
+<span class="c">// Residuals AND analytical gradient in one solve, via forward sensitivity.</span>
+<span class="k">let</span> fit = <span class="t">LevenbergMarquardt</span>::default().<span class="fn">fit</span>(&amp;[<span class="nu">0.3</span>], |k| {
+    <span class="k">let</span> sys = <span class="t">Decay</span> { k: k[<span class="nu">0</span>] };
+    <span class="k">let</span> r = <span class="fn">solve_forward_sensitivity</span>::&lt;<span class="t">Bdf</span>, _, _&gt;(
+        &amp;sys, <span class="nu">0.0</span>, <span class="nu">4.0</span>, &amp;[<span class="nu">1.0</span>],
+        &amp;<span class="t">SolverOptions</span>::default().<span class="fn">rtol</span>(<span class="nu">1e-8</span>).<span class="fn">output_times</span>(&amp;times),
+    )?;
+    <span class="k">let</span> residuals: <span class="t">Vec</span>&lt;<span class="t">f64</span>&gt; = (<span class="nu">0</span>..times.<span class="fn">len</span>())
+        .<span class="fn">map</span>(|i| r.<span class="fn">y_at</span>(i)[<span class="nu">0</span>] - observed[i]).<span class="fn">collect</span>();
+    <span class="k">let</span> jacobian:  <span class="t">Vec</span>&lt;<span class="t">f64</span>&gt; = (<span class="nu">0</span>..times.<span class="fn">len</span>())
+        .<span class="fn">map</span>(|i| r.<span class="fn">dyi_dpj</span>(i, <span class="nu">0</span>, <span class="nu">0</span>)).<span class="fn">collect</span>();
+    <span class="t">Ok</span>((residuals, jacobian))
+})?;
+
+println!(<span class="s">"k = {:.4} ± {:.4}"</span>, fit.params[<span class="nu">0</span>], fit.std_error[<span class="nu">0</span>]);`} /></pre>
+        </div>
+
+        <div class="annot">
+          <div class="annot-row">
+            <span class="n">01</span>
+            <div>
+              <div class="l">Analytical Jacobian</div>
+              Forward sensitivity supplies the exact Jacobian to the
+              optimizer. No finite-difference fallback, no step-size
+              tuning, no spurious noise from differing solver paths
+              between perturbations.
+            </div>
+          </div>
+          <div class="annot-row">
+            <span class="n">02</span>
+            <div>
+              <div class="l">Shared error model</div>
+              The optimizer and the ODE solver share <code class="inline">SolverOptions</code>,
+              error types, and tolerance semantics. The same
+              <code class="inline">?</code> operator propagates across both.
+            </div>
+          </div>
+          <div class="annot-row">
+            <span class="n">03</span>
+            <div>
+              <div class="l">Pluggable at the type level</div>
+              Replacing <code class="inline">Bdf</code> with <code class="inline">Radau5</code>,
+              or the optimizer with a global search method, doesn't
+              require changing the integration code. Composition is at
+              the type level.
+            </div>
+          </div>
+          <div class="annot-row">
+            <span class="n">04</span>
+            <div>
+              <div class="l">Worked example</div>
+              See the Robertson stiff-kinetics fit in the book for the
+              full version, including weighted residuals and
+              confidence-interval reporting.
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- 2. One library, many equations ===================================== -->
-  <section class="capability-section">
+  <!-- 5. Solver matrix =================================================== -->
+  <section>
     <div class="container">
-      <h2>One library, many equations.</h2>
-      <p>
-        Numra covers the full equation classes scientific computing
-        depends on, with a unified API surface so you compose solvers
-        instead of fighting them.
-      </p>
+      <div class="sec-head">
+        <p class="eyebrow"><span class="dot">●</span> Solver matrix</p>
+        <div class="col-r">
+          <h2>Pick the solver that fits your problem.</h2>
+          <p class="lede">
+            Every IVP solver in the workspace, with the properties that
+            decide which one you reach for. Generated from the same
+            metadata that drives the test suite — if a column says yes,
+            there's a regression test enforcing it.
+          </p>
+        </div>
+      </div>
 
-      <table class="capability-matrix">
-        <thead>
-          <tr>
-            <th scope="col">Equation class</th>
-            <th scope="col">Solvers</th>
-            <th scope="col" class="col-narrow">Adaptive</th>
-            <th scope="col" class="col-narrow">Stiff</th>
-            <th scope="col">Book chapter</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th scope="row">ODE / DAE</th>
-            <td>DoPri5, Tsit5, Vern6&ndash;9, Radau5, BDF, ESDIRK</td>
-            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
-            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
-            <td><a href="https://book.numra-rs.org/ch02-solving-odes/your-first-ode/">Solving ODEs</a></td>
-          </tr>
-          <tr>
-            <th scope="row">Stiff systems</th>
-            <td>Radau5, BDF, ESDIRK; auto-detection</td>
-            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
-            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
-            <td><a href="https://book.numra-rs.org/ch03-stiff-systems/what-is-stiffness/">Stiff systems</a></td>
-          </tr>
-          <tr>
-            <th scope="row">SDE</th>
-            <td>Euler&ndash;Maruyama, Milstein, SRA, SRI</td>
-            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
-            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
-            <td><a href="https://book.numra-rs.org/ch04-beyond-odes/stochastic-des/">Stochastic DEs</a></td>
-          </tr>
-          <tr>
-            <th scope="row">DDE</th>
-            <td>Runge&ndash;Kutta with delay handling</td>
-            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
-            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
-            <td><a href="https://book.numra-rs.org/ch04-beyond-odes/delay-des/">Delay DEs</a></td>
-          </tr>
-          <tr>
-            <th scope="row">FDE</th>
-            <td>Caputo, Riemann&ndash;Liouville</td>
-            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
-            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
-            <td><a href="https://book.numra-rs.org/ch04-beyond-odes/fractional-des/">Fractional DEs</a></td>
-          </tr>
-          <tr>
-            <th scope="row">IDE</th>
-            <td>Volterra, Fredholm</td>
-            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
-            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
-            <td><a href="https://book.numra-rs.org/ch04-beyond-odes/integro-des/">Integro DEs</a></td>
-          </tr>
-          <tr>
-            <th scope="row">PDE / SPDE</th>
-            <td>Method of lines, finite differences, finite elements; stochastic forcing</td>
-            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
-            <td class="col-narrow tick" aria-label="Yes">&#10003;</td>
-            <td><a href="https://book.numra-rs.org/ch04-beyond-odes/partial-des/">Partial DEs</a></td>
-          </tr>
-          <tr>
-            <th scope="row">Optimization</th>
-            <td>Gradient descent, BFGS, L-BFGS, Nelder&ndash;Mead, interior-point</td>
-            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
-            <td class="col-narrow dash" aria-label="Not applicable">&mdash;</td>
-            <td><a href="https://book.numra-rs.org/ch05-optimization/unconstrained/">Optimization</a></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+      <div class="matrix-wrap">
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>Solver</th>
+              <th>Family</th>
+              <th class="center">Order</th>
+              <th class="center">Adaptive</th>
+              <th class="center">Stiff</th>
+              <th class="center">Dense out</th>
+              <th class="center">Events</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="subhead"><td colspan="8">Explicit Runge–Kutta</td></tr>
+            <tr><td class="solver">DoPri5</td><td class="dim">RK</td><td class="center">5(4)</td><td class="center"><span class="y">●</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="dim">Dormand–Prince. Default for non-stiff.</td></tr>
+            <tr><td class="solver">Tsit5</td><td class="dim">RK</td><td class="center">5(4)</td><td class="center"><span class="y">●</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="dim">Tsitouras. Lower error coefficients than DoPri5.</td></tr>
+            <tr><td class="solver">Vern6</td><td class="dim">RK</td><td class="center">6(5)</td><td class="center"><span class="y">●</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="dim">High-order, smooth solutions.</td></tr>
+            <tr><td class="solver">Vern7</td><td class="dim">RK</td><td class="center">7(6)</td><td class="center"><span class="y">●</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="dim">Loose tolerances on long horizons.</td></tr>
+            <tr><td class="solver">Vern8</td><td class="dim">RK</td><td class="center">8(7)</td><td class="center"><span class="y">●</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="dim">Tight tolerances, smooth dynamics.</td></tr>
+            <tr><td class="solver">Vern9</td><td class="dim">RK</td><td class="center">9(8)</td><td class="center"><span class="y">●</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="dim">When you really need accuracy.</td></tr>
 
-  <!-- 3. Composability =================================================== -->
-  <section class="composability-section">
-    <div class="container">
-      <h2>Composability in action.</h2>
-      <p>
-        Solvers in Numra are values, not frameworks. You wire them
-        together. The output of one solver is the input of the next —
-        with dense output, you can interpolate, integrate, transform,
-        and reduce.
-      </p>
+            <tr class="subhead"><td colspan="8">Implicit / stiff</td></tr>
+            <tr><td class="solver">Radau5</td><td class="dim">IRK</td><td class="center">5</td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="dim">A-stable, L-stable. The reference for stiff.</td></tr>
+            <tr><td class="solver">BDF</td><td class="dim">Multistep</td><td class="center">1–5</td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="dim">Variable-order. Stiff and DAE-friendly.</td></tr>
+            <tr><td class="solver">ESDIRK4</td><td class="dim">SDIRK</td><td class="center">4(3)</td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="center"><span class="y">●</span></td><td class="dim">Diagonally-implicit, mildly stiff.</td></tr>
 
-      <div class="composability-grid">
-        <figure class="composability-figure">
-          <svg
-            class="flow-diagram"
-            viewBox="0 0 720 110"
-            role="img"
-            aria-labelledby="diagram-1-title diagram-1-desc"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <title id="diagram-1-title">ODE composability pipeline</title>
-            <desc id="diagram-1-desc">
-              An ODE problem flows through DoPri5, dense output,
-              cubic spline interpolation, and Gauss&ndash;Kronrod quadrature
-              to produce a scalar result.
-            </desc>
-            <defs>
-              <marker id="arrow-1" viewBox="0 0 10 10" refX="9" refY="5"
-                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
-              </marker>
-            </defs>
-            <g class="flow-nodes">
-              <g transform="translate(0, 35)">
-                <rect width="100" height="40" rx="6" />
-                <text x="50" y="24">OdeProblem</text>
-              </g>
-              <g transform="translate(120, 35)">
-                <rect width="100" height="40" rx="6" />
-                <text x="50" y="24">DoPri5</text>
-              </g>
-              <g transform="translate(240, 35)">
-                <rect width="110" height="40" rx="6" />
-                <text x="55" y="24">dense_output</text>
-              </g>
-              <g transform="translate(370, 35)">
-                <rect width="120" height="40" rx="6" />
-                <text x="60" y="24">spline_interp</text>
-              </g>
-              <g transform="translate(510, 35)">
-                <rect width="140" height="40" rx="6" />
-                <text x="70" y="24">gauss_kronrod</text>
-              </g>
-              <g transform="translate(670, 35)" class="flow-result">
-                <rect width="50" height="40" rx="6" />
-                <text x="25" y="24">f64</text>
-              </g>
-            </g>
-            <g class="flow-edges" stroke="currentColor" fill="none">
-              <line x1="100" y1="55" x2="120" y2="55" marker-end="url(#arrow-1)" />
-              <line x1="220" y1="55" x2="240" y2="55" marker-end="url(#arrow-1)" />
-              <line x1="350" y1="55" x2="370" y2="55" marker-end="url(#arrow-1)" />
-              <line x1="490" y1="55" x2="510" y2="55" marker-end="url(#arrow-1)" />
-              <line x1="650" y1="55" x2="670" y2="55" marker-end="url(#arrow-1)" />
-            </g>
-          </svg>
-          <figcaption>
-            ODE &rarr; dense output &rarr; interpolation &rarr; quadrature.
-            Verified by
-            <a
-              href="https://github.com/moussaoutlook/numra-rs/blob/main/numra/tests/interop_workflows.rs"
-              rel="noopener"
-            ><code>workflow_ode_interp_integrate</code></a>.
-          </figcaption>
-        </figure>
+            <tr class="subhead"><td colspan="8">Stochastic</td></tr>
+            <tr><td class="solver">EulerMaruyama</td><td class="dim">SDE</td><td class="center">0.5</td><td class="center"><span class="n">○</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="partial">◐</span></td><td class="dim">Strong order 0.5, weak 1.0.</td></tr>
+            <tr><td class="solver">Milstein</td><td class="dim">SDE</td><td class="center">1.0</td><td class="center"><span class="n">○</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="partial">◐</span></td><td class="dim">Diagonal noise.</td></tr>
+            <tr><td class="solver">SRA / SRI</td><td class="dim">SDE</td><td class="center">1.5</td><td class="center"><span class="y">●</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="n">○</span></td><td class="center"><span class="partial">◐</span></td><td class="dim">Adaptive, additive / Itô noise.</td></tr>
+          </tbody>
+        </table>
+      </div>
 
-        <figure class="composability-figure">
-          <svg
-            class="flow-diagram"
-            viewBox="0 0 720 110"
-            role="img"
-            aria-labelledby="diagram-2-title diagram-2-desc"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <title id="diagram-2-title">PDE composability pipeline</title>
-            <desc id="diagram-2-desc">
-              A PDE problem is discretized via the method of lines, solved
-              by Numra's automatic stiffness-aware solver, reduced to a norm,
-              and turned into a scalar statistic.
-            </desc>
-            <g class="flow-nodes">
-              <g transform="translate(0, 35)">
-                <rect width="100" height="40" rx="6" />
-                <text x="50" y="24">PdeProblem</text>
-              </g>
-              <g transform="translate(120, 35)">
-                <rect width="150" height="40" rx="6" />
-                <text x="75" y="24">method_of_lines</text>
-              </g>
-              <g transform="translate(290, 35)">
-                <rect width="100" height="40" rx="6" />
-                <text x="50" y="24">Auto::solve</text>
-              </g>
-              <g transform="translate(410, 35)">
-                <rect width="140" height="40" rx="6" />
-                <text x="70" y="24">reduce_norm_l2</text>
-              </g>
-              <g transform="translate(570, 35)" class="flow-result">
-                <rect width="100" height="40" rx="6" />
-                <text x="50" y="24">Statistic</text>
-              </g>
-            </g>
-            <g class="flow-edges" stroke="currentColor" fill="none">
-              <line x1="100" y1="55" x2="120" y2="55" marker-end="url(#arrow-1)" />
-              <line x1="270" y1="55" x2="290" y2="55" marker-end="url(#arrow-1)" />
-              <line x1="390" y1="55" x2="410" y2="55" marker-end="url(#arrow-1)" />
-              <line x1="550" y1="55" x2="570" y2="55" marker-end="url(#arrow-1)" />
-            </g>
-          </svg>
-          <figcaption>
-            PDE &rarr; method of lines &rarr; automatic solver &rarr; reduction &rarr; statistic.
-            Verified by
-            <a
-              href="https://github.com/moussaoutlook/numra-rs/blob/main/numra/tests/interop_workflows.rs"
-              rel="noopener"
-            ><code>workflow_pde_statistics</code></a>.
-          </figcaption>
-        </figure>
+      <div class="legend" aria-label="Matrix legend">
+        <span><i class="y">●</i> supported &amp; tested</span>
+        <span><i class="partial">◐</i> partial / experimental</span>
+        <span><i class="n">○</i> not applicable</span>
       </div>
     </div>
   </section>
 
-  <!-- 4. Performance and correctness ===================================== -->
-  <section class="evidence-section">
+  <!-- 6. Benchmarks ====================================================== -->
+  <section>
     <div class="container">
-      <h2>Performance and correctness.</h2>
-      <div class="evidence-grid">
-        <div class="evidence-card">
-          <h3>Benchmarks</h3>
-          <figure class="bench-figure">
-            <img
-              src="/figures/home_tolerance_runtime.svg"
-              alt="Log-log plot of DoPri5 wall-clock runtime versus requested relative tolerance, integrating the Lorenz system from t=0 to t=20. Seven tolerances from 1e-3 to 1e-9. Empirical power-law slope is approximately 0.17."
-              loading="lazy"
-              width="700"
-              height="430"
-            />
-            <figcaption>
-              DoPri5 on Lorenz across seven tolerances. Adaptive step
-              control means stricter tolerance only costs sub-linearly.
+      <div class="sec-head">
+        <p class="eyebrow"><span class="dot">●</span> Benchmarks</p>
+        <div class="col-r">
+          <h2>Reproducible. Provenanced. Pinned to a SHA.</h2>
+          <p class="lede">
+            Every benchmark figure ships with the commit, the CPU, the
+            rustc version, and a one-line reproduction script. Plots
+            that can't meet that bar don't ship — see the
+            <a href="https://book.numra-rs.org/ch13-performance/comparisons/" rel="noopener">comparisons chapter</a>
+            for the full methodology.
+          </p>
+        </div>
+      </div>
+
+      <div class="bench">
+        <figure class="bench-fig">
+          <div class="bench-fig-head">
+            <h4>Numra Radau5 vs. SciPy <code class="inline">solve_ivp(method='Radau')</code></h4>
+            <span class="axes">van der Pol · μ=10</span>
+          </div>
+          <div class="bench-fig-sub">
+            Two panels for a stiff non-linear oscillator. Left:
+            wall-clock vs. requested tolerance. Right: wall-clock per
+            correct digit of the final state, where correct digits are
+            −log₁₀ of the relative L₂ error against an rtol = 1e-12
+            reference solution. Lower is better in both panels.
+          </div>
+
+          <img
+            src="/figures/comparisons/comparison_vdp_stiff.svg"
+            alt="Two-panel bar chart comparing Numra Radau5 and SciPy solve_ivp(method='Radau') on the Van der Pol oscillator at mu=10. Left panel: wall-clock vs tolerance. Right panel: wall-clock per correct digit of the final state, where correct digits are -log10 of relative L2 error against an rtol=1e-12 reference solution."
+            loading="lazy"
+            width="697"
+            height="320"
+            class="bench-svg"
+          />
+
+          <div class="bench-foot">
+            <span>fig · 3-stage Radau IIA (Hairer–Wanner §IV.8) · one scoped problem class</span>
+            <span>
               <a
-                href="https://github.com/moussaoutlook/numra-rs/blob/main/numra-bench/benches/solvers.rs"
+                href="https://book.numra-rs.org/ch13-performance/comparisons/"
                 rel="noopener"
-              >View the reproduction script</a>; full hardware and
-              toolchain provenance lives in the SVG sidecar.
-            </figcaption>
-          </figure>
-        </div>
-        <div class="evidence-card">
-          <h3>Correctness</h3>
-          <figure class="bench-figure">
-            <img
-              src="/figures/home_correctness_map.svg"
-              alt="Heatmap of regression-test coverage. Rows are equation classes (ODE/DAE, SDE, Optimization, Linear algebra, Quadrature, Interpolation, FFT). Columns are invariant types (convergence order, analytic/golden value, statistical bands, event localization). Filled cells indicate test coverage."
-              loading="lazy"
-              width="560"
-              height="400"
-            />
-            <figcaption>
-              Every solver family has at least one regression invariant
-              under test. <a
-                href="https://github.com/moussaoutlook/numra-rs/blob/main/docs/audit/correctness-test-map.md"
-                rel="noopener"
-              >Browse the full test &rarr; method map</a>.
-            </figcaption>
-          </figure>
-        </div>
+              >read the methodology ↗</a>
+            </span>
+          </div>
+        </figure>
+
+        <aside class="bench-meta">
+          <dl>
+            <div><dt>Commit</dt><dd>numra @ 3564573</dd></div>
+            <div><dt>Rendered</dt><dd>2026-05-06 06:17 UTC</dd></div>
+            <div><dt>CPU</dt><dd>Apple M4 Max</dd></div>
+            <div><dt>Memory</dt><dd>128 GiB</dd></div>
+            <div><dt>OS</dt><dd>Darwin 24.6.0 (arm64)</dd></div>
+            <div><dt>rustc</dt><dd>1.92.0 (release)</dd></div>
+            <div><dt>SciPy</dt><dd>Radau · analytical Jacobian · 3.10.9 / 3.14.3</dd></div>
+            <div><dt>Reference</dt><dd>SciPy Radau · rtol = atol = 1e-12</dd></div>
+            <div><dt>Tolerances</dt><dd>1e-4, 1e-6, 1e-8 · 5 reps / point</dd></div>
+            <div><dt>Repro</dt><dd><a href="https://github.com/moussaoutlook/numra-rs/blob/main/website/figures/comparisons/vdp_stiff.py" rel="noopener">website/figures/comparisons/vdp_stiff.py</a></dd></div>
+          </dl>
+        </aside>
       </div>
     </div>
   </section>
 
-  <!-- 5. Built for science =============================================== -->
-  <section class="science-section">
+  <!-- 7. Architecture ==================================================== -->
+  <section>
     <div class="container">
-      <h2>Built for science.</h2>
-      <div class="science-grid">
-        <div>
-          <h3>Citable</h3>
-          <p>
-            DOI per release via Zenodo, BibTeX on <a href="/cite">/cite</a>.
-            Cite Numra in papers without hesitation.
+      <div class="sec-head">
+        <p class="eyebrow"><span class="dot">●</span> Architecture</p>
+        <div class="col-r">
+          <h2>A workspace, not a monolith.</h2>
+          <p class="lede">
+            Numra is organized in three layers. Each crate depends only
+            on layers below it, so you can pull in just what you need
+            without dragging in the whole numerical stack.
           </p>
         </div>
-        <div>
-          <h3>Versioned</h3>
-          <p>
-            Stable MSRV, semver from 1.0, deprecation windows.
-            See <a href="/stability">/stability</a>.
+      </div>
+
+      <div class="arch">
+        {archLayers.map((layer) => (
+          <div class="arch-row">
+            <div class="lhs">
+              <span class="layer-num">{layer.num}</span>
+              <span class="layer-name">{layer.name}</span>
+              <span class="layer-tag">{layer.tag}</span>
+            </div>
+            <div class="rhs">
+              {layer.crates.map((crate) => (
+                <span class="crate"><b>{crate}</b></span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Engineering posture ============================================= -->
+  <section>
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow"><span class="dot">●</span> Engineering posture</p>
+        <div class="col-r">
+          <h2>Standards we hold ourselves to.</h2>
+          <p class="lede">
+            Three commitments across every release — provenance on
+            every benchmark figure, regression tests against published
+            invariants, and an explicit stability policy.
           </p>
         </div>
-        <div>
-          <h3>Evidence-based</h3>
-          <p>
-            Every benchmark plot ships with its commit SHA, hardware,
-            and a reproduction script.
+      </div>
+
+      <div class="eng-grid">
+        <div class="eng-cell">
+          <p class="h">01 · Provenance</p>
+          <p class="t">Every figure carries a SHA.</p>
+          <p class="b">
+            Every benchmark plot in the book is annotated with the
+            Numra commit, CPU model, rustc version, and a link to the
+            reproduction script. Plots without that bar don't ship.
           </p>
+          <a class="l" href="https://github.com/moussaoutlook/numra-rs/tree/main/numra-bench" rel="noopener">
+            Bench harness →
+          </a>
+        </div>
+        <div class="eng-cell">
+          <p class="h">02 · Tested</p>
+          <p class="t">Invariants, not happy paths.</p>
+          <p class="b">
+            Convergence orders for ODE families, statistical bands for
+            SDEs, golden-value LP/QP/MILP solutions, FFT round-trip,
+            dense linear-solve smoke tests, and event localization.
+          </p>
+          <a class="l" href="/features">Feature matrix →</a>
+        </div>
+        <div class="eng-cell">
+          <p class="h">03 · Stability</p>
+          <p class="t">Pre-1.0 churn is documented.</p>
+          <p class="b">
+            Until 1.0, breaking changes carry rationale in the
+            changelog. After 1.0, deprecation cycles run across at
+            least one minor version before removal.
+          </p>
+          <a class="l" href="/stability">Stability policy →</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 6. License at a glance ============================================= -->
-  <section class="license-section">
-    <div class="container-narrow">
-      <h2>License.</h2>
-      <p>
-        Numra is free for non-commercial academic and research use under
-        the Numra Academic &amp; Research License (Non-Commercial) v1.0.
-        Commercial use requires a separate license.
-      </p>
-      <div class="cta-row">
-        <a class="btn btn-secondary" href="/license">Read the license</a>
-        <a class="btn btn-secondary" href="/commercial">Commercial licensing</a>
+  <!-- 9. Where to start + cite =========================================== -->
+  <section>
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow"><span class="dot">●</span> Where to start</p>
+        <div class="col-r">
+          <h2>Pick your entry point.</h2>
+          <p class="lede">
+            Numra serves several distinct audiences. Choose the path
+            that matches what brought you here.
+          </p>
+        </div>
+      </div>
+
+      <div class="start-grid">
+        <a class="start-cell" href="/install">
+          <span class="role">Practitioner</span>
+          <p class="q">"I want to install Numra and solve my first ODE."</p>
+          <span class="lnk">Installation &amp; first solve →</span>
+        </a>
+        <a class="start-cell" href="https://book.numra-rs.org" rel="noopener">
+          <span class="role">Evaluator</span>
+          <p class="q">"I'm comparing Numra to SciPy and SciML for a project."</p>
+          <span class="lnk">Read the book →</span>
+        </a>
+        <a class="start-cell" href="https://github.com/moussaoutlook/numra-rs/blob/main/CONTRIBUTING.md" rel="noopener">
+          <span class="role">Contributor</span>
+          <p class="q">"I want to understand the workspace architecture."</p>
+          <span class="lnk">CONTRIBUTING &amp; layer map →</span>
+        </a>
+        <a class="start-cell" href="/cite">
+          <span class="role">Researcher</span>
+          <p class="q">"I'm citing Numra in academic work."</p>
+          <span class="lnk">BibTeX, DOI, CITATION.cff →</span>
+        </a>
+      </div>
+
+      <div class="cite">
+        <div class="cite-head">
+          <span>citation.bib · cite Numra</span>
+          <span>BibTeX</span>
+        </div>
+        <pre>{`@software{numra_${new Date().getFullYear()},
+  title   = {Numra: Composable numerical methods for Rust},
+  author  = {Leblouba, Moussa},
+  year    = {${new Date().getFullYear()}},
+  version = {0.1.0},
+  url     = {https://numra-rs.org},
+  license = {NARL-1.0},
+}`}</pre>
       </div>
     </div>
   </section>
 </BaseLayout>
 
 <style>
-  .hero {
-    padding: var(--space-9) 0 var(--space-8);
+  /* Hero =============================================================== */
+  .hero { padding: 88px 0 64px; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 56px;
+    align-items: start;
   }
-
   .hero h1 {
-    margin-bottom: var(--space-4);
+    font-size: 68px;
+    font-weight: 600;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    color: var(--color-fg-strong);
+    margin: 16px 0 18px;
+    max-width: 13ch;
   }
-
-  .lede {
-    font-size: var(--text-xl);
+  .hero h1 em {
+    font-style: normal;
+    color: var(--color-accent);
+  }
+  .hero-desc {
+    font-size: 17px;
     color: var(--color-fg-muted);
-    line-height: var(--leading-snug);
-    margin-bottom: var(--space-6);
-    max-width: var(--measure);
+    line-height: 1.55;
+    max-width: 56ch;
+    margin: 0 0 28px;
   }
-
-  .cta-row {
-    display: flex;
+  .hero-meta {
+    display: inline-flex;
+    align-items: center;
     flex-wrap: wrap;
-    gap: var(--space-3);
-    margin-bottom: var(--space-7);
-  }
-
-  .btn {
-    display: inline-block;
-    padding: var(--space-3) var(--space-5);
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    text-decoration: none;
-    border: 1px solid transparent;
-    transition: background var(--motion-fast) var(--ease-out),
-                color      var(--motion-fast) var(--ease-out),
-                border     var(--motion-fast) var(--ease-out);
-  }
-
-  .btn-primary {
-    background: var(--color-accent);
-    color: var(--color-bg);
-  }
-  .btn-primary:hover {
-    background: var(--color-accent-hover);
-    color: var(--color-bg);
-  }
-
-  .btn-secondary {
-    background: transparent;
-    color: var(--color-fg);
-    border-color: var(--color-border-strong);
-  }
-  .btn-secondary:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-  }
-
-  .hero-code {
-    margin-top: var(--space-5);
-  }
-
-  .hero-code pre {
-    box-shadow: var(--shadow-2);
-  }
-
-  section + section {
-    border-top: 1px solid var(--color-border);
-    padding: var(--space-8) 0;
-  }
-
-  .evidence-grid,
-  .science-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--space-5);
-    margin-top: var(--space-5);
-  }
-
-  .evidence-card {
-    padding: var(--space-5);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--color-bg-elevated);
-  }
-
-  .license-section {
-    padding: var(--space-7) 0 var(--space-9);
-  }
-
-  .capability-matrix {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: var(--space-5);
-    font-size: var(--text-sm);
-  }
-  .capability-matrix th,
-  .capability-matrix td {
-    text-align: left;
-    padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--color-border);
-    vertical-align: top;
-  }
-  .capability-matrix thead th {
-    font-weight: 600;
-    color: var(--color-fg-muted);
-    font-size: var(--text-xs);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    border-bottom: 2px solid var(--color-border-strong);
-    background: var(--color-bg-subtle);
-  }
-  .capability-matrix tbody th[scope="row"] {
-    font-weight: 600;
-    color: var(--color-fg);
-    white-space: nowrap;
-  }
-  .capability-matrix tbody tr:hover {
-    background: var(--color-bg-subtle);
-  }
-  .capability-matrix .col-narrow {
-    width: 5rem;
-    text-align: center;
-  }
-  .capability-matrix .tick {
-    color: var(--color-accent);
-    font-weight: 700;
-  }
-  .capability-matrix .dash {
-    color: var(--color-fg-subtle);
-  }
-  .capability-matrix a {
-    color: var(--color-accent);
-    text-decoration: none;
-    border-bottom: 1px solid transparent;
-    transition: border-color var(--motion-fast) var(--ease-out);
-  }
-  .capability-matrix a:hover {
-    border-bottom-color: var(--color-accent);
-  }
-
-  .composability-grid {
-    display: grid;
-    gap: var(--space-6);
-    margin-top: var(--space-5);
-  }
-  .composability-figure {
-    margin: 0;
-  }
-  .flow-diagram {
-    width: 100%;
-    height: auto;
-    color: var(--color-fg-muted);
-    overflow: visible;
-  }
-  .flow-diagram .flow-nodes rect {
-    fill: var(--color-bg-elevated);
-    stroke: var(--color-border-strong);
-    stroke-width: 1;
-  }
-  .flow-diagram .flow-nodes text {
-    fill: var(--color-fg);
+    gap: 10px;
     font-family: var(--font-mono);
     font-size: 11px;
-    text-anchor: middle;
-    dominant-baseline: middle;
-  }
-  .flow-diagram .flow-result rect {
-    fill: var(--color-accent-soft);
-    stroke: var(--color-accent);
-  }
-  .flow-diagram .flow-result text {
-    fill: var(--color-accent);
-    font-weight: 600;
-  }
-  .flow-diagram .flow-edges line {
-    stroke-width: 1.5;
-  }
-  .composability-figure figcaption {
-    margin-top: var(--space-3);
-    font-size: var(--text-sm);
     color: var(--color-fg-muted);
-    text-align: center;
+    margin-top: 22px;
   }
-  .composability-figure figcaption code {
-    font-size: 0.92em;
-    background: var(--color-code-bg);
-    padding: 0.05em 0.4em;
+  .hero-meta .tag {
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
+    padding: 2px 8px;
+    background: var(--color-bg-elevated);
   }
-  .composability-figure figcaption a {
-    color: var(--color-accent);
-    text-decoration: none;
-    border-bottom: 1px solid transparent;
-    transition: border-color var(--motion-fast) var(--ease-out);
+  .hero-meta .tag.teal {
+    color: var(--color-accent-hover);
+    border-color: var(--color-accent-border);
+    background: var(--color-accent-soft);
   }
-  .composability-figure figcaption a:hover {
-    border-bottom-color: var(--color-accent);
+  .hero-ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 28px;
+  }
+  .hero-install {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-elevated);
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  .hero-install .lbl {
+    padding: 9px 12px;
+    color: var(--color-fg-muted);
+    background: var(--color-bg-subtle);
+    border-right: 1px solid var(--color-border);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .hero-install code {
+    padding: 9px 14px;
+    color: var(--color-fg-strong);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
   }
 
-  .bench-figure {
+  /* Buttons ============================================================ */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--color-fg-muted);
+    font-weight: 500;
     margin: 0;
   }
-  .bench-figure img {
+  .eyebrow .dot { color: var(--color-accent); margin-right: 8px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all .12s var(--ease-out);
+    font-family: inherit;
+    text-decoration: none;
+  }
+  .btn .arr { font-family: var(--font-mono); transform: translateY(-0.5px); }
+  .btn-primary { background: var(--color-fg-strong); color: var(--color-bg); }
+  .btn-primary:hover { background: #000; color: var(--color-bg); }
+  .btn-secondary {
+    background: var(--color-bg-elevated);
+    color: var(--color-fg-strong);
+    border-color: var(--color-border-strong);
+  }
+  .btn-secondary:hover { background: var(--color-bg-subtle); color: var(--color-fg-strong); }
+  .btn-ghost {
+    color: var(--color-fg);
+    background: transparent;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+  .btn-ghost:hover { color: var(--color-fg-strong); }
+
+  /* Code window ======================================================== */
+  .codewin {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-2);
+  }
+  .codewin-head {
+    display: flex;
+    align-items: center;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+    letter-spacing: 0.04em;
+  }
+  .codewin-head .dots { display: inline-flex; gap: 6px; margin-right: 12px; }
+  .codewin-head .dots i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-border-strong);
+    display: inline-block;
+  }
+  .codewin-head .file { color: var(--color-fg); font-weight: 500; }
+  .codewin-head .runtime { margin-left: auto; color: var(--color-fg-muted); }
+  .codewin pre {
+    margin: 0;
+    padding: 18px 20px 20px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--color-fg);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    overflow-x: auto;
+    white-space: pre;
+    tab-size: 2;
+  }
+  .codewin pre :global(.k)  { color: #B23271; }
+  .codewin pre :global(.c)  { color: var(--color-fg-faint); font-style: italic; }
+  .codewin pre :global(.s)  { color: #2E7D32; }
+  .codewin pre :global(.t)  { color: #1565C0; }
+  .codewin pre :global(.fn) { color: #6A1B9A; }
+  .codewin pre :global(.nu) { color: #B23271; }
+
+  /* Hero side stack ==================================================== */
+  .hero-side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .hero-side-foot {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-elevated);
+    overflow: hidden;
+  }
+  .hero-side-foot .cell {
+    padding: 14px 16px;
+    border-right: 1px solid var(--color-border);
+  }
+  .hero-side-foot .cell:last-child { border-right: 0; }
+  .hero-side-foot .num {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--color-fg-strong);
+    letter-spacing: -0.02em;
+  }
+  .hero-side-foot .lbl {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-fg-muted);
+    margin-top: 2px;
+  }
+
+  /* Status bar ========================================================= */
+  .statusbar {
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+  }
+  .statusbar-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    max-width: var(--container-width);
+    margin: 0 auto;
+    padding: 0 28px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-fg-muted);
+  }
+  .statusbar-inner .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 24px 14px 0;
+    margin-right: 24px;
+  }
+  .statusbar-inner .item:not(:last-child) {
+    border-right: 1px solid var(--color-border);
+  }
+  .statusbar-inner .ic {
+    width: 6px;
+    height: 6px;
+    background: var(--color-success);
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(31, 122, 77, 0.12);
+  }
+  .statusbar-inner .ic.amber {
+    background: var(--color-gold);
+    box-shadow: 0 0 0 3px rgba(176, 123, 58, 0.12);
+  }
+  .statusbar-inner .item b {
+    color: var(--color-fg-strong);
+    font-weight: 500;
+  }
+
+  /* Section scaffold =================================================== */
+  section {
+    padding: 96px 0;
+    border-top: 1px solid var(--color-border);
+  }
+  .sec-head {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 56px;
+    margin-bottom: 48px;
+  }
+  .sec-head h2 {
+    font-size: 36px;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    color: var(--color-fg-strong);
+    margin: 14px 0 0;
+    max-width: 22ch;
+  }
+  .sec-head .lede {
+    font-size: 16px;
+    color: var(--color-fg-muted);
+    line-height: 1.6;
+    max-width: 60ch;
+    margin: 0;
+  }
+  .sec-head .col-r { padding-top: 4px; }
+
+  /* Capabilities ======================================================= */
+  .cap-cat {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 56px;
+    padding: 28px 0;
+    border-top: 1px solid var(--color-border);
+  }
+  .cap-cat:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .cap-cat-h {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .cap-cat-h .num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-faint);
+    letter-spacing: 0.06em;
+  }
+  .cap-cat-h h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-fg-strong);
+    margin: 0;
+    letter-spacing: -0.012em;
+  }
+  .cap-cat-sub {
+    margin-top: 6px;
+    font-size: 13.5px;
+    color: var(--color-fg-muted);
+    line-height: 1.55;
+    max-width: 30ch;
+  }
+  .cap-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+  }
+  .cap-row {
+    display: grid;
+    grid-template-columns: 78px 1fr auto;
+    gap: 18px;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid var(--color-border);
+    align-items: center;
+    cursor: pointer;
+    transition: background .12s var(--ease-out);
+    text-decoration: none;
+    color: inherit;
+  }
+  .cap-row:hover { background: var(--color-bg-subtle); }
+  .cap-row .sym {
+    width: 73px;
+    height: 73px;
+    display: grid;
+    place-items: center;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: border-color .12s var(--ease-out);
+  }
+  .cap-row:hover .sym { border-color: var(--color-border-strong); }
+  .cap-row .sym :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    padding: 4px;
+  }
+  .cap-row .body { display: flex; flex-direction: column; }
+  .cap-row .name {
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--color-fg-strong);
+    letter-spacing: -0.005em;
+  }
+  .cap-row .desc {
+    font-size: 13px;
+    color: var(--color-fg-muted);
+    line-height: 1.5;
+    margin-top: 2px;
+  }
+  .cap-row .ch {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-faint);
+    align-self: center;
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  /* Compose / annotations ============================================== */
+  .compose-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 40px;
+    align-items: stretch;
+  }
+  .annot {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 4px;
+  }
+  .annot-row {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 14px;
+    padding: 14px 0;
+    border-top: 1px solid var(--color-border);
+    font-size: 14px;
+    color: var(--color-fg);
+    line-height: 1.55;
+  }
+  .annot-row:last-child { border-bottom: 1px solid var(--color-border); }
+  .annot-row .n {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-accent);
+    font-weight: 500;
+    padding-top: 1px;
+    letter-spacing: 0.02em;
+  }
+  .annot-row .l {
+    font-size: 13px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-fg-strong);
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  code.inline {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    padding: 1px 5px;
+    background: var(--color-code-bg);
+    color: var(--color-fg-strong);
+    border-radius: 3px;
+    border: 1px solid var(--color-border);
+  }
+
+  /* Solver matrix ====================================================== */
+  .matrix-wrap {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-elevated);
+    overflow: hidden;
+  }
+  table.matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 0;
+  }
+  table.matrix th, table.matrix td {
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--color-border);
+    border-right: 1px solid var(--color-border);
+  }
+  table.matrix th:last-child, table.matrix td:last-child { border-right: 0; }
+  table.matrix tr:last-child td { border-bottom: 0; }
+  table.matrix thead th {
+    background: var(--color-bg-subtle);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-fg-muted);
+    font-weight: 500;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  table.matrix td.solver {
+    font-family: var(--font-mono);
+    color: var(--color-fg-strong);
+    font-weight: 500;
+  }
+  table.matrix td.dim { color: var(--color-fg-muted); }
+  table.matrix td.center { text-align: center; }
+  table.matrix .y {
+    color: var(--color-success);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  table.matrix .n {
+    color: var(--color-fg-faint);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  table.matrix .partial {
+    color: var(--color-gold);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  table.matrix tr.subhead td {
+    background: var(--color-bg-subtle);
+    color: var(--color-fg-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+  }
+  .legend {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+  }
+  .legend i { font-style: normal; }
+  .legend .y { color: var(--color-success); margin-right: 6px; }
+  .legend .n { color: var(--color-fg-faint); margin-right: 6px; }
+  .legend .partial { color: var(--color-gold); margin-right: 6px; }
+
+  /* Benchmarks ========================================================= */
+  .bench {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 40px;
+    align-items: stretch;
+  }
+  .bench-fig {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 22px 24px 18px;
+    margin: 0;
+  }
+  .bench-fig-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .bench-fig-head h4 {
+    font-size: 14px;
+    color: var(--color-fg-strong);
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+  .bench-fig-head .axes {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+  }
+  .bench-fig-sub {
+    font-size: 12.5px;
+    color: var(--color-fg-muted);
+    margin-bottom: 18px;
+  }
+  .bench-svg {
     width: 100%;
     height: auto;
     display: block;
-    background: var(--color-bg);
-    border-radius: var(--radius-sm);
   }
-  .bench-figure figcaption {
-    margin-top: var(--space-3);
-    font-size: var(--text-sm);
+  .bench-foot {
+    border-top: 1px solid var(--color-border);
+    margin-top: 14px;
+    padding-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
     color: var(--color-fg-muted);
   }
-  .bench-figure figcaption a {
-    color: var(--color-accent);
-    text-decoration: none;
-    border-bottom: 1px solid transparent;
-    transition: border-color var(--motion-fast) var(--ease-out);
+  .bench-foot a { color: var(--color-accent); }
+  .bench-meta { display: flex; flex-direction: column; gap: 0; }
+  .bench-meta dl {
+    margin: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-elevated);
+    overflow: hidden;
   }
-  .bench-figure figcaption a:hover {
-    border-bottom-color: var(--color-accent);
+  .bench-meta dl > div {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .bench-meta dl > div:last-child { border-bottom: 0; }
+  .bench-meta dt {
+    padding: 10px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-fg-muted);
+    background: var(--color-bg-subtle);
+    border-right: 1px solid var(--color-border);
+  }
+  .bench-meta dd {
+    margin: 0;
+    padding: 10px 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-fg-strong);
+    overflow-wrap: anywhere;
   }
 
-  @media (max-width: 760px) {
-    .capability-matrix,
-    .capability-matrix thead,
-    .capability-matrix tbody,
-    .capability-matrix tr,
-    .capability-matrix th,
-    .capability-matrix td {
-      display: block;
-    }
-    .capability-matrix thead {
-      display: none;
-    }
-    .capability-matrix tbody tr {
+  /* Architecture ======================================================= */
+  .arch {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .arch-row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 0;
+    align-items: stretch;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-elevated);
+    overflow: hidden;
+  }
+  .arch-row .lhs {
+    background: var(--color-bg-subtle);
+    padding: 18px 20px;
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+  }
+  .arch-row .lhs .layer-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-faint);
+    letter-spacing: 0.08em;
+  }
+  .arch-row .lhs .layer-name {
+    font-size: 16px;
+    color: var(--color-fg-strong);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .arch-row .lhs .layer-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-accent);
+    margin-top: 4px;
+  }
+  .arch-row .rhs {
+    padding: 16px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .arch-row .rhs .crate {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 5px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    color: var(--color-fg-strong);
+  }
+  .arch-row .rhs .crate b {
+    color: var(--color-accent);
+    font-weight: 500;
+  }
+
+  /* Engineering posture ================================================ */
+  .eng-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .eng-cell {
+    padding: 28px 26px 26px;
+    border-right: 1px solid var(--color-border);
+  }
+  .eng-cell:last-child { border-right: 0; }
+  .eng-cell .h {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-accent);
+    margin: 0 0 12px;
+    font-weight: 500;
+  }
+  .eng-cell .t {
+    font-size: 18px;
+    color: var(--color-fg-strong);
+    font-weight: 600;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .eng-cell .b {
+    font-size: 14px;
+    color: var(--color-fg-muted);
+    line-height: 1.6;
+    margin: 0 0 14px;
+  }
+  .eng-cell .l {
+    font-size: 13px;
+    color: var(--color-accent);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  /* Where to start ===================================================== */
+  .start-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--color-bg-elevated);
+  }
+  .start-cell {
+    padding: 22px 22px 20px;
+    border-right: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    cursor: pointer;
+    transition: background .12s var(--ease-out);
+    text-decoration: none;
+    color: inherit;
+  }
+  .start-cell:nth-child(2n) { border-right: 0; }
+  .start-cell:nth-last-child(-n+2) { border-bottom: 0; }
+  .start-cell:hover { background: var(--color-bg-subtle); }
+  .start-cell .role {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-fg-muted);
+  }
+  .start-cell .q {
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--color-fg-strong);
+    line-height: 1.35;
+    letter-spacing: -0.012em;
+    margin: 0;
+    max-width: none;
+  }
+  .start-cell .lnk {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-accent);
+    margin-top: auto;
+    padding-top: 6px;
+  }
+
+  /* Cite block ========================================================= */
+  .cite {
+    margin-top: 32px;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .cite-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-fg-muted);
+  }
+  .cite pre {
+    margin: 0;
+    padding: 18px 20px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--color-fg);
+    white-space: pre;
+    overflow-x: auto;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+
+  /* Reset margins on the homepage (override base.css h2/h3 vertical
+     rhythm — sections handle their own spacing here). */
+  section h2, section h3, section h4 {
+    margin-top: 0;
+  }
+
+  /* Responsive ========================================================= */
+  @media (max-width: 1100px) {
+    .hero h1 { font-size: 56px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+    .compose-grid, .bench { grid-template-columns: 1fr; }
+    .sec-head, .cap-cat { grid-template-columns: 1fr; gap: 16px; }
+  }
+  @media (max-width: 720px) {
+    .hero { padding: 48px 0 40px; }
+    .hero h1 { font-size: 40px; }
+    section { padding: 56px 0; }
+    .sec-head h2 { font-size: 28px; }
+    .cap-list, .start-grid, .eng-grid { grid-template-columns: 1fr; }
+    .arch-row { grid-template-columns: 1fr; }
+    .arch-row .lhs {
+      border-right: 0;
       border-bottom: 1px solid var(--color-border);
-      padding-block: var(--space-3);
     }
-    .capability-matrix tbody th[scope="row"] {
-      font-size: var(--text-base);
-      border-bottom: none;
-      padding-bottom: var(--space-2);
-    }
-    .capability-matrix tbody td {
-      border-bottom: none;
-      padding-block: var(--space-1);
-    }
-    .capability-matrix .col-narrow {
-      display: inline-block;
-      width: auto;
-      text-align: left;
-      padding-right: var(--space-3);
-    }
-    .capability-matrix .col-narrow::before {
-      content: attr(aria-label) ": ";
-      color: var(--color-fg-muted);
-      font-weight: 600;
-      font-size: var(--text-xs);
-    }
+    .eng-cell { border-right: 0; border-bottom: 1px solid var(--color-border); }
+    .eng-cell:last-child { border-bottom: 0; }
+    .start-cell { border-right: 0; }
+    .start-cell:nth-last-child(-n+2) { border-bottom: 1px solid var(--color-border); }
+    .start-cell:last-child { border-bottom: 0; }
   }
 </style>

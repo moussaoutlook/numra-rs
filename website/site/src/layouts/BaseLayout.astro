@@ -84,10 +84,10 @@ const fullTitle = title.endsWith('Numra') ? title : `${title} · Numra`;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
 
-    {/* Theme */}
-    <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0E1116" media="(prefers-color-scheme: dark)" />
+    {/* Theme — marketing site is light-only by design. The book has its
+        own light/dark/auto config; that lives in the Starlight project. */}
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#FBFAF7" />
 
     {/* Favicon + iOS home-screen icon */}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -106,12 +106,6 @@ const fullTitle = title.endsWith('Numra') ? title : `${title} · Numra`;
     {jsonLd && (
       <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     )}
-
-    {/* Theme persistence: read user choice before render to avoid
-        a flash of incorrect theme. Loaded as an external script
-        (public/theme-init.js) so that `script-src 'self'` covers it
-        without an `'unsafe-inline'` exemption. */}
-    <script is:inline src="/theme-init.js"></script>
 
     {/* Cloudflare Web Analytics is auto-injected by the proxy when
         the configured hostname (`numra-rs.org`) sits behind Cloudflare's

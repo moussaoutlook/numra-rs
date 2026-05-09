@@ -5,36 +5,38 @@ const year = new Date().getFullYear();
 
 const footerSections = [
   {
-    title: 'Documentation',
+    title: 'Docs',
     links: [
       { href: 'https://book.numra-rs.org',     label: 'Book',          external: true  },
-      { href: 'https://examples.numra-rs.org', label: 'Examples',      external: true  },
       { href: '/api',                          label: 'API reference', external: false },
+      { href: 'https://examples.numra-rs.org', label: 'Examples',      external: true  },
+      { href: '/cite',                         label: 'Cite',          external: false },
     ],
   },
   {
     title: 'Project',
     links: [
-      { href: 'https://github.com/moussaoutlook/numra-rs',          label: 'GitHub',     external: true },
-      { href: 'https://github.com/moussaoutlook/numra-rs/releases', label: 'Releases',   external: true },
-      { href: '/changelog',                              label: 'Changelog',  external: false },
-      { href: '/roadmap',                                label: 'Roadmap',    external: false },
+      { href: 'https://github.com/moussaoutlook/numra-rs',          label: 'GitHub',    external: true  },
+      { href: 'https://github.com/moussaoutlook/numra-rs/releases', label: 'Releases',  external: true  },
+      { href: '/changelog',                                         label: 'Changelog', external: false },
+      { href: '/roadmap',                                           label: 'Roadmap',   external: false },
     ],
   },
   {
-    title: 'Use',
+    title: 'Engineering',
     links: [
-      { href: '/install',    label: 'Install',     external: false },
-      { href: '/cite',       label: 'Cite Numra',  external: false },
-      { href: '/stability',  label: 'Stability',   external: false },
-      { href: '/community',  label: 'Community',   external: false },
+      { href: '/features',  label: 'Features',         external: false },
+      { href: '/stability', label: 'Stability policy', external: false },
+      { href: '/install',   label: 'Install',          external: false },
+      { href: '/community', label: 'Community',        external: false },
     ],
   },
   {
     title: 'Licensing',
     links: [
-      { href: '/license',    label: 'License (academic / research, non-commercial)', external: false },
-      { href: '/commercial', label: 'Commercial licensing', external: false },
+      { href: '/license',    label: 'Academic / non-commercial', external: false },
+      { href: '/commercial', label: 'Commercial licensing',      external: false },
+      { href: '/privacy',    label: 'Privacy',                   external: false },
     ],
   },
 ];
@@ -42,141 +44,130 @@ const footerSections = [
 
 <footer class="site-footer">
   <div class="container">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <img
-          class="footer-logo footer-logo-light"
-          src="/numra_logo_no_BG.svg"
-          alt="Numra"
-          width="120"
-          height="40"
-        />
-        <img
-          class="footer-logo footer-logo-dark"
-          src="/numra_logo_white-text_no_BG.svg"
-          alt=""
-          aria-hidden="true"
-          width="120"
-          height="40"
-        />
-        <p class="tagline">
-          Composable numerical methods for Rust.
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a href="/" class="b" aria-label="Numra home">
+          <img
+            class="brand-logo"
+            src="/numra_logo_no_BG.svg"
+            alt="Numra"
+            width="100"
+            height="33"
+          />
+        </a>
+        <p>
+          Composable numerical methods for Rust. A research project of
+          Spectral Automata, distributed under the Numra Academic and
+          Research License.
         </p>
       </div>
 
       {footerSections.map((section) => (
-        <div class="footer-section">
-          <h2 class="footer-heading">{section.title}</h2>
-          <ul>
-            {section.links.map((link) => (
-              <li>
-                <a
-                  href={link.href}
-                  {...(link.external ? { rel: 'noopener' } : {})}
-                >{link.label}</a>
-              </li>
-            ))}
-          </ul>
+        <div class="foot-col">
+          <h5>{section.title}</h5>
+          {section.links.map((link) => (
+            <a
+              href={link.href}
+              {...(link.external ? { rel: 'noopener' } : {})}
+            >{link.label}</a>
+          ))}
         </div>
       ))}
     </div>
 
-    <div class="footer-bottom">
-      <p>
-        © {year} Spectral Automata. Source available for
-        <a href="/license">non-commercial academic and research use</a>.
-      </p>
-      <p>
+    <div class="foot-bottom">
+      <span>
+        © {year} Spectral Automata · NARL-1.0
+      </span>
+      <span>
         <a href="https://spectralautomata.com" rel="noopener">
           A Spectral Automata project
         </a>
-      </p>
+      </span>
     </div>
   </div>
 </footer>
 
 <style>
   .site-footer {
+    background: var(--color-bg-elevated);
     border-top: 1px solid var(--color-border);
-    background: var(--color-bg-subtle);
-    padding: var(--space-7) 0 var(--space-5);
+    padding: 56px 0 28px;
     margin-top: var(--space-9);
   }
 
-  .footer-grid {
+  .foot-grid {
     display: grid;
-    grid-template-columns: 1.5fr repeat(4, 1fr);
-    gap: var(--space-6);
-    margin-bottom: var(--space-7);
+    grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 48px;
   }
 
-  .footer-brand .tagline {
+  .foot-brand .b {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 12px;
+    text-decoration: none;
+  }
+
+  .foot-brand .brand-logo {
+    height: 33px;
+    width: auto;
+    display: block;
+  }
+
+  .foot-brand p {
+    font-size: 13.5px;
     color: var(--color-fg-muted);
-    font-size: var(--text-sm);
-    max-width: 28ch;
-    margin-top: var(--space-3);
-  }
-
-  .footer-heading {
-    font-size: var(--text-sm);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-fg-muted);
-    margin-bottom: var(--space-3);
-    font-weight: 600;
-  }
-
-  .footer-section ul {
-    list-style: none;
-    padding: 0;
+    max-width: 36ch;
+    line-height: 1.55;
     margin: 0;
   }
 
-  .footer-section li {
-    margin-bottom: var(--space-2);
-  }
-
-  .footer-section a {
+  .foot-col h5 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
     color: var(--color-fg);
+    font-weight: 500;
+    margin: 0 0 14px;
+  }
+
+  .foot-col a {
+    display: block;
+    color: var(--color-fg-muted);
+    font-size: 13.5px;
+    padding: 3px 0;
     text-decoration: none;
-    font-size: var(--text-sm);
   }
 
-  .footer-section a:hover {
-    color: var(--color-accent);
-    text-decoration: underline;
+  .foot-col a:hover {
+    color: var(--color-fg-strong);
   }
 
-  .footer-logo { height: auto; display: block; }
-  .footer-logo-dark { display: none; }
-  [data-theme="dark"] .footer-logo-light { display: none; }
-  [data-theme="dark"] .footer-logo-dark { display: block; }
-  @media (prefers-color-scheme: dark) {
-    html:not([data-theme="light"]) .footer-logo-light { display: none; }
-    html:not([data-theme="light"]) .footer-logo-dark { display: block; }
-  }
-
-  .footer-bottom {
-    padding-top: var(--space-5);
+  .foot-bottom {
     border-top: 1px solid var(--color-border);
+    padding-top: 18px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
     display: flex;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: var(--space-3);
-    color: var(--color-fg-muted);
-    font-size: var(--text-sm);
+    gap: 12px;
   }
 
-  .footer-bottom a {
-    color: var(--color-fg-muted);
+  .foot-bottom a { color: var(--color-fg-muted); }
+  .foot-bottom a:hover { color: var(--color-fg-strong); }
+
+  @media (max-width: 1100px) {
+    .foot-grid { grid-template-columns: 1.4fr 1fr 1fr 1fr; }
+    .foot-grid > div:nth-child(5) { grid-column: span 4; }
   }
 
-  @media (max-width: 800px) {
-    .footer-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-    .footer-brand {
-      grid-column: 1 / -1;
-    }
+  @media (max-width: 720px) {
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+    .foot-brand { grid-column: 1 / -1; }
   }
 </style>
