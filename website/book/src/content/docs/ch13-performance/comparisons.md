@@ -43,7 +43,7 @@ through `scipy.integrate.OdeSolver`'s class hierarchy on every step.
 Numra's implementation runs the same numerics in native Rust without
 that overhead.
 
-## Where Numra is slower (per SPEC §17)
+## Where Numra is slower
 
 It would be misleading to leave the story there. There are concrete cases
 where SciPy and other established libraries beat Numra today:
