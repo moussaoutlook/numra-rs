@@ -1,4 +1,16 @@
 ---
+// src/pages/index.astro
+//
+// Examples gallery — visual parity with numra-rs.org homepage.
+// Reuses the marketing site's design language:
+//   - eyebrow + serif headline pattern
+//   - .sec-head split header (eyebrow on left, title + lede on right)
+//   - cap-row-style cards (label badge, descriptive body, mono meta)
+//   - mono section labels, cream surface, subtle borders
+//
+// The filter island still hydrates from /public/gallery-filter.js
+// (CSP-friendly).
+
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 
@@ -24,108 +36,167 @@ const facetCounts = {
   dense_output: examples.filter((e) => e.data.dense_output).length,
 };
 
+const complexityCounts = {
+  beginner: examples.filter((e) => e.data.complexity === 'beginner').length,
+  intermediate: examples.filter((e) => e.data.complexity === 'intermediate').length,
+  advanced: examples.filter((e) => e.data.complexity === 'advanced').length,
+};
+
 const description =
   'A gallery of runnable Rust examples for the Numra workspace — ODEs, SDEs, DDEs, PDEs, optimization, and more.';
 ---
 
 <BaseLayout title="Examples" description={description}>
-  <section class="hero container">
-    <h1>Examples</h1>
-    <p class="lede">
-      Every example is a runnable Rust program in the
-      <a href="https://github.com/moussaoutlook/numra-rs/tree/main/numra/examples" rel="noopener">
-        <code>numra/examples/</code>
-      </a>
-      directory. Filter by equation class, stiffness, or feature; click through
-      to read the source and the relevant book chapter.
-    </p>
-  </section>
-
-  <section class="gallery container">
-    <aside class="filter-panel" aria-label="Gallery filters">
-      <h2>Filter</h2>
-
-      <fieldset>
-        <legend>Equation class</legend>
-        {equationClassList.map((cls) => (
-          <label>
-            <input type="checkbox" data-filter="equation_class" value={cls} />
-            <span>{cls}</span>
-            <span class="count">{equationClassCounts[cls]}</span>
-          </label>
-        ))}
-      </fieldset>
-
-      <fieldset>
-        <legend>Features</legend>
-        <label>
-          <input type="checkbox" data-filter="stiff" value="true" />
-          <span>Stiff system</span>
-          <span class="count">{facetCounts.stiff}</span>
-        </label>
-        <label>
-          <input type="checkbox" data-filter="has_events" value="true" />
-          <span>Event detection</span>
-          <span class="count">{facetCounts.has_events}</span>
-        </label>
-        <label>
-          <input type="checkbox" data-filter="dense_output" value="true" />
-          <span>Dense output</span>
-          <span class="count">{facetCounts.dense_output}</span>
-        </label>
-      </fieldset>
-
-      <fieldset>
-        <legend>Complexity</legend>
-        {(['beginner', 'intermediate', 'advanced'] as const).map((c) => (
-          <label>
-            <input type="checkbox" data-filter="complexity" value={c} />
-            <span>{c}</span>
-            <span class="count">{examples.filter((e) => e.data.complexity === c).length}</span>
-          </label>
-        ))}
-      </fieldset>
-
-      <button type="button" id="clear-filters" class="reset-btn">Clear all</button>
-    </aside>
-
-    <div class="cards-wrap">
-      <p class="result-count" aria-live="polite">
-        Showing <span id="visible-count">{examples.length}</span> of {examples.length} examples.
+  <!-- 1. Hero ============================================================ -->
+  <header class="hero">
+    <div class="container">
+      <p class="eyebrow">
+        <span class="dot">●</span>
+        Runnable programs for every subsystem
+      </p>
+      <h1>Examples that <em>actually compile.</em></h1>
+      <p class="hero-desc">
+        Every example is a runnable Rust program in the
+        <a href="https://github.com/moussaoutlook/numra-rs/tree/main/numra/examples" rel="noopener">
+          <code class="inline">numra/examples/</code>
+        </a>
+        directory of the workspace. Filter by equation class, stiffness,
+        or feature; click through to read the source and the relevant
+        book chapter.
       </p>
 
-      <ul class="cards" id="card-list">
-        {examples.map((ex) => (
-          <li
-            class="card"
-            data-equation-class={ex.data.equation_class}
-            data-stiff={String(ex.data.stiff)}
-            data-events={String(ex.data.has_events)}
-            data-dense={String(ex.data.dense_output)}
-            data-complexity={ex.data.complexity}
-          >
-            <a class="card-link" href={`/${ex.id}`}>
-              <div class="card-header">
-                <h3>{ex.data.title}</h3>
-                <span class={`badge badge-${ex.data.equation_class.toLowerCase()}`}>
-                  {ex.data.equation_class}
-                </span>
-              </div>
-              <p class="summary">{ex.data.summary}</p>
-              <ul class="tags">
-                <li class={`tag complexity-${ex.data.complexity}`}>{ex.data.complexity}</li>
-                {ex.data.stiff && <li class="tag">stiff</li>}
-                {ex.data.has_events && <li class="tag">events</li>}
-                {ex.data.dense_output && <li class="tag">dense output</li>}
-              </ul>
-            </a>
-          </li>
-        ))}
-      </ul>
+      <div class="hero-stats">
+        <div class="cell">
+          <div class="num">{examples.length}</div>
+          <div class="lbl">Examples</div>
+        </div>
+        <div class="cell">
+          <div class="num">{equationClassList.length}</div>
+          <div class="lbl">Equation classes</div>
+        </div>
+        <div class="cell">
+          <div class="num">{facetCounts.stiff}</div>
+          <div class="lbl">Stiff systems</div>
+        </div>
+        <div class="cell">
+          <div class="num">{facetCounts.has_events}</div>
+          <div class="lbl">With events</div>
+        </div>
+      </div>
+    </div>
+  </header>
 
-      <p class="empty-state" id="empty-state" hidden>
-        No examples match the current filter combination.
-      </p>
+  <!-- 2. Gallery ========================================================= -->
+  <section>
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow"><span class="dot">●</span> Gallery</p>
+        <div class="col-r">
+          <h2>Filter the catalog.</h2>
+          <p class="lede">
+            Pick an equation class, narrow by feature, or jump to the
+            complexity that matches your starting point. Each card links
+            to a worked write-up alongside the runnable Rust source.
+          </p>
+        </div>
+      </div>
+
+      <div class="gallery">
+        <aside class="filter-panel" aria-label="Gallery filters">
+          <h3 class="panel-title">Filter</h3>
+
+          <fieldset>
+            <legend>Equation class</legend>
+            {equationClassList.map((cls) => (
+              <label>
+                <input type="checkbox" data-filter="equation_class" value={cls} />
+                <span class="lbl-text">{cls}</span>
+                <span class="count">{equationClassCounts[cls]}</span>
+              </label>
+            ))}
+          </fieldset>
+
+          <fieldset>
+            <legend>Features</legend>
+            <label>
+              <input type="checkbox" data-filter="stiff" value="true" />
+              <span class="lbl-text">Stiff system</span>
+              <span class="count">{facetCounts.stiff}</span>
+            </label>
+            <label>
+              <input type="checkbox" data-filter="has_events" value="true" />
+              <span class="lbl-text">Event detection</span>
+              <span class="count">{facetCounts.has_events}</span>
+            </label>
+            <label>
+              <input type="checkbox" data-filter="dense_output" value="true" />
+              <span class="lbl-text">Dense output</span>
+              <span class="count">{facetCounts.dense_output}</span>
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Complexity</legend>
+            {(['beginner', 'intermediate', 'advanced'] as const).map((c) => (
+              <label>
+                <input type="checkbox" data-filter="complexity" value={c} />
+                <span class="lbl-text">{c}</span>
+                <span class="count">{complexityCounts[c]}</span>
+              </label>
+            ))}
+          </fieldset>
+
+          <button type="button" id="clear-filters" class="reset-btn">Clear all</button>
+        </aside>
+
+        <div class="cards-wrap">
+          <p class="result-count" aria-live="polite">
+            Showing <span id="visible-count">{examples.length}</span> of {examples.length} examples.
+          </p>
+
+          <ul class="cards" id="card-list">
+            {examples.map((ex) => (
+              <li
+                class="card"
+                data-equation-class={ex.data.equation_class}
+                data-stiff={String(ex.data.stiff)}
+                data-events={String(ex.data.has_events)}
+                data-dense={String(ex.data.dense_output)}
+                data-complexity={ex.data.complexity}
+              >
+                <a class="card-link" href={`/${ex.id}`}>
+                  <div class="card-top">
+                    <span class={`badge badge-${ex.data.equation_class.toLowerCase()}`}>
+                      {ex.data.equation_class}
+                    </span>
+                    <span class={`complexity complexity-${ex.data.complexity}`}>
+                      {ex.data.complexity}
+                    </span>
+                  </div>
+
+                  <h3 class="card-title">{ex.data.title}</h3>
+                  <p class="summary">{ex.data.summary}</p>
+
+                  <ul class="tags">
+                    {ex.data.stiff && <li class="tag">stiff</li>}
+                    {ex.data.has_events && <li class="tag">events</li>}
+                    {ex.data.dense_output && <li class="tag">dense output</li>}
+                  </ul>
+
+                  <span class="card-foot">
+                    <span class="src">{ex.data.source_path}</span>
+                    <span class="arr">→</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <p class="empty-state" id="empty-state" hidden>
+            No examples match the current filter combination.
+          </p>
+        </div>
+      </div>
     </div>
   </section>
 </BaseLayout>
@@ -136,89 +207,233 @@ const description =
 <script is:inline src="/gallery-filter.js" defer></script>
 
 <style>
-  .hero {
-    padding: var(--space-7) 0 var(--space-5);
-  }
+  /* ============================================================== Hero */
+  .hero { padding: 88px 0 56px; }
 
   .hero h1 {
-    font-size: var(--text-3xl);
-    margin: 0 0 var(--space-3);
+    font-size: 60px;
+    font-weight: 600;
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+    color: var(--color-fg-strong);
+    margin: 16px 0 18px;
+    max-width: 16ch;
   }
-
-  .hero .lede {
+  .hero h1 em {
+    font-style: normal;
+    color: var(--color-accent);
+  }
+  .hero-desc {
+    font-size: 17px;
     color: var(--color-fg-muted);
-    max-width: 70ch;
+    line-height: 1.55;
+    max-width: 64ch;
+    margin: 0 0 32px;
+  }
+  .hero-desc a {
+    color: var(--color-accent);
+    border-bottom: 1px solid var(--color-accent-border);
+  }
+  .hero-desc a:hover { color: var(--color-accent-hover); }
+
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(4, max-content);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-elevated);
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .hero-stats .cell {
+    padding: 14px 28px;
+    border-right: 1px solid var(--color-border);
+    min-width: 130px;
+  }
+  .hero-stats .cell:last-child { border-right: 0; }
+  .hero-stats .num {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--color-fg-strong);
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-stats .lbl {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-fg-muted);
+    margin-top: 2px;
   }
 
+  /* ============================================================ eyebrow */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--color-fg-muted);
+    font-weight: 500;
+    margin: 0;
+  }
+  .eyebrow .dot { color: var(--color-accent); margin-right: 8px; }
+
+  /* ============================================================ inline code */
+  code.inline {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    padding: 1px 5px;
+    background: var(--color-code-bg);
+    color: var(--color-fg-strong);
+    border-radius: 3px;
+    border: 1px solid var(--color-border);
+  }
+
+  /* =========================================================== section */
+  section {
+    padding: 80px 0 96px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .sec-head {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 56px;
+    margin-bottom: 40px;
+  }
+  .sec-head h2 {
+    font-size: 36px;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    color: var(--color-fg-strong);
+    margin: 14px 0 0;
+  }
+  .sec-head .lede {
+    font-size: 16px;
+    color: var(--color-fg-muted);
+    line-height: 1.6;
+    max-width: 60ch;
+    margin: 0;
+  }
+  .sec-head .col-r { padding-top: 4px; }
+
+  section h2, section h3, section h4 { margin-top: 0; }
+
+  /* ============================================================ gallery */
   .gallery {
     display: grid;
     grid-template-columns: 240px 1fr;
-    gap: var(--space-7);
-    padding-bottom: var(--space-9);
+    gap: 40px;
+    align-items: start;
   }
 
-  .filter-panel h2 {
-    font-size: var(--text-sm);
+  /* ====================================================== filter panel */
+  .filter-panel {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-elevated);
+    padding: 18px 18px 16px;
+    position: sticky;
+    top: 76px;
+  }
+
+  .filter-panel .panel-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-fg-muted);
-    margin: 0 0 var(--space-3);
-    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--color-fg);
+    font-weight: 500;
+    margin: 0 0 14px;
   }
 
   .filter-panel fieldset {
-    border: none;
-    padding: 0 0 var(--space-5);
-    margin: 0 0 var(--space-3);
+    border: 0;
+    padding: 0 0 14px;
+    margin: 0 0 14px;
     border-bottom: 1px solid var(--color-border);
   }
 
-  .filter-panel fieldset:last-of-type {
-    border-bottom: none;
+  .filter-panel fieldset:nth-of-type(3) {
+    border-bottom: 0;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
   }
 
   .filter-panel legend {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    margin-bottom: var(--space-2);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-fg-muted);
+    font-weight: 500;
+    margin-bottom: 8px;
+    padding: 0;
   }
 
   .filter-panel label {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    font-size: var(--text-sm);
+    gap: 8px;
+    font-size: 13.5px;
+    color: var(--color-fg);
     padding: 4px 0;
     cursor: pointer;
   }
 
+  .filter-panel label:hover .lbl-text { color: var(--color-fg-strong); }
+
+  .filter-panel input[type="checkbox"] {
+    accent-color: var(--color-accent);
+  }
+
+  .filter-panel .lbl-text { text-transform: capitalize; }
+
   .filter-panel .count {
     margin-left: auto;
-    color: var(--color-fg-muted);
+    font-family: var(--font-mono);
+    color: var(--color-fg-faint);
+    font-size: 11px;
     font-variant-numeric: tabular-nums;
-    font-size: var(--text-xs);
   }
 
   .reset-btn {
+    margin-top: 8px;
+    width: 100%;
     background: transparent;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     color: var(--color-fg);
-    padding: var(--space-2) var(--space-4);
-    font-size: var(--text-sm);
+    padding: 7px 10px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     cursor: pointer;
-    margin-top: var(--space-3);
+    transition: border-color .12s var(--ease-out), color .12s var(--ease-out);
   }
 
   .reset-btn:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
+    border-color: var(--color-border-strong);
+    color: var(--color-fg-strong);
   }
 
+  /* ============================================================== cards */
+  .cards-wrap { min-width: 0; }
+
   .result-count {
+    font-family: var(--font-mono);
+    font-size: 12px;
     color: var(--color-fg-muted);
-    font-size: var(--text-sm);
-    margin: 0 0 var(--space-4);
+    margin: 0 0 18px;
+    letter-spacing: 0.04em;
+  }
+  .result-count #visible-count {
+    color: var(--color-fg-strong);
+    font-weight: 500;
   }
 
   .cards {
@@ -226,94 +441,158 @@ const description =
     padding: 0;
     margin: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 16px;
   }
 
   .card {
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--color-bg);
-    transition: border-color 0.15s ease, transform 0.15s ease;
+    border-radius: var(--radius-md);
+    background: var(--color-bg-elevated);
+    transition: border-color .12s var(--ease-out), transform .12s var(--ease-out);
+    margin: 0;
   }
 
   .card:hover {
-    border-color: var(--color-accent);
-    transform: translateY(-2px);
+    border-color: var(--color-border-strong);
+    transform: translateY(-1px);
   }
 
   .card-link {
-    display: block;
-    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 18px 14px;
     color: inherit;
     text-decoration: none;
     height: 100%;
   }
 
-  .card-header {
+  .card-top {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--space-3);
-    margin-bottom: var(--space-3);
-  }
-
-  .card-header h3 {
-    margin: 0;
-    font-size: var(--text-md);
+    align-items: center;
+    gap: 8px;
   }
 
   .badge {
-    font-size: var(--text-xs);
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.1em;
     padding: 2px 8px;
     border-radius: var(--radius-sm);
-    background: var(--color-bg-subtle);
-    color: var(--color-fg);
-    border: 1px solid var(--color-border);
-    flex-shrink: 0;
+    background: var(--color-accent-soft);
+    color: var(--color-accent-hover);
+    border: 1px solid var(--color-accent-border);
+  }
+
+  .complexity {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-fg-muted);
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-fg-strong);
+    margin: 2px 0 0;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
   }
 
   .summary {
     color: var(--color-fg-muted);
-    font-size: var(--text-sm);
-    line-height: 1.5;
-    margin: 0 0 var(--space-3);
+    font-size: 13.5px;
+    line-height: 1.55;
+    margin: 0;
+    max-width: none;
   }
 
   .tags {
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 2px 0 0;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2);
+    gap: 6px;
+    max-width: none;
   }
 
   .tag {
-    font-size: var(--text-xs);
-    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 2px 7px;
     border-radius: var(--radius-sm);
     background: var(--color-bg-subtle);
     color: var(--color-fg-muted);
     border: 1px solid var(--color-border);
+    margin: 0;
   }
 
-  .tag.complexity-beginner { color: var(--color-fg); }
-  .tag.complexity-intermediate { color: var(--color-fg); }
-  .tag.complexity-advanced { color: var(--color-fg); }
+  .card-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-faint);
+    gap: 10px;
+  }
+
+  .card-foot .src {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .card-foot .arr {
+    color: var(--color-accent);
+    font-size: 13px;
+    transition: transform .12s var(--ease-out);
+    flex-shrink: 0;
+  }
+  .card:hover .card-foot .arr { transform: translateX(2px); }
 
   .empty-state {
     color: var(--color-fg-muted);
     text-align: center;
-    padding: var(--space-7);
+    padding: 56px 0;
+    font-size: 14px;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-subtle);
+  }
+
+  /* ======================================================== responsive */
+  @media (max-width: 1100px) {
+    .hero h1 { font-size: 48px; }
+    .sec-head { grid-template-columns: 1fr; gap: 16px; }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+    .hero-stats .cell:nth-child(2) { border-right: 0; }
+    .hero-stats .cell:nth-child(1), .hero-stats .cell:nth-child(2) {
+      border-bottom: 1px solid var(--color-border);
+    }
   }
 
   @media (max-width: 800px) {
-    .gallery {
-      grid-template-columns: 1fr;
-    }
+    .gallery { grid-template-columns: 1fr; }
+    .filter-panel { position: static; }
+  }
+
+  @media (max-width: 720px) {
+    .hero { padding: 48px 0 36px; }
+    .hero h1 { font-size: 36px; }
+    section { padding: 56px 0 72px; }
+    .sec-head h2 { font-size: 26px; }
+    .hero-stats { grid-template-columns: 1fr 1fr; }
   }
 </style>

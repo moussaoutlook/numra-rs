@@ -27,8 +27,9 @@ body {
   background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-sans);
-  font-size: var(--text-base);
+  font-size: 15px;
   line-height: var(--leading-base);
+  font-feature-settings: "ss01", "cv11";
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -40,15 +41,15 @@ main {
 
 /* ========================================================== headings */
 h1, h2, h3, h4, h5, h6 {
-  color: var(--color-fg);
+  color: var(--color-fg-strong);
   font-family: var(--font-sans);
   font-weight: 600;
   line-height: var(--leading-tight);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
-h1 { font-size: var(--text-5xl); letter-spacing: -0.02em; }
-h2 { font-size: var(--text-3xl); margin-top: var(--space-8); margin-bottom: var(--space-4); }
+h1 { font-size: var(--text-5xl); letter-spacing: -0.035em; }
+h2 { font-size: var(--text-3xl); margin-top: var(--space-8); margin-bottom: var(--space-4); letter-spacing: -0.025em; }
 h3 { font-size: var(--text-2xl); margin-top: var(--space-6); margin-bottom: var(--space-3); }
 h4 { font-size: var(--text-xl);  margin-top: var(--space-5); margin-bottom: var(--space-3); }
 
@@ -60,15 +61,11 @@ p {
 
 a {
   color: var(--color-accent);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.15em;
+  text-decoration: none;
   transition: color var(--motion-fast) var(--ease-out);
 }
 
-a:hover {
-  color: var(--color-accent-hover);
-}
+a:hover { color: var(--color-accent-hover); }
 
 strong { font-weight: 600; }
 
@@ -172,12 +169,17 @@ th {
   width: 100%;
   max-width: var(--container-width);
   margin: 0 auto;
-  padding: 0 var(--space-5);
+  padding: 0 28px;
 }
 
 .container-narrow {
   width: 100%;
   max-width: var(--container-narrow);
   margin: 0 auto;
-  padding: 0 var(--space-5);
+  padding: 0 28px;
+}
+
+/* ====================================================== utility: mono */
+.mono {
+  font-family: var(--font-mono);
 }
