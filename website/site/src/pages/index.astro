@@ -215,21 +215,20 @@ const archLayers = [
               <span class="file">examples/lotka_volterra.rs</span>
               <span class="runtime">cargo run --release</span>
             </div>
-            <pre><Fragment set:html={`<span class="k">use</span> numra::ode::{<span class="t">Tsit5</span>, <span class="t">SolverOptions</span>, <span class="fn">solve_ivp</span>};
+            <pre><Fragment set:html={`<span class="k">use</span> numra::ode::{<span class="t">OdeProblem</span>, <span class="t">Solver</span>, <span class="t">SolverOptions</span>, <span class="t">Tsit5</span>};
 
-<span class="c">// dx/dt =  α x − β x y</span>
-<span class="c">// dy/dt = −γ y + δ x y</span>
-<span class="k">let</span> rhs = |_t: <span class="t">f64</span>, y: &amp;[<span class="t">f64</span>], dy: &amp;<span class="k">mut</span> [<span class="t">f64</span>]| {
-    dy[<span class="nu">0</span>] =  <span class="nu">1.5</span>*y[<span class="nu">0</span>] - <span class="nu">1.0</span>*y[<span class="nu">0</span>]*y[<span class="nu">1</span>];
-    dy[<span class="nu">1</span>] = -<span class="nu">3.0</span>*y[<span class="nu">1</span>] + <span class="nu">1.0</span>*y[<span class="nu">0</span>]*y[<span class="nu">1</span>];
-};
+<span class="c">// Lotka–Volterra:  dx/dt = α x − β x y,  dy/dt = −γ y + δ x y</span>
+<span class="k">let</span> lotka = <span class="t">OdeProblem</span>::<span class="fn">new</span>(
+    |_t, y: &amp;[<span class="t">f64</span>], dy: &amp;<span class="k">mut</span> [<span class="t">f64</span>]| {
+        dy[<span class="nu">0</span>] =  <span class="nu">1.5</span> * y[<span class="nu">0</span>] - <span class="nu">1.0</span> * y[<span class="nu">0</span>] * y[<span class="nu">1</span>];
+        dy[<span class="nu">1</span>] = -<span class="nu">3.0</span> * y[<span class="nu">1</span>] + <span class="nu">1.0</span> * y[<span class="nu">0</span>] * y[<span class="nu">1</span>];
+    },
+    <span class="nu">0.0</span>, <span class="nu">15.0</span>,
+    vec![<span class="nu">1.0</span>, <span class="nu">1.0</span>],
+);
 
-<span class="k">let</span> sol = <span class="fn">solve_ivp</span>::&lt;<span class="t">Tsit5</span>, _&gt;(
-    rhs, <span class="nu">0.0</span>, <span class="nu">15.0</span>, &amp;[<span class="nu">1.0</span>, <span class="nu">1.0</span>],
-    &amp;<span class="t">SolverOptions</span>::default()
-        .<span class="fn">rtol</span>(<span class="nu">1e-8</span>)
-        .<span class="fn">atol</span>(<span class="nu">1e-10</span>),
-)?;
+<span class="k">let</span> opts = <span class="t">SolverOptions</span>::default().<span class="fn">rtol</span>(<span class="nu">1e-8</span>).<span class="fn">atol</span>(<span class="nu">1e-10</span>);
+<span class="k">let</span> sol  = <span class="t">Tsit5</span>::<span class="fn">solve</span>(&amp;lotka, lotka.t0, lotka.tf, &amp;lotka.y0, &amp;opts)?;
 
 <span class="k">for</span> (t, y) <span class="k">in</span> sol.<span class="fn">iter</span>() {
     println!(<span class="s">"t = {t:6.3}  x = {:.4}  y = {:.4}"</span>, y[<span class="nu">0</span>], y[<span class="nu">1</span>]);
@@ -338,38 +337,44 @@ const archLayers = [
           </div>
           <pre><Fragment set:html={`<span class="k">use</span> numra::ode::{<span class="t">Bdf</span>, <span class="t">SolverOptions</span>};
 <span class="k">use</span> numra::ode::sensitivity::{<span class="fn">solve_forward_sensitivity</span>, <span class="t">ParametricOdeSystem</span>};
-<span class="k">use</span> numra::optim::<span class="t">LevenbergMarquardt</span>;
+<span class="k">use</span> numra::optim::{<span class="fn">lm_minimize</span>, <span class="t">LmOptions</span>};
 
-<span class="c">// Observed decay measurements at 5 time points.</span>
-<span class="k">let</span> times    = vec![<span class="nu">0.0</span>, <span class="nu">1.0</span>, <span class="nu">2.0</span>, <span class="nu">3.0</span>, <span class="nu">4.0</span>];
-<span class="k">let</span> observed = vec![<span class="nu">1.00</span>, <span class="nu">0.61</span>, <span class="nu">0.37</span>, <span class="nu">0.22</span>, <span class="nu">0.14</span>];
+<span class="c">// Observed: a sample of the decaying state at t = 4.</span>
+<span class="k">let</span> observed = <span class="nu">0.14</span>;
 
 <span class="c">// Parametric model: dy/dt = -k·y, with k unknown.</span>
 <span class="k">struct</span> <span class="t">Decay</span> { k: <span class="t">f64</span> }
 <span class="k">impl</span> <span class="t">ParametricOdeSystem</span>&lt;<span class="t">f64</span>&gt; <span class="k">for</span> <span class="t">Decay</span> {
-    <span class="k">fn</span> <span class="fn">n_states</span>(&amp;self) -&gt; <span class="t">usize</span> { <span class="nu">1</span> }
-    <span class="k">fn</span> <span class="fn">n_params</span>(&amp;self) -&gt; <span class="t">usize</span> { <span class="nu">1</span> }
-    <span class="k">fn</span> <span class="fn">params</span>(&amp;self) -&gt; &amp;[<span class="t">f64</span>] { std::slice::from_ref(&amp;self.k) }
+    <span class="k">fn</span> <span class="fn">n_states</span>(&amp;self) -&gt; <span class="t">usize</span>  { <span class="nu">1</span> }
+    <span class="k">fn</span> <span class="fn">n_params</span>(&amp;self) -&gt; <span class="t">usize</span>  { <span class="nu">1</span> }
+    <span class="k">fn</span> <span class="fn">params</span>(&amp;self)   -&gt; &amp;[<span class="t">f64</span>] { std::slice::from_ref(&amp;self.k) }
     <span class="k">fn</span> <span class="fn">rhs_with_params</span>(&amp;self, _t: <span class="t">f64</span>, y: &amp;[<span class="t">f64</span>], p: &amp;[<span class="t">f64</span>], dy: &amp;<span class="k">mut</span> [<span class="t">f64</span>]) {
         dy[<span class="nu">0</span>] = -p[<span class="nu">0</span>] * y[<span class="nu">0</span>];
     }
 }
 
-<span class="c">// Residuals AND analytical gradient in one solve, via forward sensitivity.</span>
-<span class="k">let</span> fit = <span class="t">LevenbergMarquardt</span>::default().<span class="fn">fit</span>(&amp;[<span class="nu">0.3</span>], |k| {
+<span class="c">// One Bdf solve of the augmented system gives state AND analytical sensitivity dy/dk.</span>
+<span class="k">let</span> solve_with_sens = |k: &amp;[<span class="t">f64</span>]| {
     <span class="k">let</span> sys = <span class="t">Decay</span> { k: k[<span class="nu">0</span>] };
-    <span class="k">let</span> r = <span class="fn">solve_forward_sensitivity</span>::&lt;<span class="t">Bdf</span>, _, _&gt;(
+    <span class="fn">solve_forward_sensitivity</span>::&lt;<span class="t">Bdf</span>, <span class="t">f64</span>, _&gt;(
         &amp;sys, <span class="nu">0.0</span>, <span class="nu">4.0</span>, &amp;[<span class="nu">1.0</span>],
-        &amp;<span class="t">SolverOptions</span>::default().<span class="fn">rtol</span>(<span class="nu">1e-8</span>).<span class="fn">output_times</span>(&amp;times),
-    )?;
-    <span class="k">let</span> residuals: <span class="t">Vec</span>&lt;<span class="t">f64</span>&gt; = (<span class="nu">0</span>..times.<span class="fn">len</span>())
-        .<span class="fn">map</span>(|i| r.<span class="fn">y_at</span>(i)[<span class="nu">0</span>] - observed[i]).<span class="fn">collect</span>();
-    <span class="k">let</span> jacobian:  <span class="t">Vec</span>&lt;<span class="t">f64</span>&gt; = (<span class="nu">0</span>..times.<span class="fn">len</span>())
-        .<span class="fn">map</span>(|i| r.<span class="fn">dyi_dpj</span>(i, <span class="nu">0</span>, <span class="nu">0</span>)).<span class="fn">collect</span>();
-    <span class="t">Ok</span>((residuals, jacobian))
-})?;
+        &amp;<span class="t">SolverOptions</span>::default().<span class="fn">rtol</span>(<span class="nu">1e-8</span>).<span class="fn">atol</span>(<span class="nu">1e-12</span>),
+    ).<span class="fn">expect</span>(<span class="s">"augmented solve failed"</span>)
+};
 
-println!(<span class="s">"k = {:.4} ± {:.4}"</span>, fit.params[<span class="nu">0</span>], fit.std_error[<span class="nu">0</span>]);`} /></pre>
+<span class="k">let</span> residual = |k: &amp;[<span class="t">f64</span>], r: &amp;<span class="k">mut</span> [<span class="t">f64</span>]| {
+    <span class="k">let</span> sol  = solve_with_sens(k);
+    <span class="k">let</span> last = sol.<span class="fn">len</span>() - <span class="nu">1</span>;
+    r[<span class="nu">0</span>] = sol.<span class="fn">y_at</span>(last)[<span class="nu">0</span>] - observed;
+};
+<span class="k">let</span> jacobian = |k: &amp;[<span class="t">f64</span>], j: &amp;<span class="k">mut</span> [<span class="t">f64</span>]| {
+    <span class="k">let</span> sol  = solve_with_sens(k);
+    <span class="k">let</span> last = sol.<span class="fn">len</span>() - <span class="nu">1</span>;
+    j[<span class="nu">0</span>] = sol.<span class="fn">dyi_dpj</span>(last, <span class="nu">0</span>, <span class="nu">0</span>);
+};
+
+<span class="k">let</span> fit = <span class="fn">lm_minimize</span>(residual, jacobian, &amp;[<span class="nu">0.3</span>], <span class="nu">1</span>, &amp;<span class="t">LmOptions</span>::default())?;
+println!(<span class="s">"k = {:.4}  (final cost {:.2e})"</span>, fit.x[<span class="nu">0</span>], fit.f);`} /></pre>
         </div>
 
         <div class="annot">
@@ -386,10 +391,13 @@ println!(<span class="s">"k = {:.4} ± {:.4}"</span>, fit.params[<span class="nu
           <div class="annot-row">
             <span class="n">02</span>
             <div>
-              <div class="l">Shared error model</div>
-              The optimizer and the ODE solver share <code class="inline">SolverOptions</code>,
-              error types, and tolerance semantics. The same
-              <code class="inline">?</code> operator propagates across both.
+              <div class="l">One error model</div>
+              Each crate carries its own configuration
+              (<code class="inline">SolverOptions</code> for ODE,
+              <code class="inline">LmOptions</code> for LM), but the
+              error types convert into <code class="inline">NumraError</code>
+              so the same <code class="inline">?</code> operator
+              propagates across the whole pipeline.
             </div>
           </div>
           <div class="annot-row">
