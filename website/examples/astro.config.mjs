@@ -26,6 +26,16 @@ export default defineConfig({
   build: {
     format: 'file',
   },
+  // Light-only site, so use a single light Shiki theme rather than the
+  // dual-theme setup from the marketing site. Without this, Astro
+  // defaults to `github-dark`, which paints code blocks with a dark
+  // background that fights the cream palette.
+  markdown: {
+    shikiConfig: {
+      theme: 'github-light',
+      wrap: false,
+    },
+  },
   integrations: [
     mdx(),
     sitemap(),

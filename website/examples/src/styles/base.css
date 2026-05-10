@@ -110,6 +110,10 @@ pre code {
   border: none;
   padding: 0;
   font-size: inherit;
+  /* Defer to the parent <pre>'s color (or to Shiki's per-token inline
+     colors). Without this, the global `code { color: ... }` rule
+     repaints highlighted tokens and breaks syntax coloring. */
+  color: inherit;
 }
 
 /* ============================================================ misc */

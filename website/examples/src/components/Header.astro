@@ -12,17 +12,9 @@ const navItems = [
   <div class="container">
     <a class="brand" href="https://numra-rs.org" aria-label="Numra home">
       <img
-        class="brand-logo brand-logo-light"
+        class="brand-logo"
         src="/numra_logo_no_BG.svg"
         alt="Numra"
-        width="120"
-        height="40"
-      />
-      <img
-        class="brand-logo brand-logo-dark"
-        src="/numra_logo_white-text_no_BG.svg"
-        alt=""
-        aria-hidden="true"
         width="120"
         height="40"
       />
@@ -70,15 +62,9 @@ const navItems = [
   }
 
   .brand-logo {
-    height: auto;
+    height: 30px;
+    width: auto;
     display: block;
-  }
-  .brand-logo-dark { display: none; }
-  [data-theme="dark"] .brand-logo-light { display: none; }
-  [data-theme="dark"] .brand-logo-dark { display: block; }
-  @media (prefers-color-scheme: dark) {
-    html:not([data-theme="light"]) .brand-logo-light { display: none; }
-    html:not([data-theme="light"]) .brand-logo-dark { display: block; }
   }
 
   .examples-tag {

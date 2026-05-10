@@ -130,57 +130,10 @@ const description =
   </section>
 </BaseLayout>
 
-<script>
-  // Pure-DOM filter island — no framework. Each filter group works as
-  // OR within the group, AND across groups (standard faceted search).
-  const list = document.getElementById('card-list') as HTMLUListElement | null;
-  const empty = document.getElementById('empty-state') as HTMLParagraphElement | null;
-  const visibleCount = document.getElementById('visible-count') as HTMLSpanElement | null;
-  const clearBtn = document.getElementById('clear-filters') as HTMLButtonElement | null;
-  if (!list || !empty || !visibleCount || !clearBtn) {
-    throw new Error('Gallery DOM nodes missing — markup drift?');
-  }
-  const inputs = Array.from(
-    document.querySelectorAll<HTMLInputElement>('input[data-filter]'),
-  );
-
-  function activeValues(filter: string): Set<string> {
-    return new Set(
-      inputs.filter((i) => i.dataset.filter === filter && i.checked).map((i) => i.value),
-    );
-  }
-
-  function applyFilters() {
-    const eqClasses = activeValues('equation_class');
-    const stiff = activeValues('stiff');
-    const events = activeValues('has_events');
-    const dense = activeValues('dense_output');
-    const complexity = activeValues('complexity');
-
-    let visible = 0;
-    const cards = list!.querySelectorAll<HTMLLIElement>('li.card');
-    cards.forEach((card) => {
-      const matchesClass = eqClasses.size === 0 || eqClasses.has(card.dataset.equationClass ?? '');
-      const matchesStiff = stiff.size === 0 || stiff.has(card.dataset.stiff ?? 'false');
-      const matchesEvents = events.size === 0 || events.has(card.dataset.events ?? 'false');
-      const matchesDense = dense.size === 0 || dense.has(card.dataset.dense ?? 'false');
-      const matchesComplexity =
-        complexity.size === 0 || complexity.has(card.dataset.complexity ?? '');
-      const show =
-        matchesClass && matchesStiff && matchesEvents && matchesDense && matchesComplexity;
-      card.hidden = !show;
-      if (show) visible++;
-    });
-    visibleCount!.textContent = String(visible);
-    empty!.hidden = visible !== 0;
-  }
-
-  inputs.forEach((i) => i.addEventListener('change', applyFilters));
-  clearBtn.addEventListener('click', () => {
-    inputs.forEach((i) => (i.checked = false));
-    applyFilters();
-  });
-</script>
+{/* Filter island. Lives in /public/gallery-filter.js because the strict
+    CSP (`script-src 'self'`) blocks Astro's default inline-bundled
+    <script> output. */}
+<script is:inline src="/gallery-filter.js" defer></script>
 
 <style>
   .hero {

@@ -1,16 +1,12 @@
 /*
- * Numra design tokens
+ * Numra design tokens — examples gallery (examples.numra-rs.org)
  * ---------------------------------------------------------------------------
- * Duplicated from website/site/src/styles/tokens.css; keep in sync.
- * (The book project keeps a copy at website/book/src/styles/tokens.css.
- * Treat the site copy as canonical until a shared package is extracted
- * in Phase 2.)
+ * Single source of truth for color, typography, spacing, radius, shadow,
+ * and motion. Imported by BaseLayout.
  *
- * This file is the single source of truth for color, typography, spacing,
- * radius, shadow, and motion across the marketing site and the book.
- *
- * Both Astro projects import this file. Do not redefine these values
- * elsewhere. If you need a new token, add it here.
+ * Light-only by design — matches the marketing site's cream palette so
+ * the gallery feels like a continuation of numra-rs.org. The book has
+ * its own light/dark/auto config; that's a separate Starlight project.
  *
  * Conventions:
  *   --color-*   semantic colors (bg, fg, border, accent)
@@ -26,37 +22,47 @@
  */
 
 :root {
+  color-scheme: light;
+
   /* ------------------------------------------------------------ surface */
-  --color-bg:           #FFFFFF;
-  --color-bg-subtle:    #F5F6F7;
+  /* Warm cream paper feel; matches the marketing site. */
+  --color-bg:           #FBFAF7;
+  --color-bg-subtle:    #F4F2EC;
   --color-bg-elevated:  #FFFFFF;
-  --color-border:       #E1E4E8;
-  --color-border-strong:#C2C8D0;
+
+  --color-border:       #E6E3DB;
+  --color-border-strong:#D5D2C5;
 
   /* --------------------------------------------------------------- text */
-  --color-fg:           #14171A;
+  --color-fg:           #1F2329;
+  --color-fg-strong:    #0E1116;
   --color-fg-muted:     #5C6370;
-  --color-fg-subtle:    #8A92A0;
+  --color-fg-subtle:    #8089928f;
+  --color-fg-faint:     #A8ADB6;
 
   /* ---------------------------------------------- accent (deep teal) */
   --color-accent:       #0A6E6B;
-  --color-accent-hover: #0C8581;
-  --color-accent-soft:  #E6F0EF;
+  --color-accent-hover: #064C49;
+  --color-accent-soft:  #E1EFEC;
+  --color-accent-border:#C9DDDA;
+
+  /* ----------------------------------------- secondary accent (warm gold) */
+  --color-gold:         #B07B3A;
+  --color-gold-soft:    #F4E9D6;
 
   /* ----------------------------------------------------------- code */
-  --color-code-bg:      #F5F6F7;
-  --color-code-fg:      #14171A;
-  --color-code-border:  #E1E4E8;
+  --color-code-bg:      #F1EFE8;
+  --color-code-fg:      #0E1116;
+  --color-code-border:  #E6E3DB;
 
   /* ------------------------------------- focus, selection, status */
   --color-focus-ring:   #0A6E6B;
-  --color-selection-bg: #E6F0EF;
-  --color-success:      #1F7A4A;
-  --color-warn:         #B86E0E;
+  --color-selection-bg: #E1EFEC;
+  --color-success:      #1F7A4D;
+  --color-warn:         #B8520A;
   --color-danger:       #B92133;
 
   /* --------------------------------- Wong palette (color-blind safe) */
-  /* Use these for charts, plots, and data series. */
   --plot-1: #000000;
   --plot-2: #E69F00;
   --plot-3: #56B4E9;
@@ -91,7 +97,7 @@
   /* line heights */
   --leading-tight: 1.2;
   --leading-snug:  1.4;
-  --leading-base:  1.6;
+  --leading-base:  1.55;
   --leading-loose: 1.8;
 
   /* prose measure */
@@ -112,18 +118,18 @@
 
   /* ---------------------------------------------------------- radius */
   --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
   --radius-xl: 16px;
   --radius-pill: 9999px;
 
   /* ---------------------------------------------------------- shadow */
-  --shadow-1: 0 1px 2px rgba(20, 23, 26, 0.04),
-              0 1px 3px rgba(20, 23, 26, 0.06);
-  --shadow-2: 0 4px 8px rgba(20, 23, 26, 0.04),
-              0 8px 24px rgba(20, 23, 26, 0.08);
-  --shadow-3: 0 8px 16px rgba(20, 23, 26, 0.06),
-              0 24px 48px rgba(20, 23, 26, 0.12);
+  --shadow-1: 0 1px 2px rgba(14, 17, 22, 0.04),
+              0 1px 3px rgba(14, 17, 22, 0.06);
+  --shadow-2: 0 1px 0 rgba(0, 0, 0, 0.02),
+              0 12px 24px -16px rgba(14, 17, 22, 0.10);
+  --shadow-3: 0 8px 16px rgba(14, 17, 22, 0.06),
+              0 24px 48px rgba(14, 17, 22, 0.12);
 
   /* ---------------------------------------------------------- motion */
   --motion-instant: 0ms;
@@ -135,78 +141,8 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* layout */
-  --container-width: 1200px;
+  --container-width: 1240px;
   --container-narrow: 720px;
-}
-
-/* ============================================================ DARK MODE
- * Triggered by `data-theme="dark"` on <html>, set by a script that reads
- * `prefers-color-scheme` on first load and persists user choice.
- */
-[data-theme="dark"] {
-  --color-bg:           #0E1116;
-  --color-bg-subtle:    #161B22;
-  --color-bg-elevated:  #1C2128;
-  --color-border:       #2D333B;
-  --color-border-strong:#444C56;
-
-  --color-fg:           #E6EDF3;
-  --color-fg-muted:     #9BA3AE;
-  --color-fg-subtle:    #6E7681;
-
-  --color-accent:       #2DBAB5;
-  --color-accent-hover: #4FCFCB;
-  --color-accent-soft:  #1A2D2C;
-
-  --color-code-bg:      #161B22;
-  --color-code-fg:      #E6EDF3;
-  --color-code-border:  #2D333B;
-
-  --color-focus-ring:   #2DBAB5;
-  --color-selection-bg: #1A2D2C;
-  --color-success:      #3FB37F;
-  --color-warn:         #E0A24A;
-  --color-danger:       #F25E6E;
-
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3),
-              0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 4px 8px rgba(0, 0, 0, 0.3),
-              0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-3: 0 8px 16px rgba(0, 0, 0, 0.4),
-              0 24px 48px rgba(0, 0, 0, 0.5);
-}
-
-/* ============================================== Honor system preference
- * Default to system preference until the user explicitly toggles.
- * The toggle script sets data-theme="light" or data-theme="dark";
- * absence of that attribute means "follow system".
- */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-bg:           #0E1116;
-    --color-bg-subtle:    #161B22;
-    --color-bg-elevated:  #1C2128;
-    --color-border:       #2D333B;
-    --color-border-strong:#444C56;
-
-    --color-fg:           #E6EDF3;
-    --color-fg-muted:     #9BA3AE;
-    --color-fg-subtle:    #6E7681;
-
-    --color-accent:       #2DBAB5;
-    --color-accent-hover: #4FCFCB;
-    --color-accent-soft:  #1A2D2C;
-
-    --color-code-bg:      #161B22;
-    --color-code-fg:      #E6EDF3;
-    --color-code-border:  #2D333B;
-
-    --color-focus-ring:   #2DBAB5;
-    --color-selection-bg: #1A2D2C;
-    --color-success:      #3FB37F;
-    --color-warn:         #E0A24A;
-    --color-danger:       #F25E6E;
-  }
 }
 
 /* ===================================================== Reduced motion */
@@ -224,7 +160,7 @@
 /* ================================================= Selection styling */
 ::selection {
   background: var(--color-selection-bg);
-  color: var(--color-fg);
+  color: var(--color-accent-hover);
 }
 
 /* ===================================================== Focus visible */

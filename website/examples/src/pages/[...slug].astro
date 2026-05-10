@@ -1,5 +1,6 @@
 ---
 import { getCollection, render } from 'astro:content';
+import { Code } from 'astro:components';
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 export async function getStaticPaths() {
@@ -63,7 +64,7 @@ const sourceTrimmed = sourceText.replace(/^(\s*\/\/!.*\n)+\s*\n?/, '');
         ·
         <a href={entry.data.book_link} rel="noopener">Related book chapter</a>
       </p>
-      <pre><code class="language-rust">{sourceTrimmed}</code></pre>
+      <Code code={sourceTrimmed} lang="rust" theme="github-light" />
     </section>
   </article>
 </BaseLayout>
@@ -144,17 +145,15 @@ const sourceTrimmed = sourceText.replace(/^(\s*\/\/!.*\n)+\s*\n?/, '');
     margin: 0 0 var(--space-3);
   }
 
-  .meta pre {
-    background: var(--color-bg-subtle);
+  /* The Source code block is rendered by Astro's <Code> component,
+     which emits a Shiki-styled <pre> with inline background + per-token
+     colors. We just constrain the box. */
+  .meta :global(pre.astro-code) {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     padding: var(--space-4);
     overflow-x: auto;
     font-size: var(--text-sm);
     line-height: 1.55;
-  }
-
-  .meta code {
-    font-family: var(--font-mono);
   }
 </style>

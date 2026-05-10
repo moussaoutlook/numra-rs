@@ -7,17 +7,9 @@ const year = new Date().getFullYear();
     <div class="footer-grid">
       <div class="footer-brand">
         <img
-          class="footer-logo footer-logo-light"
+          class="footer-logo"
           src="/numra_logo_no_BG.svg"
           alt="Numra"
-          width="120"
-          height="40"
-        />
-        <img
-          class="footer-logo footer-logo-dark"
-          src="/numra_logo_white-text_no_BG.svg"
-          alt=""
-          aria-hidden="true"
           width="120"
           height="40"
         />
@@ -117,14 +109,7 @@ const year = new Date().getFullYear();
     text-decoration: underline;
   }
 
-  .footer-logo { height: auto; display: block; }
-  .footer-logo-dark { display: none; }
-  [data-theme="dark"] .footer-logo-light { display: none; }
-  [data-theme="dark"] .footer-logo-dark { display: block; }
-  @media (prefers-color-scheme: dark) {
-    html:not([data-theme="light"]) .footer-logo-light { display: none; }
-    html:not([data-theme="light"]) .footer-logo-dark { display: block; }
-  }
+  .footer-logo { height: 33px; width: auto; display: block; }
 
   .footer-bottom {
     padding-top: var(--space-5);
