@@ -18,6 +18,7 @@
 use crate::error::SolverError;
 use crate::problem::OdeSystem;
 use crate::solver::{Solver, SolverOptions, SolverResult, SolverStats};
+use crate::t_eval::{validate_grid, TEvalEmitter};
 use numra_core::Scalar;
 
 // ============================================================================
@@ -185,9 +186,18 @@ impl<S: Scalar> Solver<S> for Vern6 {
         // Statistics
         let mut stats = SolverStats::default();
 
-        // Solution storage
-        let mut t_out = vec![t0];
-        let mut y_out = y0.to_vec();
+        if let Some(grid) = options.t_eval.as_deref() {
+            validate_grid(grid, t0, tf)?;
+        }
+        let mut grid_emitter = options
+            .t_eval
+            .as_deref()
+            .map(|g| TEvalEmitter::new(g, direction));
+        let (mut t_out, mut y_out) = if grid_emitter.is_some() {
+            (Vec::new(), Vec::new())
+        } else {
+            (vec![t0], y0.to_vec())
+        };
 
         // Initial step size estimation
         problem.rhs(t, &y, &mut k[0..dim]);
@@ -353,17 +363,27 @@ impl<S: Scalar> Solver<S> for Vern6 {
 
             if err_norm <= S::ONE {
                 // Step accepted
-                t = t + h;
+                stats.n_accept += 1;
+
+                let t_new = t + h;
+                if let Some(ref mut emitter) = grid_emitter {
+                    // dy at t is k[0..dim] (FSAL'd from prev step / initial),
+                    // dy at t+h is k[8*dim..9*dim] (Vern6's c_9 = 1 stage).
+                    let (dy_start, dy_end_block) = k.split_at(dim);
+                    let dy_end = &dy_end_block[(8 - 1) * dim..8 * dim];
+                    emitter.emit_step(
+                        t, &y, dy_start, t_new, &y_new, dy_end, &mut t_out, &mut y_out,
+                    );
+                } else {
+                    t_out.push(t_new);
+                    y_out.extend_from_slice(&y_new);
+                }
+
+                t = t_new;
                 y.copy_from_slice(&y_new);
 
                 // FSAL: copy k9 (stage 8) to k1 (stage 0) for next step
                 k.copy_within(8 * dim..9 * dim, 0);
-
-                stats.n_accept += 1;
-
-                // Store output
-                t_out.push(t);
-                y_out.extend_from_slice(&y);
             } else {
                 stats.n_reject += 1;
             }
@@ -826,8 +846,6 @@ where
 
     let mut t = t0;
     let mut y = y0.to_vec();
-    let mut t_out = vec![t0];
-    let mut y_out = y0.to_vec();
 
     // Flat storage for stage vectors: k[s*dim + i] instead of k[s][i].
     // Avoids heap fragmentation from Vec<Vec<S>>.
@@ -835,6 +853,11 @@ where
     let mut y_stage = vec![S::ZERO; dim];
     let mut y_new = vec![S::ZERO; dim];
     let mut err = vec![S::ZERO; dim];
+    // Slope at the start of the next step. Held in a side buffer so we can
+    // Hermite-interpolate against it without disturbing k[0..dim] (still
+    // needed for stage computation in the in-flight step).
+    let mut dy_old = vec![S::ZERO; dim];
+    let mut dy_new = vec![S::ZERO; dim];
 
     let mut stats = SolverStats::default();
 
@@ -846,6 +869,18 @@ where
     let h_max = options.h_max.min((tf - t0).abs());
 
     let direction = if tf > t0 { S::ONE } else { -S::ONE };
+    if let Some(grid) = options.t_eval.as_deref() {
+        validate_grid(grid, t0, tf)?;
+    }
+    let mut grid_emitter = options
+        .t_eval
+        .as_deref()
+        .map(|g| TEvalEmitter::new(g, direction));
+    let (mut t_out, mut y_out) = if grid_emitter.is_some() {
+        (Vec::new(), Vec::new())
+    } else {
+        (vec![t0], y0.to_vec())
+    };
     let mut step_count = 0_usize;
 
     while (tf - t) * direction > S::from_f64(1e-10) * (tf - t0).abs() {
@@ -903,21 +938,32 @@ where
         if err_norm <= S::ONE {
             stats.n_accept += 1;
 
-            t = t + h;
-            y.copy_from_slice(&y_new);
-            // FSAL would copy k[STAGES-1] to k[0] here if applicable
+            let t_new = t + h;
+            // Snapshot dy at the start (k[0..dim] still holds slope at t),
+            // then compute dy at the end of the step. We need both for
+            // Hermite interpolation in t_eval mode and we'd recompute the
+            // end slope anyway for the next step's k[0..dim].
+            dy_old.copy_from_slice(&k[0..dim]);
+            problem.rhs(t_new, &y_new, &mut dy_new);
+            stats.n_eval += 1;
 
-            t_out.push(t);
-            y_out.extend_from_slice(&y);
+            if let Some(ref mut emitter) = grid_emitter {
+                emitter.emit_step(
+                    t, &y, &dy_old, t_new, &y_new, &dy_new, &mut t_out, &mut y_out,
+                );
+            } else {
+                t_out.push(t_new);
+                y_out.extend_from_slice(&y_new);
+            }
+
+            t = t_new;
+            y.copy_from_slice(&y_new);
+            k[0..dim].copy_from_slice(&dy_new);
 
             let err_safe = err_norm.max(S::from_f64(1e-10));
             let fac = safety * err_safe.powf(-S::ONE / order_f);
             let fac = fac.min(fac_max).max(fac_min);
             h = h * fac;
-
-            // Recompute k[0] for next step (flat indexing)
-            problem.rhs(t, &y, &mut k[0..dim]);
-            stats.n_eval += 1;
         } else {
             stats.n_reject += 1;
 
@@ -963,14 +1009,14 @@ where
 
     let mut t = t0;
     let mut y = y0.to_vec();
-    let mut t_out = vec![t0];
-    let mut y_out = y0.to_vec();
 
     // Flat storage for 13 stage vectors: k[s*dim + i] instead of k[s][i].
     let mut k = vec![S::ZERO; 13 * dim];
     let mut y_stage = vec![S::ZERO; dim];
     let mut y_new = vec![S::ZERO; dim];
     let mut err = vec![S::ZERO; dim];
+    let mut dy_old = vec![S::ZERO; dim];
+    let mut dy_new = vec![S::ZERO; dim];
 
     let mut stats = SolverStats::default();
 
@@ -981,6 +1027,18 @@ where
     let h_max = options.h_max.min((tf - t0).abs());
 
     let direction = if tf > t0 { S::ONE } else { -S::ONE };
+    if let Some(grid) = options.t_eval.as_deref() {
+        validate_grid(grid, t0, tf)?;
+    }
+    let mut grid_emitter = options
+        .t_eval
+        .as_deref()
+        .map(|g| TEvalEmitter::new(g, direction));
+    let (mut t_out, mut y_out) = if grid_emitter.is_some() {
+        (Vec::new(), Vec::new())
+    } else {
+        (vec![t0], y0.to_vec())
+    };
     let mut step_count = 0_usize;
 
     while (tf - t) * direction > S::from_f64(1e-10) * (tf - t0).abs() {
@@ -1198,19 +1256,28 @@ where
         if err_norm <= S::ONE {
             stats.n_accept += 1;
 
-            t = t + h;
-            y.copy_from_slice(&y_new);
+            let t_new = t + h;
+            dy_old.copy_from_slice(&k[0..dim]);
+            problem.rhs(t_new, &y_new, &mut dy_new);
+            stats.n_eval += 1;
 
-            t_out.push(t);
-            y_out.extend_from_slice(&y);
+            if let Some(ref mut emitter) = grid_emitter {
+                emitter.emit_step(
+                    t, &y, &dy_old, t_new, &y_new, &dy_new, &mut t_out, &mut y_out,
+                );
+            } else {
+                t_out.push(t_new);
+                y_out.extend_from_slice(&y_new);
+            }
+
+            t = t_new;
+            y.copy_from_slice(&y_new);
+            k[0..dim].copy_from_slice(&dy_new);
 
             let err_safe = err_norm.max(S::from_f64(1e-10));
             let fac = safety * err_safe.powf(S::from_f64(-1.0 / 9.0));
             let fac = fac.min(fac_max).max(fac_min);
             h = h * fac;
-
-            problem.rhs(t, &y, &mut k[0..dim]);
-            stats.n_eval += 1;
         } else {
             stats.n_reject += 1;
 

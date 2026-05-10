@@ -24,6 +24,7 @@ use crate::events::{find_event_time, Event, EventAction};
 use crate::problem::OdeSystem;
 use crate::solver::{Solver, SolverOptions, SolverResult, SolverStats};
 use crate::step_control::{PIController, StepController};
+use crate::t_eval::{validate_grid, TEvalEmitter};
 use numra_core::Scalar;
 
 /// Dormand-Prince 5(4) solver.
@@ -158,6 +159,18 @@ impl<S: Scalar> Solver<S> for DoPri5 {
         // Direction of integration
         let direction = if tf >= t0 { S::ONE } else { -S::ONE };
 
+        // Optional user-requested output grid. When set, the solver emits
+        // (t, y) only at these times, interpolated from each accepted step
+        // via Hermite cubic. Validated up front so misconfigured inputs
+        // surface before any RHS calls.
+        if let Some(grid) = options.t_eval.as_deref() {
+            validate_grid(grid, t0, tf)?;
+        }
+        let mut grid_emitter = options
+            .t_eval
+            .as_deref()
+            .map(|g| TEvalEmitter::new(g, direction));
+
         // Initialize step size controller
         let mut controller = PIController::for_order(5);
 
@@ -197,9 +210,13 @@ impl<S: Scalar> Solver<S> for DoPri5 {
             Vec::new()
         };
 
-        // Output storage
-        let mut t_out = vec![t0];
-        let mut y_out = y0.to_vec();
+        // Output storage. In t_eval mode, the result vectors start empty
+        // and are populated only at the requested times by `grid_emitter`.
+        let (mut t_out, mut y_out) = if grid_emitter.is_some() {
+            (Vec::new(), Vec::new())
+        } else {
+            (vec![t0], y0.to_vec())
+        };
 
         // Event tracking
         let has_events = !options.events.is_empty();
@@ -467,16 +484,25 @@ impl<S: Scalar> Solver<S> for DoPri5 {
                     }
                 }
 
+                // Store output. In t_eval mode, emit Hermite-interpolated
+                // values at any requested grid points covered by this step;
+                // otherwise push the natural step endpoint as before. Both
+                // paths are closed-form in (t, y, k1, y_new, k7), which we
+                // already have in scope.
+                let t_new = t + h;
+                if let Some(ref mut emitter) = grid_emitter {
+                    emitter.emit_step(t, &y, &k1, t_new, &y_new, &k7, &mut t_out, &mut y_out);
+                } else {
+                    t_out.push(t_new);
+                    y_out.extend_from_slice(&y_new);
+                }
+
                 // Update state
-                t = t + h;
+                t = t_new;
                 y.copy_from_slice(&y_new);
 
                 // FSAL: k7 becomes k1
                 k1.copy_from_slice(&k7);
-
-                // Store output
-                t_out.push(t);
-                y_out.extend_from_slice(&y);
 
                 step_count += 1;
             } else {

@@ -30,7 +30,10 @@ pub struct SolverOptions<S: Scalar> {
     pub h_min: S,
     /// Maximum number of steps
     pub max_steps: usize,
-    /// Save solution at these times (None = save all steps)
+    /// Output grid in the integration direction. When `Some`, each solver
+    /// returns exactly these `(t, y)` pairs (Hermite cubic interpolated
+    /// from accepted step endpoints; endpoints are reproduced bit-exact).
+    /// When `None`, the natural adaptive step grid is returned.
     pub t_eval: Option<Vec<S>>,
     /// Enable dense output
     pub dense_output: bool,

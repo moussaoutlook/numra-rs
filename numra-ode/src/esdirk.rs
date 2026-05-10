@@ -24,6 +24,7 @@ use numra_linalg::{DenseMatrix, LUFactorization, Matrix};
 use crate::error::SolverError;
 use crate::problem::OdeSystem;
 use crate::solver::{Solver, SolverOptions, SolverResult, SolverStats};
+use crate::t_eval::{validate_grid, TEvalEmitter};
 
 // ============================================================================
 // ESDIRK3(2) - 3 stages, 2nd order with embedded 1st order
@@ -253,8 +254,24 @@ where
 
     let mut t = t0;
     let mut y = y0.to_vec();
-    let mut t_out = vec![t0];
-    let mut y_out = y0.to_vec();
+
+    let direction_init = if tf > t0 { S::ONE } else { -S::ONE };
+    if let Some(grid) = options.t_eval.as_deref() {
+        validate_grid(grid, t0, tf)?;
+    }
+    let mut grid_emitter = options
+        .t_eval
+        .as_deref()
+        .map(|g| TEvalEmitter::new(g, direction_init));
+    let (mut t_out, mut y_out) = if grid_emitter.is_some() {
+        (Vec::new(), Vec::new())
+    } else {
+        (vec![t0], y0.to_vec())
+    };
+    // Slope at the start of the current step. f0 holds the slope at the
+    // current accepted state and is refreshed inside the accept branch; we
+    // snapshot it here before that overwrite for the Hermite emitter.
+    let mut dy_old_buf = vec![S::ZERO; dim];
 
     let mut k: Vec<Vec<S>> = (0..STAGES).map(|_| vec![S::ZERO; dim]).collect();
     let mut y_stage = vec![S::ZERO; dim];
@@ -279,7 +296,7 @@ where
     let mut need_jac = true;
     let mut jac_h = h;
 
-    let direction = if tf > t0 { S::ONE } else { -S::ONE };
+    let direction = direction_init;
     let mut step_count = 0_usize;
     let mut consecutive_failures = 0_usize;
 
@@ -368,15 +385,31 @@ where
             stats.n_accept += 1;
             consecutive_failures = 0;
 
-            t = t + h;
-            y.copy_from_slice(&y_new);
-
-            problem.rhs(t, &y, &mut f0);
+            let t_new = t + h;
+            // Save start-of-step slope before f0 is refreshed to the new t.
+            dy_old_buf.copy_from_slice(&f0);
+            problem.rhs(t_new, &y_new, &mut f0);
             stats.n_eval += 1;
-            k[0].copy_from_slice(&f0);
 
-            t_out.push(t);
-            y_out.extend_from_slice(&y);
+            if let Some(ref mut emitter) = grid_emitter {
+                emitter.emit_step(
+                    t,
+                    &y,
+                    &dy_old_buf,
+                    t_new,
+                    &y_new,
+                    &f0,
+                    &mut t_out,
+                    &mut y_out,
+                );
+            } else {
+                t_out.push(t_new);
+                y_out.extend_from_slice(&y_new);
+            }
+
+            t = t_new;
+            y.copy_from_slice(&y_new);
+            k[0].copy_from_slice(&f0);
 
             let err_safe = err_norm.max(S::EPSILON * S::from_f64(100.0));
             let fac = safety * err_safe.powf(-S::ONE / order_f);

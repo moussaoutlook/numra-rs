@@ -19,6 +19,7 @@
 use crate::error::SolverError;
 use crate::problem::OdeSystem;
 use crate::solver::{Solver, SolverOptions, SolverResult, SolverStats};
+use crate::t_eval::{validate_grid, TEvalEmitter};
 use numra_core::Scalar;
 
 /// Tsit5 solver: Tsitouras 5(4) method.
@@ -111,8 +112,20 @@ impl<S: Scalar> Solver<S> for Tsit5 {
 
         let mut t = t0;
         let mut y = y0.to_vec();
-        let mut t_out = vec![t0];
-        let mut y_out = y0.to_vec();
+
+        let direction = if tf > t0 { S::ONE } else { -S::ONE };
+        if let Some(grid) = options.t_eval.as_deref() {
+            validate_grid(grid, t0, tf)?;
+        }
+        let mut grid_emitter = options
+            .t_eval
+            .as_deref()
+            .map(|g| TEvalEmitter::new(g, direction));
+        let (mut t_out, mut y_out) = if grid_emitter.is_some() {
+            (Vec::new(), Vec::new())
+        } else {
+            (vec![t0], y0.to_vec())
+        };
 
         // Stage derivatives
         let mut k1 = vec![S::ZERO; dim];
@@ -135,7 +148,6 @@ impl<S: Scalar> Solver<S> for Tsit5 {
         let h_min = options.h_min;
         let h_max = options.h_max.min((tf - t0).abs());
 
-        let direction = if tf > t0 { S::ONE } else { -S::ONE };
         let mut step_count = 0_usize;
 
         while (tf - t) * direction > S::from_f64(1e-10) * (tf - t0).abs() {
@@ -236,12 +248,17 @@ impl<S: Scalar> Solver<S> for Tsit5 {
                 // Accept step
                 stats.n_accept += 1;
 
-                t = t + h;
+                let t_new = t + h;
+                if let Some(ref mut emitter) = grid_emitter {
+                    emitter.emit_step(t, &y, &k1, t_new, &y_new, &k7, &mut t_out, &mut y_out);
+                } else {
+                    t_out.push(t_new);
+                    y_out.extend_from_slice(&y_new);
+                }
+
+                t = t_new;
                 y.copy_from_slice(&y_new);
                 k1.copy_from_slice(&k7); // FSAL
-
-                t_out.push(t);
-                y_out.extend_from_slice(&y);
 
                 // New step size for 5th order method: exponent = -1/(p+1) = -1/6
                 let err_safe = err_norm.max(S::from_f64(1e-10));

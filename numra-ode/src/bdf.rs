@@ -76,6 +76,7 @@ use numra_linalg::{DenseMatrix, LUFactorization, Matrix};
 use crate::error::SolverError;
 use crate::problem::OdeSystem;
 use crate::solver::{Solver, SolverOptions, SolverResult, SolverStats};
+use crate::t_eval::{validate_grid, TEvalEmitter};
 
 /// BDF / NDF solver for stiff ODEs and index-1 DAEs (orders 1-5).
 #[derive(Clone, Debug, Default)]
@@ -448,10 +449,30 @@ impl Bdf {
         let mut stats = SolverStats::default();
 
         let mut t = t0;
-        let mut t_out = vec![t0];
-        let mut y_out = y0.to_vec();
-
         let direction = if tf > t0 { S::ONE } else { -S::ONE };
+
+        if let Some(grid) = options.t_eval.as_deref() {
+            validate_grid(grid, t0, tf)?;
+        }
+        let mut grid_emitter = options
+            .t_eval
+            .as_deref()
+            .map(|g| TEvalEmitter::new(g, direction));
+        let (mut t_out, mut y_out) = if grid_emitter.is_some() {
+            (Vec::new(), Vec::new())
+        } else {
+            (vec![t0], y0.to_vec())
+        };
+        // Slopes at the previous accepted t (start of step) and the new t,
+        // needed by the Hermite interpolant in t_eval mode. BDF doesn't keep
+        // f(t, y) hot between steps, so we do explicit RHS evaluations only
+        // when a grid is supplied.
+        let mut dy_old_buf = vec![S::ZERO; dim];
+        let mut dy_new_buf = vec![S::ZERO; dim];
+        if grid_emitter.is_some() {
+            problem.rhs(t0, y0, &mut dy_old_buf);
+            stats.n_eval += 1;
+        }
 
         // ---- Initial RHS, step size, and divided differences ----
         let mut f_eval = vec![S::ZERO; dim];
@@ -699,6 +720,14 @@ impl Bdf {
             // --- Commit accepted step ---
             stats.n_accept += 1;
             n_equal_steps += 1;
+            let t_old = t;
+            // Snapshot the old state before the divided-differences update
+            // overwrites D[0]; needed by the Hermite interpolant.
+            let y_old_snapshot = if grid_emitter.is_some() {
+                Some(d_arr[0].clone())
+            } else {
+                None
+            };
             t = t + h_abs_used * direction;
             h_abs = h_abs_used;
 
@@ -733,8 +762,25 @@ impl Bdf {
                 ok
             });
 
-            t_out.push(t);
-            y_out.extend_from_slice(&d_arr[0]);
+            if let Some(ref mut emitter) = grid_emitter {
+                problem.rhs(t, &d_arr[0], &mut dy_new_buf);
+                stats.n_eval += 1;
+                let y_old = y_old_snapshot.as_deref().unwrap();
+                emitter.emit_step(
+                    t_old,
+                    y_old,
+                    &dy_old_buf,
+                    t,
+                    &d_arr[0],
+                    &dy_new_buf,
+                    &mut t_out,
+                    &mut y_out,
+                );
+                dy_old_buf.copy_from_slice(&dy_new_buf);
+            } else {
+                t_out.push(t);
+                y_out.extend_from_slice(&d_arr[0]);
+            }
 
             // Mark Jacobian as stale.
             current_jac = false;

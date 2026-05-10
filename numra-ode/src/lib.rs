@@ -84,6 +84,7 @@ pub mod radau5;
 pub mod sensitivity;
 pub mod solver;
 pub mod step_control;
+pub mod t_eval;
 pub mod tsit5;
 pub mod uncertainty;
 pub mod verner;

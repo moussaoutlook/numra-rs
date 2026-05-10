@@ -76,6 +76,7 @@ use numra_linalg::{DenseMatrix, LUFactorization, Matrix};
 use crate::error::SolverError;
 use crate::problem::OdeSystem;
 use crate::solver::{Solver, SolverOptions, SolverResult, SolverStats};
+use crate::t_eval::{validate_grid, TEvalEmitter};
 
 /// Radau5 solver for stiff ODEs.
 #[derive(Clone, Debug, Default)]
@@ -186,8 +187,22 @@ impl<S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField> Solver<
 
         let mut t = t0;
         let mut y = y0.to_vec();
-        let mut t_out = vec![t0];
-        let mut y_out = y0.to_vec();
+
+        let direction_init = if tf > t0 { S::ONE } else { -S::ONE };
+        if let Some(grid) = options.t_eval.as_deref() {
+            validate_grid(grid, t0, tf)?;
+        }
+        let mut grid_emitter = options
+            .t_eval
+            .as_deref()
+            .map(|g| TEvalEmitter::new(g, direction_init));
+        let (mut t_out, mut y_out) = if grid_emitter.is_some() {
+            (Vec::new(), Vec::new())
+        } else {
+            (vec![t0], y0.to_vec())
+        };
+        // Buffer holding f(t_old, y_old) right before output emission.
+        let mut dy_old_buf = vec![S::ZERO; dim];
 
         // Working arrays
         let mut f0 = vec![S::ZERO; dim];
@@ -458,14 +473,32 @@ impl<S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField> Solver<
                 h_abs_old = Some(h.abs());
                 err_norm_old = Some(err_norm);
 
-                t = t + h;
-                y.copy_from_slice(&y_new);
-                t_out.push(t);
-                y_out.extend_from_slice(&y);
-
-                // FIX 8: refresh f0 for the next step's error estimator.
-                problem.rhs(t, &y, &mut f0);
+                let t_new = t + h;
+                // Save the slope at the start of the step before we
+                // overwrite f0 with the slope at the end (used both for the
+                // next-step error estimator and Hermite interpolation).
+                dy_old_buf.copy_from_slice(&f0);
+                problem.rhs(t_new, &y_new, &mut f0);
                 stats.n_eval += 1;
+
+                if let Some(ref mut emitter) = grid_emitter {
+                    emitter.emit_step(
+                        t,
+                        &y,
+                        &dy_old_buf,
+                        t_new,
+                        &y_new,
+                        &f0,
+                        &mut t_out,
+                        &mut y_out,
+                    );
+                } else {
+                    t_out.push(t_new);
+                    y_out.extend_from_slice(&y_new);
+                }
+
+                t = t_new;
+                y.copy_from_slice(&y_new);
 
                 first = false;
                 reject = false;
