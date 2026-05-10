@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-08.
+Last updated: 2026-05-10.
 
 ## Recently retired
 
@@ -259,6 +259,101 @@ so the implicit path is uniformly preferable on stiff PDEs. A user
 who picks the wrong solver loses more wall-clock today than they did
 before — auto-detection has more to recover.
 
+### F-LEAK: Generify foundational code over `Scalar`
+
+**Status**: scoped, not started. Surfaced 2026-05-10 by the
+foundation-pass verification (finding B1).
+
+**What's there today**: three concrete-`f64` leaks in foundation-
+adjacent code that block the `Scalar` story end-to-end:
+
+1. `numra-autodiff` reverse mode — `tape::Tape::var(value: f64)`
+   (`tape.rs:67`), `Tape::gradient` (`tape.rs:122`),
+   `Tape::jacobian` (`tape.rs:149`); `reverse::Var::cst(f64)`
+   (`reverse.rs:57`), `Var::powf(f64)` (`reverse.rs:212`); `grad`,
+   `jacobian_reverse`, `hessian` free functions
+   (`reverse.rs:572, 599, 630`). Forward-mode `Dual<S>` is already
+   generic; only reverse mode is concrete.
+2. `numra-linalg` general (non-symmetric) eigendecomposition — split
+   into `impl EigenDecomposition<f64>` (`eigen.rs:63`) and
+   `impl EigenDecomposition<f32>` (`eigen.rs:90`); no generic blanket.
+   Cause: faer's `complex_native::c64`/`c32` for the underlying
+   Hessenberg routine. External `Scalar` impls get nothing.
+3. `numra-signal` filter design — `butter(order: usize, cutoff: f64,
+   fs: f64) -> Result<SosFilter<f64>, _>` (`filter_design.rs:33`);
+   `instantaneous_frequency<S: Scalar>(x: &[S], fs: f64)`
+   (`hilbert.rs:104`) leaks `fs` through.
+
+**What needs doing**: generify each site over `S: Scalar`, or, where
+the underlying engine forces concretion (eigen/faer), document the
+faer constraint in rustdoc and consider a `from_f64`/`to_f64` adapter
+for the API surface so generic pipelines aren't broken at the boundary.
+
+Recorded as one consolidated follow-up rather than three separate
+entries because the three sites share the same generification approach
+and benefit from being addressed as a single sweep.
+
+### F-FD-STEP: Reconcile FD step formula between `OdeSystem` and `ParametricOdeSystem` defaults
+
+**Status**: scoped, not started. Surfaced 2026-05-10 by the
+foundation-pass verification (finding C4).
+
+**What's there today**: two foundation traits with default FD-Jacobian
+bodies that use different step formulas:
+
+- `OdeSystem::jacobian` (`numra-ode/src/problem.rs:24`): `eps =
+  S::from_f64(1e-8)`, `h = eps * (1 + |y_j|)`. Hardcoded `1e-8`.
+- `ParametricOdeSystem::jacobian_y` and `_p` (`numra-ode/src/sensitivity.rs:182,
+  210`): `h_factor = S::EPSILON.sqrt()`, `h = h_factor * (1 + |y|)`.
+  Generic-precision-aware.
+
+The `1e-8` `OdeSystem` formula is below `f32::EPSILON ≈ 1.19e-7`,
+which means the default `OdeSystem::jacobian` FD path on `f32` is
+silently useless — the perturbation gets quantised away. The
+`Signal::eval_derivative` default (`numra-core/src/signal.rs`) has
+the same `1e-8` problem.
+
+**What needs doing**:
+1. Decide whether `OdeSystem::jacobian` and `Signal::eval_derivative`
+   should adopt `S::EPSILON.sqrt()` (matching `ParametricOdeSystem`)
+   or some other generic-precision formula.
+2. If yes, change the defaults — measure that no regression happens
+   on `f64` workloads (`bench_jacobian_unification` is the right
+   harness). The Hairer-Wanner reference and standard textbook
+   formula is `sqrt(eps_mach) * (1 + |y_j|)`, so the change aligns
+   the workspace with the standard.
+3. Update the `OdeSystem::jacobian` rustdoc and the relevant CHANGELOG
+   entry; update the §3.3 documented "Known limitation" note in
+   `docs/architecture/foundation-specification.md`.
+4. Add an `f32` regression test covering the FD path so the silent-
+   uselessness mode is pinned out.
+
+### F-SOLVER-FIELDS: Clarify or remove `Bdf::max_order` / `Auto::*` fields the static `Solver::solve` cannot read
+
+**Status**: scoped, not started. Surfaced 2026-05-10 by the
+foundation-pass verification (finding C5).
+
+**What's there today**: `Solver::solve` (`numra-ode/src/solver.rs:291`)
+is a static method (no `&self`). `DoPri5`, `Tsit5`, `Vern6/7/8`,
+`Radau5`, `Esdirk32/43/54` are zero-size unit structs and don't carry
+state — fine. But:
+
+- `Bdf { max_order: usize, min_order: usize }` (`numra-ode/src/bdf.rs:83`)
+  has fields, with builder methods `Bdf::new()`, `Bdf::with_max_order(...)`,
+  `Bdf::fixed_order(...)`. The fields cannot be read from inside the
+  static `Solver::solve` because no `&self` is passed.
+- `Auto { ... }` (`numra-ode/src/auto.rs:119`) — same shape.
+
+So either (a) the fields are dead code, (b) the builders are sketched
+but the trait method needs a reshape to `fn solve(&self, ...)` to use
+them, or (c) there's an internal adapter I missed.
+
+**What needs doing**: investigate and either delete the fields/builders
+(if dead), wire them through `SolverOptions` (if they encode caller
+preferences), or reshape `Solver::solve` to take `&self` (if the fields
+encode genuine per-solver state). Option (c) is the most foundation-
+affecting; pin the design before changing the trait.
+
 ---
 
 ## PDE
@@ -421,6 +516,205 @@ The `/stability` page promises a deprecation cycle. Until we actually
 sub-optimal API choice (candidate: the `SolverOptions` builder, which
 mixes f64 and S generic awkwardly) and run it through deprecation →
 removal across two minor versions. Validates the policy in practice.
+
+### F-ERR: Complete the `NumraError` `From`-impl coverage
+
+**Status**: scoped, not started. Surfaced 2026-05-10 by the
+foundation-pass verification (finding B5). Closes Foundation
+Specification §7 open-question 6.
+
+**What's there today**: `numra_core::NumraError`
+(`numra-core/src/error.rs:16`) is the workspace error type and is
+re-exported from the facade (`numra/src/lib.rs:43`). Five fallible
+crates have `From<...> for NumraError` impls (`numra-interp`,
+`numra-integrate`, `numra-special`, `numra-stats`, plus the
+`numra-core` sub-errors). Five fallible crates do **not**:
+
+- `numra-ode` — `SolverError` (`numra-ode/src/error.rs:12`). The
+  highest-leverage gap: every cross-crate `?` from the ODE world
+  fails to land in `NumraError` without manual conversion.
+- `numra-optim` — `OptimError` (`numra-optim/src/error.rs:11`).
+- `numra-ocp` — `OcpError` (`numra-ocp/src/error.rs:11`).
+- `numra-fit` — `FitError` (`numra-fit/src/error.rs:11`).
+- `numra-signal` — `SignalError` (`numra-signal/src/error.rs:11`).
+
+The composability contract item 3 reads "Errors compose into the
+workspace error type" — failed today by 10 of 21 capabilities.
+
+**What needs doing**: for each missing crate, add the `From<MyError>
+for NumraError` impl. The mechanical work is small (one impl per
+crate); the design work is naming the `NumraError` variant for each
+domain and deciding whether to expand `NumraError`'s enum or use a
+catch-all `Other(Box<dyn Error>)`-style escape hatch. The
+non-mechanical part is choosing names and ensuring the conversion
+preserves the diagnostic detail downstream consumers want.
+
+Order the work so `numra-ode::SolverError` is first (highest
+consumer count); `numra-optim::OptimError` second.
+
+### F-SENDSYNC: Audit & remove defensive `Send + Sync` on foundation traits
+
+**Status**: scoped, not started. Surfaced 2026-05-10 by the
+foundation-pass verification (finding B8 / C2 / C6).
+
+**What's there today**: defensive `Send + Sync` bounds on five
+foundation/quasi-foundation traits, plus closure-type-alias virality
+in PDE/OCP:
+
+- `Scalar: ... + Send + Sync + 'static` (`numra-core/src/scalar.rs:58–60`).
+- `Signal<S>: Send + Sync` (`numra-core/src/signal.rs:51`).
+- `EventFunction<S>: Send + Sync` (`numra-ode/src/events.rs:66`). Note
+  that `Arc<dyn EventFunction<S>>` is used in `SolverOptions::events`
+  but `Arc<T>` doesn't require `T: Send + Sync` unless the `Arc` is
+  sent across threads.
+- `NonlinearSystem<S>: Send + Sync` (`numra-nonlinear/src/newton.rs:100`).
+- `SdeSystem<S>: Sync` (`numra-sde/src/system.rs:27`) — asymmetric
+  (only one of the two bounds).
+- Closure aliases requiring `+ Send + Sync + 'static` in
+  `numra-pde/src/{mol2d.rs:19,84, mol3d.rs:19,84, equations2d.rs:58,
+  equations3d.rs:60, mol2d_parametric.rs:44,96,
+  mol3d_parametric.rs:17,57}` and `numra-ocp/src/{param_est.rs:22,104,
+  shooting.rs:29-38, collocation.rs:32-41}`.
+
+The recent `ParametricOdeSystem` decision (no `Send + Sync` defensive
+bounds, call-site escalation pattern) is the precedent for the
+direction. These older bounds predate the principle.
+
+**What needs doing**: for each site, decide whether (a) a real parallel
+consumer requires the bound (document the consumer), or (b) the bound
+is defensive (drop it). Loosening trait bounds is non-breaking, so the
+removal is safe; the work is the audit, not the change. Bundle the
+`Scalar` bound with §3.1's documented-rationale follow-up (either
+keep with rustdoc explaining why, or drop).
+
+### F-OPTS: Document SDE/FDE/IDE options divergence from `SolverOptions`
+
+**Status**: scoped, not started. Surfaced 2026-05-10 by the
+foundation-pass verification (finding B6). Low priority; documentation
+only.
+
+**What's there today**: `numra-sde`, `numra-fde`, `numra-ide` have
+their own options structs (predating the §2.5 principle that new
+solver families must justify divergence from `SolverOptions`). Their
+rustdoc does not currently explain why they diverge — typically because
+the principle didn't exist when they were written.
+
+**What needs doing**: add a one-paragraph rustdoc note to each
+divergent options struct explaining the rationale (fixed-step
+algorithm, distinct adaptivity story, scalar-vs-Wiener noise time
+control, etc.). Optionally consider whether the divergence is still
+justified or whether one of these can be retro-fitted onto
+`SolverOptions`.
+
+### F-MATRIX-SHAPE: Decide whether `SparseMatrix` joins `Matrix` trait or stays separate
+
+**Status**: scoped, not started. Surfaced 2026-05-10 by the
+foundation-pass verification (finding C3). Design question, not
+mechanical work.
+
+**What's there today**: `numra-linalg::Matrix<S>`
+(`matrix.rs:15`) has one workspace impl, `DenseMatrix<S>` (with the
+faer-bound `S: Scalar + SimpleEntity + Conjugate<Canonical = S> +
+ComplexField`). `SparseMatrix<S>` (`sparse.rs`) is a separate concrete
+type that does **not** implement `Matrix<S>`. Sparse direct solvers
+(`SparseLU<S>`) currently convert to dense internally
+(`sparse.rs:148–149`).
+
+The §3.2 design claim "Foundation is dense + sparse (CSC)" is
+contradicted by the actual shape — sparse is parallel to the trait,
+not within it. The Foundation Spec revision moves this question into
+§7 (open questions, item 5).
+
+**What needs doing**: decide one of:
+- (a) Sparse joins the `Matrix` trait. Likely requires a `solve`
+  method that can dispatch on storage layout, an iteration story,
+  and probably a separator at the trait level for which operations
+  make sense (matvec yes, dense indexing no).
+- (b) Sparse stays separate; the trait stays dense-only and the
+  rustdoc says so explicitly. Solvers that need to dispatch across
+  both write their own enum or generic abstraction at the consumer
+  layer.
+
+This becomes urgent when a sparse-aware iterative solver path lands
+that needs to call `solve` polymorphically over dense and sparse.
+Until then it's a clarification, not a blocker.
+
+### F-INTEROP-Q: Backfill interop tests covering `?`-propagation, non-`f64` Scalar, and capabilities currently missing an interop edge
+
+**Status**: scoped, not started. Surfaced 2026-05-10 by the
+foundation-pass verification (findings B5, D4, D6, J1).
+
+**What's there today**: `numra/tests/interop_workflows.rs` contains
+six workflow tests. Issues:
+
+- **No test exercises cross-crate `?`-propagation.** Every test uses
+  `.unwrap()` and returns `()`. The contract item 3 property is
+  literally untested, even where the underlying impls do compose
+  (e.g. `numra-interp::InterpError → NumraError`).
+- **Every test is monomorphised at `f64`.** No interop test exercises
+  the principle that composition preserves genericity. A user trying
+  to compose at `f32` has no test telling them whether their pipeline
+  holds together.
+- **Capabilities lacking an interop edge entirely**: SDE, DDE, FDE,
+  IDE, SPDE, Linalg-as-a-capability, Autodiff-reverse, Special. Each
+  fails contract item 7.
+
+**What needs doing**:
+1. Add at least one interop test that returns `NumraResult<()>` and
+   uses `?` across at least two crate boundaries. Pick the cleanest
+   already-converting pair (e.g. `numra-integrate` + `numra-stats`)
+   so the test demonstrates the value without first requiring F-ERR.
+2. After F-ERR lands, expand to cover the formerly-missing pairs.
+3. Add at least one interop test with `S = f32` exercising a
+   non-trivial pipeline (e.g. ODE → Interp → Quad). Catches the
+   silent-`f32`-FD-step issue (F-FD-STEP) and any concrete-`f64`
+   leak that would otherwise hide in monomorphisation.
+4. Add interop tests for the missing capabilities — one per. SDE
+   into Stats; DDE into Interp; etc. The audit's roadmap §4 has the
+   pairing logic.
+
+This is one consolidated follow-up because the work shape is the
+same for each (write a test in `interop_workflows.rs` or sibling
+file). Sequence: (1) before/alongside F-ERR; (3) before/alongside
+F-FD-STEP; (4) over time as capabilities are touched.
+
+### F-SENS-DOWNSTREAM: Decide downstream consumers for `SensitivityResult`
+
+**Status**: scoped, not started. Surfaced 2026-05-10 by the
+foundation-pass verification (finding H2 — composability contract
+worked example, item 5).
+
+**What's there today**: `numra-ode::SensitivityResult<S>` is
+produced by `solve_forward_sensitivity{,_with}`
+(`numra-ode/src/sensitivity.rs:831, 934`) and re-exported by
+`numra-ocp::forward_sensitivity` (`numra-ocp/src/sensitivity.rs:73`).
+**No workspace site consumes it as an input.** The composability
+contract draft worked example claimed two outgoing edges
+(`LevenbergMarquardt::fit`, `solve_trajectory`) but neither exists in
+that direction in the code. The capability ships with no in-workspace
+downstream story for its primary result type.
+
+**What needs doing**: the sensitivity capability is incomplete until
+at least one downstream consumer exists. Candidates worth scoping:
+
+- **Parameter estimation** (likely highest value). A `param_est_with_sensitivity(...)
+  -> ParamEstResult` API that takes a `SensitivityResult` produced
+  externally and feeds it into a Levenberg-Marquardt loop without
+  re-solving — useful for warm-starting and for users who want to
+  bring their own sensitivity routine.
+- **Uncertainty propagation**. A `propagate_uncertainty(SensitivityResult,
+  ParamCovariance) -> StateUncertainty` API that turns sensitivity
+  outputs into parameter-covariance-driven state uncertainty. Naturally
+  pairs with `numra-core::uncertainty`.
+- **Identifiability analysis**. A `identifiability(SensitivityResult)
+  -> IdentifiabilityReport` that reports per-parameter rank deficiency,
+  collinearity, and informativeness — the classical use case for forward
+  sensitivity.
+
+Each candidate is its own piece of work; this follow-up exists to name
+the question and to make the worked-example ✗ visible until at least
+one of the downstream consumers ships. Once one ships, the contract
+worked example flips from ✗ to ✓ and this follow-up is retired.
 
 ---
 
