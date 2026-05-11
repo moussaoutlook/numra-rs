@@ -83,11 +83,11 @@ const capCategories = [
     name: 'Differential equations',
     sub: 'Initial-value problems, stochastic forcing, delay, fractional, integro, and PDE method-of-lines.',
     rows: [
-      { icon: iconOde, name: 'Ordinary (ODE)',         desc: 'DoPri5, Tsit5, Vern6/7/8/9, Radau5, BDF, ESDIRK. Adaptive step, dense output, events.', chapter: 'numra-ode',                  link: `${BOOK}/ch02-solving-odes/your-first-ode/` },
-      { icon: iconSde, name: 'Stochastic (SDE)',       desc: 'Euler–Maruyama, Milstein, SRA, SRI. GBM and Ornstein–Uhlenbeck primitives.',             chapter: 'numra-sde',                  link: `${BOOK}/ch04-beyond-odes/stochastic-des/` },
+      { icon: iconOde, name: 'Ordinary (ODE)',         desc: 'DoPri5, Tsit5, Vern6/7/8, Radau5, BDF, ESDIRK. Adaptive step, dense output, events.',     chapter: 'numra-ode',                  link: `${BOOK}/ch02-solving-odes/your-first-ode/` },
+      { icon: iconSde, name: 'Stochastic (SDE)',       desc: 'Euler–Maruyama, Milstein, SRA1, SRA2. Diagonal, scalar, and general noise structures.',  chapter: 'numra-sde',                  link: `${BOOK}/ch04-beyond-odes/stochastic-des/` },
       { icon: iconDde, name: 'Delay (DDE)',            desc: 'Constant and state-dependent delays with history-function dispatch.',                    chapter: 'numra-dde',                  link: `${BOOK}/ch04-beyond-odes/delay-des/` },
-      { icon: iconFde, name: 'Fractional (FDE)',       desc: 'Caputo and Riemann–Liouville derivatives for non-integer-order systems.',                chapter: 'numra-fde',                  link: `${BOOK}/ch04-beyond-odes/fractional-des/` },
-      { icon: iconIde, name: 'Integro-differential',   desc: 'Volterra and Fredholm kernels.',                                                          chapter: 'numra-ide',                  link: `${BOOK}/ch04-beyond-odes/integro-des/` },
+      { icon: iconFde, name: 'Fractional (FDE)',       desc: 'Caputo derivatives (0 < α ≤ 1) via the L1 scheme. Mittag-Leffler reference functions.',  chapter: 'numra-fde',                  link: `${BOOK}/ch04-beyond-odes/fractional-des/` },
+      { icon: iconIde, name: 'Integro-differential',   desc: 'Volterra type-2 kernels via quadrature and a Prony solver for sum-of-exponentials.',     chapter: 'numra-ide',                  link: `${BOOK}/ch04-beyond-odes/integro-des/` },
       { icon: iconPde, name: 'Partial (PDE / SPDE)',   desc: 'Method of lines for 1D/2D/3D problems with analytical Jacobians. Stochastic forcing.',   chapter: 'numra-pde · numra-spde',     link: `${BOOK}/ch04-beyond-odes/partial-des/` },
     ],
   },
@@ -98,8 +98,8 @@ const capCategories = [
     rows: [
       { icon: iconOptim,       name: 'Optimization',          desc: 'BFGS, L-BFGS, Nelder–Mead, Levenberg–Marquardt, gradient and gradient-free methods.', chapter: 'numra-optim',     link: `${BOOK}/ch05-optimization/unconstrained/` },
       { icon: iconControl,     name: 'Optimal control',       desc: 'ODE-constrained optimization. Single shooting, multiple shooting, collocation.',      chapter: 'numra-ocp',       link: `${BOOK}/ch10-optimal-control/shooting-methods/` },
-      { icon: iconSensitivity, name: 'Curve fitting',         desc: 'Polynomial regression and nonlinear least squares with analytical Jacobians.',        chapter: 'numra-fit',       link: `${BOOK}/ch07-calculus-and-analysis/curve-fitting/` },
-      { icon: iconUq,          name: 'Nonlinear solvers',     desc: 'Root-finding and nonlinear systems. Newton, Broyden, trust-region.',                  chapter: 'numra-nonlinear', link: `${BOOK}/ch05-optimization/least-squares/` },
+      { icon: iconSensitivity, name: 'Sensitivity analysis',      desc: 'Forward sensitivity via an augmented ParametricOdeSystem. Analytical or FD Jacobians. Composes with any ODE solver.', chapter: 'numra-ode',              link: `${BOOK}/ch11-uncertainty/sensitivity-analysis/` },
+      { icon: iconUq,          name: 'Uncertainty quantification', desc: 'First-order GUM and Monte Carlo propagation through ODE parameters. Uncertain<S> mean/variance primitive in core.', chapter: 'numra-ode · numra-core', link: `${BOOK}/ch11-uncertainty/error-propagation/` },
     ],
   },
   {
@@ -111,7 +111,7 @@ const capCategories = [
       { icon: iconQuad,     name: 'Integration & interp',     desc: 'Adaptive quadrature, Gauss–Kronrod, splines, barycentric interpolation.',                  chapter: 'numra-integrate · numra-interp',  link: `${BOOK}/ch07-calculus-and-analysis/numerical-integration/` },
       { icon: iconSignal,   name: 'Signal processing',        desc: 'Digital filters (IIR/FIR), resampling, peak detection.',                                   chapter: 'numra-signal',                    link: `${BOOK}/ch08-signal-processing/filtering-signals/` },
       { icon: iconStats,    name: 'Statistics',               desc: 'Distributions, hypothesis tests, descriptive statistics.',                                 chapter: 'numra-stats',                     link: `${BOOK}/ch09-statistics/descriptive-stats/` },
-      { icon: iconAutodiff, name: 'Automatic differentiation', desc: 'Forward-mode autodiff. Powers sensitivity, optimization, and PDE Jacobians.',             chapter: 'numra-autodiff',                  link: `${BOOK}/ch07-calculus-and-analysis/automatic-differentiation/` },
+      { icon: iconAutodiff, name: 'Automatic differentiation', desc: 'Forward-mode Dual<S> and reverse-mode Var with tape. Gradient, Jacobian, and Hessian utilities.',                            chapter: 'numra-autodiff',                  link: `${BOOK}/ch07-calculus-and-analysis/automatic-differentiation/` },
     ],
   },
   {
@@ -119,10 +119,10 @@ const capCategories = [
     name: 'Foundations & tooling',
     sub: 'The shared types, error model, and instrumentation that hold the rest of the workspace together.',
     rows: [
-      { icon: iconCoreTypes,    name: 'Core types',         desc: 'Real / complex scalars, vectors, broadcast rules. The lingua franca of every crate.',          chapter: 'numra-core',    link: `${BOOK}/ch01-introduction/architecture-overview/` },
+      { icon: iconCoreTypes,    name: 'Core types',         desc: 'Real scalars (f32/f64), Vector/Matrix traits, Signal abstractions, Uncertain<S>. The lingua franca of every crate.', chapter: 'numra-core',    link: `${BOOK}/ch01-introduction/architecture-overview/` },
       { icon: iconErrorModel,   name: 'Error model',        desc: 'A single error enum with cause chains across every subsystem.',                                chapter: 'numra-core',    link: `${BOOK}/ch01-introduction/architecture-overview/` },
-      { icon: iconDiagnostics,  name: 'Special functions',  desc: 'Bessel, gamma, error functions, and elliptic integrals.',                                      chapter: 'numra-special', link: `${BOOK}/ch07-calculus-and-analysis/special-functions/` },
-      { icon: iconBenchHarness, name: 'FFT',                desc: 'Forward and inverse FFT. Used by signal processing and spectral methods.',                     chapter: 'numra-fft',     link: `${BOOK}/ch08-signal-processing/fft-and-spectral/` },
+      { icon: iconDiagnostics,  name: 'Diagnostics',   desc: 'SolverStats on every result — accepted/rejected steps, function/Jacobian/LU evaluations. Debug-only Jacobian-flag consistency checks.', chapter: 'numra-ode',   link: `${BOOK}/appendix/solver-reference/` },
+      { icon: iconBenchHarness, name: 'Bench harness', desc: 'Criterion benchmarks with JSON results. Every figure ships with provenance metadata: commit, rustc, hardware, repro script.',         chapter: 'numra-bench', link: `${BOOK}/ch13-performance/` },
     ],
   },
 ];
