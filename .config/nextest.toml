@@ -11,15 +11,9 @@
 [profile.default]
 slow-timeout = { period = "60s", terminate-after = 3 }
 
-# Per-test overrides for legitimately long-running tests. The 3-min
-# ceiling above is for the "something is wrong" case; these tests are
-# expected to be slow and run within the wider budget. Keep this list
-# small — if it grows, optimise the tests instead.
-#
-# * mol3d_parametric: 3D heat-equation MOL with Radau5 + forward
-#   sensitivity. 729 interior points × 2 (state + sensitivity) → dense
-#   Jacobian factorisations dominate. ~130 s on M4 Max, ~3 min on
-#   GitHub-hosted Linux runners.
-[[profile.default.overrides]]
-filter = 'package(numra-pde) and test(test_forward_sensitivity_matches_analytical_decay)'
-slow-timeout = { period = "60s", terminate-after = 10 }
+# `slow` profile: used by the dedicated slow-tests CI workflow that
+# runs `#[ignore]`d expensive tests on a schedule. Loosen the cap so
+# legitimately heavy tests (e.g. 3D PDE sensitivity with dense Radau5)
+# have room.
+[profile.slow]
+slow-timeout = { period = "60s", terminate-after = 20 }

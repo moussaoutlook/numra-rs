@@ -334,7 +334,14 @@ mod tests {
         }
     }
 
+    // Runs only in the dedicated slow-tests workflow. On 2-vCPU GitHub
+    // runners the dense Radau5 sensitivity factorisations on the 9³ × 2
+    // augmented Jacobian push this past 10 minutes; on a beefier machine
+    // (`cargo nextest run --run-ignored=ignored-only` locally, or the
+    // weekly `.github/workflows/slow-tests.yml` job) it finishes in ~2
+    // minutes.
     #[test]
+    #[ignore = "slow on shared CI runners; exercised by slow-tests workflow"]
     fn test_forward_sensitivity_matches_analytical_decay() {
         // 3D heat equation with the analytic exp(-3π²αt) decay.
         // Sensitivity ∂u/∂α = -3π²t · u at cube centre.
