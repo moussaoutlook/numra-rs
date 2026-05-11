@@ -118,8 +118,9 @@ mod tests {
 
     #[test]
     fn test_poisson_sample_mean() {
+        use rand::SeedableRng;
         let p = Poisson::new(5.0_f64);
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(43);
         let samples = p.sample_n(&mut rng, 10000);
         let mean = samples.iter().sum::<usize>() as f64 / samples.len() as f64;
         assert!((mean - 5.0).abs() < 0.3, "sample mean = {}", mean);

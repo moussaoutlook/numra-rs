@@ -1,0 +1,12 @@
+# Nextest configuration.
+#
+# `slow-timeout` is the primary defense against the "one hanging test
+# burns the whole 30-minute job budget" failure mode that cancelled
+# CI #44 on commit 07c7c63. A test is flagged as slow when it exceeds
+# `period`; after `terminate-after` consecutive slow periods (so
+# 3 × 60 s = 3 min wall-clock total) nextest kills the test process
+# and the run continues. The remaining suites still finish so a
+# single hang no longer hides whatever else might be failing.
+
+[profile.default]
+slow-timeout = { period = "60s", terminate-after = 3 }

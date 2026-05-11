@@ -122,8 +122,9 @@ mod tests {
 
     #[test]
     fn test_normal_sample() {
+        use rand::SeedableRng;
         let n = Normal::new(0.0_f64, 1.0);
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(42);
         let samples = n.sample_n(&mut rng, 10000);
         let mean: f64 = samples.iter().sum::<f64>() / samples.len() as f64;
         assert!(mean.abs() < 0.1, "sample mean = {}", mean);

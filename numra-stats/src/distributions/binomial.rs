@@ -126,8 +126,9 @@ mod tests {
 
     #[test]
     fn test_binomial_sample_mean() {
+        use rand::SeedableRng;
         let b = Binomial::new(20, 0.5);
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(44);
         let samples = b.sample_n(&mut rng, 5000);
         let mean = samples.iter().sum::<usize>() as f64 / samples.len() as f64;
         assert!((mean - 10.0).abs() < 1.0, "sample mean = {}", mean);

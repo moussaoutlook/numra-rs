@@ -207,8 +207,9 @@ mod tests {
 
     #[test]
     fn test_gamma_sample_mean() {
+        use rand::SeedableRng;
         let g = GammaDist::new(3.0_f64, 1.0);
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(45);
         let samples = g.sample_n(&mut rng, 10000);
         let mean: f64 = samples.iter().sum::<f64>() / samples.len() as f64;
         assert!((mean - 3.0).abs() < 0.2, "sample mean = {}", mean);
