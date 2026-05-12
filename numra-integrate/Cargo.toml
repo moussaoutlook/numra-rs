@@ -1,12 +1,17 @@
 [package]
 name = "numra-integrate"
-description = "Numerical integration and quadrature for Numra"
+description = "Numerical integration for Numra: adaptive Gauss-Kronrod, fixed Gauss-Legendre/Laguerre/Hermite, composite rules, double integrals."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["quadrature", "integration", "gauss-kronrod", "simpson", "romberg"]
+categories = ["mathematics", "science", "algorithms"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

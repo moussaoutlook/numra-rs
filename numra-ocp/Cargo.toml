@@ -1,12 +1,17 @@
 [package]
 name = "numra-ocp"
-description = "ODE-constrained optimization for Numra"
+description = "ODE-constrained optimization for Numra: single and multiple shooting, collocation, adjoint sensitivity, parameter estimation for ODE models."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["optimal-control", "parameter-estimation", "shooting", "collocation", "adjoint"]
+categories = ["mathematics", "science", "algorithms", "simulation"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

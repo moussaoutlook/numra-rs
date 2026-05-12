@@ -1,12 +1,17 @@
 [package]
 name = "numra-special"
-description = "Special mathematical functions for Numra"
+description = "Special mathematical functions for Numra: gamma, error functions, Bessel, elliptic integrals, Airy, hypergeometric, orthogonal polynomials, zeta."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["special-functions", "gamma", "bessel", "erf", "elliptic"]
+categories = ["mathematics", "science", "algorithms"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

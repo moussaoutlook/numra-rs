@@ -1,12 +1,17 @@
 [package]
 name = "numra-interp"
-description = "Interpolation and splines for Numra"
+description = "Interpolation for Numra: linear, cubic spline (natural/clamped/not-a-knot), PCHIP, Akima, barycentric Lagrange."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["interpolation", "spline", "pchip", "akima", "barycentric"]
+categories = ["mathematics", "science", "algorithms"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

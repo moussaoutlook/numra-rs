@@ -16,7 +16,7 @@
 //! The deterministic solution with IC u(x,0) = sin(pi*x) is:
 //!   u(x,t) = sin(pi*x) * exp(-alpha * pi^2 * t)
 //!
-//! Run with: cargo run --example spde_heat
+//! Run with: cargo run --example spde_heat_adaptive
 //!
 //! Author: Moussa Leblouba
 //! Date: 4 February 2026

@@ -1,16 +1,21 @@
 [package]
 name = "numra-ode"
-description = "ODE solvers for Numra"
+description = "ODE and DAE solvers for Numra: DoPri5, Tsit5, Verner 6/7/8, Radau5, ESDIRK 3/4/5, BDF, plus forward sensitivity analysis."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["ode", "differential-eqns", "runge-kutta", "solver", "stiff"]
+categories = ["mathematics", "science", "algorithms", "simulation"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }
 numra-linalg = { workspace = true }
 numra-nonlinear = { workspace = true }
 faer = { workspace = true }
-thiserror = "1.0"
+thiserror = { workspace = true }

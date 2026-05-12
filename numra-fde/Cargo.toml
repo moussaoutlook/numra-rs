@@ -1,12 +1,17 @@
 [package]
 name = "numra-fde"
-description = "Fractional Differential Equation (FDE) solvers for Numra"
+description = "Fractional differential equation solvers for Numra: L1 scheme for Caputo derivatives, with Mittag-Leffler utilities."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["fde", "fractional", "caputo", "mittag-leffler", "solver"]
+categories = ["mathematics", "science", "algorithms"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

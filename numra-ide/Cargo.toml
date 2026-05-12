@@ -1,12 +1,17 @@
 [package]
 name = "numra-ide"
-description = "Integro-Differential Equation (IDE) solvers for Numra"
+description = "Volterra integro-differential equation solvers for Numra: general quadrature solver plus Prony-series fast path for exponential kernels."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["ide", "volterra", "integro-differential", "prony", "solver"]
+categories = ["mathematics", "science", "algorithms", "simulation"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

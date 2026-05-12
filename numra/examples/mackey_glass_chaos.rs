@@ -13,7 +13,7 @@
 //! - tau = 17: chaotic (classic chaos parameter)
 //! - tau = 30: hyperchaotic
 //!
-//! Run with: cargo run --example dde_mackey_glass
+//! Run with: cargo run --example mackey_glass_chaos
 //!
 //! Author: Moussa Leblouba
 //! Date: 3 February 2026

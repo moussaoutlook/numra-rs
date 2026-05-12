@@ -1,12 +1,17 @@
 [package]
 name = "numra"
-description = "Numra - Numerical Methods Library for Rust"
+description = "Numra: a composable Rust workspace for scientific computing — differential equations (ODE/SDE/DDE/FDE/IDE/PDE/SPDE), optimization, automatic differentiation, linear algebra, statistics, signal processing."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["numerical", "scientific", "differential-eqns", "optimization", "mathematics"]
+categories = ["mathematics", "science", "algorithms", "simulation"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }
@@ -79,12 +84,12 @@ name = "bouncing_ball"
 path = "examples/bouncing_ball.rs"
 
 [[example]]
-name = "dde_mackey_glass"
-path = "examples/dde_mackey_glass.rs"
+name = "mackey_glass_chaos"
+path = "examples/mackey_glass_chaos.rs"
 
 [[example]]
-name = "spde_heat"
-path = "examples/spde_heat.rs"
+name = "spde_heat_adaptive"
+path = "examples/spde_heat_adaptive.rs"
 
 [[example]]
 name = "robertson_sensitivity"

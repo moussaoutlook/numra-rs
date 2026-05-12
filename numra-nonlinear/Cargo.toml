@@ -1,12 +1,17 @@
 [package]
 name = "numra-nonlinear"
-description = "Nonlinear solvers for Numra"
+description = "Nonlinear solvers for Numra: Newton-Raphson with line search, analytical or finite-difference Jacobians."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["nonlinear", "newton", "root-finding", "solver", "jacobian"]
+categories = ["mathematics", "algorithms", "science"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

@@ -1,12 +1,17 @@
 [package]
 name = "numra-signal"
-description = "Signal processing for Numra: digital filters, resampling, peak detection"
+description = "Digital signal processing for Numra: IIR (Butterworth, Chebyshev I) and FIR design, zero-phase filtering, resampling, Hilbert transform, peak detection."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["dsp", "filter", "butterworth", "hilbert", "peak-detection"]
+categories = ["mathematics", "science", "algorithms"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

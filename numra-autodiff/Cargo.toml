@@ -1,12 +1,17 @@
 [package]
 name = "numra-autodiff"
-description = "Forward-mode automatic differentiation for Numra"
+description = "Automatic differentiation for Numra: forward-mode (Dual numbers) and reverse-mode (tape) for gradients and Jacobians."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["autodiff", "differentiation", "gradient", "jacobian", "dual-numbers"]
+categories = ["mathematics", "science", "algorithms"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

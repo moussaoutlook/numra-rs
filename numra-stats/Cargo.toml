@@ -1,12 +1,17 @@
 [package]
 name = "numra-stats"
-description = "Statistics and probability distributions for Numra"
+description = "Statistics for Numra: probability distributions, descriptive statistics, hypothesis tests (t, chi², KS, ANOVA), regression, correlation."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["statistics", "probability", "distribution", "regression", "hypothesis"]
+categories = ["mathematics", "science", "algorithms"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

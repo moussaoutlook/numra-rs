@@ -1,12 +1,17 @@
 [package]
 name = "numra-optim"
-description = "Optimization algorithms for Numra"
+description = "Optimization for Numra: BFGS, L-BFGS, L-BFGS-B, Levenberg-Marquardt, Nelder-Mead, CMA-ES, SQP, LP/MILP, augmented Lagrangian, NSGA-II."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["optimization", "bfgs", "levenberg-marquardt", "nelder-mead", "milp"]
+categories = ["mathematics", "science", "algorithms"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

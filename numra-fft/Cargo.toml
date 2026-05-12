@@ -1,12 +1,17 @@
 [package]
 name = "numra-fft"
-description = "FFT and spectral analysis for Numra"
+description = "FFT and spectral analysis for Numra: complex/real FFT, IFFT, 2D FFT, convolution, PSD, Welch, STFT, windowing — built on rustfft."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["fft", "dft", "spectral", "psd", "convolution"]
+categories = ["mathematics", "science", "algorithms"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

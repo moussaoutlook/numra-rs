@@ -1,12 +1,17 @@
 [package]
 name = "numra-linalg"
-description = "Linear algebra abstractions for Numra"
+description = "Linear algebra abstractions for Numra: dense and sparse matrices, LU/QR/Cholesky/SVD, iterative solvers (CG, GMRES, BiCGSTAB)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["linear-algebra", "matrix", "factorization", "solver", "sparse"]
+categories = ["mathematics", "algorithms", "science", "data-structures"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

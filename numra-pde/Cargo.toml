@@ -1,12 +1,17 @@
 [package]
 name = "numra-pde"
-description = "Partial Differential Equation (PDE) solvers for Numra using Method of Lines"
+description = "Partial differential equation solvers for Numra via Method of Lines: heat, advection-diffusion, reaction-diffusion in 1D/2D/3D, Stefan moving-boundary problems."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["pde", "method-of-lines", "heat-equation", "finite-difference", "solver"]
+categories = ["mathematics", "science", "algorithms", "simulation"]
+readme = "README.md"
 
 [dependencies]
 faer = { workspace = true }

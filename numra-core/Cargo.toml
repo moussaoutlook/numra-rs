@@ -1,12 +1,17 @@
 [package]
 name = "numra-core"
-description = "Core traits and types for the Numra numerical methods library"
+description = "Core traits and types for the Numra numerical methods library: Scalar, Vector, Signal, Uncertainty, error model."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["numerical", "scientific", "traits", "no-std", "numra"]
+categories = ["science", "mathematics", "no-std", "data-structures"]
+readme = "README.md"
 
 [dependencies]
 libm = { workspace = true }

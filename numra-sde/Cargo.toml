@@ -1,12 +1,17 @@
 [package]
 name = "numra-sde"
-description = "SDE solvers for Numra"
+description = "Stochastic differential equation solvers for Numra: Euler-Maruyama, Milstein, adaptive SRA1/SRA2, ensemble runner."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["sde", "stochastic", "brownian", "monte-carlo", "solver"]
+categories = ["mathematics", "science", "algorithms", "simulation"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

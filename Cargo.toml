@@ -35,8 +35,6 @@ repository = "https://github.com/moussaoutlook/numra-rs"
 homepage = "https://numra-rs.org"
 documentation = "https://docs.rs/numra"
 authors = ["Moussa <mlablouba@gmail.com>"]
-keywords = ["numerical", "differential-equations", "ode", "sde", "scientific"]
-categories = ["science", "mathematics", "algorithms"]
 
 [workspace.dependencies]
 # Internal crates

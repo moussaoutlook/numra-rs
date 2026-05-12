@@ -1,12 +1,17 @@
 [package]
 name = "numra-spde"
-description = "Stochastic Partial Differential Equation solvers for Numra"
+description = "Stochastic partial differential equation solvers for Numra: Method of Lines with SDE time-stepping, white and colored noise sources."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["spde", "stochastic-pde", "method-of-lines", "noise", "solver"]
+categories = ["mathematics", "science", "algorithms", "simulation"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }
@@ -17,4 +22,4 @@ rand = { workspace = true }
 rand_distr = { workspace = true }
 
 [dev-dependencies]
-approx = "0.5"
+approx = { workspace = true }

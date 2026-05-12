@@ -1,12 +1,17 @@
 [package]
 name = "numra-fit"
-description = "Curve fitting and regression for Numra"
+description = "Curve fitting for Numra: nonlinear least squares (Levenberg-Marquardt), weighted fits, polynomial fit and evaluation."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["curve-fitting", "least-squares", "polyfit", "regression", "nonlinear"]
+categories = ["mathematics", "science", "algorithms"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }

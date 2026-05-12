@@ -189,8 +189,8 @@
   tests:
     - numra/tests/composition_tests.rs
   examples:
-    - dde_mackey_glass
     - mackey_glass
+    - mackey_glass_chaos
 
 - id: fde.l1_caputo
   crate: numra-fde
@@ -239,7 +239,7 @@
   tests:
     - numra/tests/composition_tests.rs
   examples:
-    - spde_heat
+    - spde_heat_adaptive
     - stochastic_heat
 
 - id: linalg.matrix

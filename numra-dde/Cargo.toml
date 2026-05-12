@@ -1,12 +1,17 @@
 [package]
 name = "numra-dde"
-description = "Delay Differential Equation (DDE) solvers for Numra"
+description = "Delay differential equation solvers for Numra: method of steps with embedded Runge-Kutta and Hermite history interpolation."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 authors.workspace = true
+keywords = ["dde", "delay-differential", "delay", "history", "solver"]
+categories = ["mathematics", "science", "algorithms", "simulation"]
+readme = "README.md"
 
 [dependencies]
 numra-core = { workspace = true }
