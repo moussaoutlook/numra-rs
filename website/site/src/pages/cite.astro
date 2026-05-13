@@ -5,11 +5,14 @@
 // pointed at LICENSE in-repo, not SPDX, since Numra ships a custom
 // non-commercial license).
 //
-// DOI is intentionally a placeholder until the first GitHub release
-// after the Zenodo integration is enabled. The BibTeX entry uses the
-// same placeholder and a note explaining that.
+// DOIs minted by Zenodo on the first GitHub release (v0.1.0, 2026-05-13).
+// Concept DOI (all-versions, preferred for citation): 10.5281/zenodo.20159709
+// Version DOI (v0.1.0, for reproducibility):         10.5281/zenodo.20159710
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+const conceptDoi = '10.5281/zenodo.20159709';
+const versionDoi = '10.5281/zenodo.20159710';
 
 const citeJsonLd = {
   '@context': 'https://schema.org',
@@ -31,17 +34,31 @@ const citeJsonLd = {
   license: 'https://github.com/moussaoutlook/numra-rs/blob/main/LICENSE',
   codeRepository: 'https://github.com/moussaoutlook/numra-rs',
   url: 'https://numra-rs.org/',
+  sameAs: `https://doi.org/${conceptDoi}`,
+  identifier: [
+    {
+      '@type': 'PropertyValue',
+      propertyID: 'doi',
+      value: conceptDoi,
+      description: 'Concept DOI (all versions)',
+    },
+    {
+      '@type': 'PropertyValue',
+      propertyID: 'doi',
+      value: versionDoi,
+      description: 'Version DOI (0.1.0)',
+    },
+  ],
 };
 
 const bibtex = `@software{numra,
-  author       = {Leblouba, Moussa},
-  title        = {{Numra: Composable Numerical Methods for Rust}},
-  year         = {2026},
-  publisher    = {Spectral Automata},
-  url          = {https://numra-rs.org},
-  note         = {Software, version 0.1.0}
-  % doi       = {10.5281/zenodo.XXXXXXX}
-  % Uncomment and populate once the first Zenodo release is published.
+  author    = {Leblouba, Moussa},
+  title     = {{Numra: Composable Numerical Methods for Rust}},
+  year      = {2026},
+  publisher = {Spectral Automata},
+  version   = {0.1.0},
+  doi       = {${conceptDoi}},
+  url       = {https://doi.org/${conceptDoi}},
 }`;
 
 const ris = `TY  - COMP
@@ -49,7 +66,8 @@ TI  - Numra: Composable Numerical Methods for Rust
 AU  - Leblouba, Moussa
 PY  - 2026
 PB  - Spectral Automata
-UR  - https://numra-rs.org
+DO  - ${conceptDoi}
+UR  - https://doi.org/${conceptDoi}
 ER  -`;
 ---
 
@@ -90,12 +108,23 @@ ER  -`;
 
       <h2>DOI.</h2>
       <p>
-        A Zenodo DOI is minted on the first GitHub release after the
-        Zenodo integration is enabled. Until then, the BibTeX entry
-        above leaves the <code>doi</code> field commented out. Once a
-        DOI exists, this page will list both the all-versions concept
-        DOI (preferred for citation) and per-version DOIs (for
-        reproducibility).
+        Numra v0.1.0 is archived on Zenodo with two DOIs:
+      </p>
+      <ul>
+        <li>
+          <strong>Concept DOI</strong> (all versions; resolves to the latest release):
+          <a href={`https://doi.org/${conceptDoi}`} rel="noopener"><code>{conceptDoi}</code></a>
+        </li>
+        <li>
+          <strong>Version DOI</strong> (this specific 0.1.0 release):
+          <a href={`https://doi.org/${versionDoi}`} rel="noopener"><code>{versionDoi}</code></a>
+        </li>
+      </ul>
+      <p>
+        For most citation use cases, prefer the concept DOI — references
+        stay current as new versions are released. The version-specific
+        DOI is appropriate when reproducibility against a particular
+        numerical implementation matters.
       </p>
 
       <h2>Why citation matters.</h2>

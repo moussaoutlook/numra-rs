@@ -61,19 +61,19 @@ keywords:
 
 # Update version and date-released on every release.
 version: "0.1.0"
-date-released: "2026-04-27"
+date-released: "2026-05-13"
 
-# Identifiers — uncomment and populate after the first Zenodo-minted DOI.
-# The "concept DOI" is the all-versions DOI; cite this in papers that
-# refer to Numra in general. The "version DOI" is for reproducibility.
-#
-# identifiers:
-#   - type: doi
-#     value: "10.5281/zenodo.XXXXXXX"
-#     description: "All versions (concept DOI)"
-#   - type: doi
-#     value: "10.5281/zenodo.YYYYYYY"
-#     description: "This specific version"
+# Identifiers — both DOIs returned by Zenodo on first publish.
+# The concept DOI always resolves to the latest version; prefer it
+# for general citation. The version DOI pins a specific release for
+# reproducibility.
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.20159709"
+    description: "All versions (concept DOI; preferred for citation)"
+  - type: doi
+    value: "10.5281/zenodo.20159710"
+    description: "Version 0.1.0 (for reproducibility)"
 
 # Optional: list preferred citation as a paper rather than the software
 # itself. Useful if a companion methods paper is published.

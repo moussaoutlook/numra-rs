@@ -2,7 +2,10 @@
 
 All notable public changes to Numra are recorded here. The project follows semantic-versioning intent, with extra care around solver behavior, public re-exports, and documented book examples while the `0.1.x` API is still settling.
 
-## 0.1.0 - Unreleased
+## 0.1.0 - 2026-05-13
+
+First public release. Archived on Zenodo: concept DOI [10.5281/zenodo.20159709](https://doi.org/10.5281/zenodo.20159709) (all versions; preferred for citation); version DOI [10.5281/zenodo.20159710](https://doi.org/10.5281/zenodo.20159710) (this 0.1.0 release; for reproducibility).
+
 
 ### Added
 
