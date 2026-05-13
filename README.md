@@ -8,7 +8,7 @@
 [![MSRV](https://img.shields.io/badge/MSRV-1.83-blue)](Cargo.toml)
 [![License](https://img.shields.io/badge/license-Academic%20%26%20Research%20NC-orange)](LICENSE)
 
-Numra is a **Cargo workspace** with a unified `[numra](numra)` facade: one dependency surface, shared `Scalar` / `Vector` abstractions, and **native Rust** implementations of the solvers and methods in-tree (contrasted with stacks that lean on FFI to classic C/Fortran libraries for the same breadth). Dense linear algebra builds on **[faer](https://github.com/sarah-ek/faer-rs)**.
+Numra is a **Cargo workspace** with a unified [`numra`](numra) facade: one dependency surface, shared `Scalar` / `Vector` abstractions, and **native Rust** implementations of the solvers and methods in-tree (contrasted with stacks that lean on FFI to classic C/Fortran libraries for the same breadth). Dense linear algebra builds on **[faer](https://github.com/sarah-ek/faer-rs)**.
 
 > *“Numra is the only comprehensive native-Rust source-available numerical stack for differential equations and related methods we are aware of”* — to the best of our knowledge after surveying Rust projects; *“comprehensive”* here means the breadth documented in this repository’s [public API inventory](docs/audit/public-api-method-inventory.md) and the [user book](https://book.numra-rs.org/).
 
@@ -23,15 +23,15 @@ End-to-end workflows are **enforced by integration tests**, including:
 
 | Workflow                                                | Verified in                                                                      |
 | ------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| ODE → cubic spline interpolation → numerical quadrature | `[workflow_ode_interp_integrate](numra/tests/interop_workflows.rs)`              |
-| ODE → FFT → signal processing → peak detection          | `[workflow_ode_fft_signal_peaks](numra/tests/interop_workflows.rs)`              |
-| Parameter estimation → sensitivity → uncertainty        | `[workflow_param_est_sensitivity_uncertainty](numra/tests/interop_workflows.rs)` |
-| Autodiff → optimization → curve fitting                 | `[workflow_autodiff_optim_fit](numra/tests/interop_workflows.rs)`                |
-| PDE (method of lines) → statistics                      | `[workflow_pde_statistics](numra/tests/interop_workflows.rs)`                    |
-| Sampling → Monte Carlo ODE                              | `[workflow_stats_monte_carlo_ode](numra/tests/interop_workflows.rs)`             |
+| ODE → cubic spline interpolation → numerical quadrature | [`workflow_ode_interp_integrate`](numra/tests/interop_workflows.rs)              |
+| ODE → FFT → signal processing → peak detection          | [`workflow_ode_fft_signal_peaks`](numra/tests/interop_workflows.rs)              |
+| Parameter estimation → sensitivity → uncertainty        | [`workflow_param_est_sensitivity_uncertainty`](numra/tests/interop_workflows.rs) |
+| Autodiff → optimization → curve fitting                 | [`workflow_autodiff_optim_fit`](numra/tests/interop_workflows.rs)                |
+| PDE (method of lines) → statistics                      | [`workflow_pde_statistics`](numra/tests/interop_workflows.rs)                    |
+| Sampling → Monte Carlo ODE                              | [`workflow_stats_monte_carlo_ode`](numra/tests/interop_workflows.rs)             |
 
 
-Cross-formalism checks (ODE / FDE / IDE / DDE / PDE / SPDE building blocks) live in `[composition_tests.rs](numra/tests/composition_tests.rs)`. Uncertainty, sensitivity, and ODE solves (including automatic stiff/nonstiff selection) are composed in `[integration_tests.rs](numra/tests/integration_tests.rs)` (`test_full_composition`, `test_week4_full_composition`).
+Cross-formalism checks (ODE / FDE / IDE / DDE / PDE / SPDE building blocks) live in [`composition_tests.rs`](numra/tests/composition_tests.rs). Uncertainty, sensitivity, and ODE solves (including automatic stiff/nonstiff selection) are composed in [`integration_tests.rs`](numra/tests/integration_tests.rs) (`test_full_composition`, `test_week4_full_composition`).
 
 For narrative patterns (ODE + optimization, AD, uncertainty, …), see the book chapter **[Composing solvers](https://book.numra-rs.org/ch12-advanced-topics/composing-solvers/)**.
 
@@ -100,7 +100,7 @@ cargo test --workspace
 cargo run -p numra --example lorenz
 ```
 
-More examples: `cargo run -p numra --example van_der_pol`, `solver_zoo`, `heat_equation`, `gbm_monte_carlo`, … (see `[numra/Cargo.toml](numra/Cargo.toml)` `[[example]]` list).
+More examples: `cargo run -p numra --example van_der_pol`, `solver_zoo`, `heat_equation`, `gbm_monte_carlo`, … (see the `[[example]]` list in [`numra/Cargo.toml`](numra/Cargo.toml)).
 
 ---
 
@@ -112,10 +112,10 @@ User docs (book): `https://book.numra-rs.org/`
 
 | Resource            | How                                                                                                                     |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **User book**       | Online (Astro/Starlight): `https://book.numra-rs.org/` · Sources: `[website/book/](website/book/)`                       |
+| **User book**       | Online (Astro/Starlight): <https://book.numra-rs.org/> · Sources: [`website/book/`](website/book/)                       |
 | **Rust API**        | `cargo doc --workspace --no-deps --open`                                                                                |
-| **Changelog**       | `[CHANGELOG.md](CHANGELOG.md)`                                                                                          |
-| **Release / audit** | `[docs/audit/](docs/audit/)` — inventory, coverage matrices, checklists                                                 |
+| **Changelog**       | [`CHANGELOG.md`](CHANGELOG.md)                                                                                          |
+| **Release / audit** | [`docs/audit/`](docs/audit/) — inventory, coverage matrices, checklists                                                 |
 
 
 ---
@@ -130,7 +130,7 @@ Local parity with the release bar:
 bash scripts/audit_release.sh
 ```
 
-**Third-party licenses:** the workspace allow-list lives in `[deny.toml](deny.toml)` (enforced in CI). To audit dependency SPDX expressions against that list:
+**Third-party licenses:** the workspace allow-list lives in [`deny.toml`](deny.toml) (enforced in CI). To audit dependency SPDX expressions against that list:
 
 ```bash
 cargo deny check licenses
@@ -147,8 +147,8 @@ Numra is licensed under the **Numra Academic & Research License (Non-Commercial)
 - **Academic & research use**: permitted at no cost
 - **Commercial / for-profit use**: requires a separate commercial license — contact `contact@spectralautomata.com`
 
-See `[LICENSE](LICENSE)`.
+See [`LICENSE`](LICENSE).
 
 ## CLA
 
-All contributions require agreeing to the Contributor License Agreement: `[CLA.md](CLA.md)`.
+All contributions require agreeing to the Contributor License Agreement: [`CLA.md`](CLA.md).
