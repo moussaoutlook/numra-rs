@@ -4,6 +4,8 @@ All notable public changes to Numra are recorded here. The project follows seman
 
 ## Unreleased
 
+## 0.1.1 - 2026-05-14
+
 ### Changed (breaking)
 
 - `numra-core`: `NumraError` is now `#[non_exhaustive]`. Exhaustive `match` arms over `NumraError` outside of `numra-core` must add a `_ => …` catch-all. Rationale: future-proofs additive variant changes, so subsequent cross-crate `From` impls can extend the workspace error story without forcing a semver-major bump. Workspace convention going forward: every public enum should be `#[non_exhaustive]` by default unless there's a specific reason not to.
