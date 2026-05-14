@@ -748,7 +748,7 @@ dependencies = [
 
 [[package]]
 name = "numra"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "numra-autodiff",
  "numra-core",
@@ -774,7 +774,7 @@ dependencies = [
 
 [[package]]
 name = "numra-autodiff"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "libm",
@@ -783,7 +783,7 @@ dependencies = [
 
 [[package]]
 name = "numra-bench"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "criterion",
  "numra-core",
@@ -793,7 +793,7 @@ dependencies = [
 
 [[package]]
 name = "numra-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "libm",
@@ -803,7 +803,7 @@ dependencies = [
 
 [[package]]
 name = "numra-dde"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "numra-core",
@@ -812,7 +812,7 @@ dependencies = [
 
 [[package]]
 name = "numra-fde"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "numra-core",
@@ -820,7 +820,7 @@ dependencies = [
 
 [[package]]
 name = "numra-fft"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "faer",
@@ -830,7 +830,7 @@ dependencies = [
 
 [[package]]
 name = "numra-fit"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "faer",
@@ -841,7 +841,7 @@ dependencies = [
 
 [[package]]
 name = "numra-ide"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "numra-core",
@@ -849,7 +849,7 @@ dependencies = [
 
 [[package]]
 name = "numra-integrate"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "numra-core",
@@ -857,7 +857,7 @@ dependencies = [
 
 [[package]]
 name = "numra-interp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "numra-core",
@@ -865,7 +865,7 @@ dependencies = [
 
 [[package]]
 name = "numra-linalg"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "faer",
  "numra-core",
@@ -873,7 +873,7 @@ dependencies = [
 
 [[package]]
 name = "numra-nonlinear"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "faer",
@@ -883,7 +883,7 @@ dependencies = [
 
 [[package]]
 name = "numra-ocp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "faer",
@@ -895,7 +895,7 @@ dependencies = [
 
 [[package]]
 name = "numra-ode"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "faer",
  "numra-core",
@@ -906,7 +906,7 @@ dependencies = [
 
 [[package]]
 name = "numra-optim"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "faer",
@@ -921,7 +921,7 @@ dependencies = [
 
 [[package]]
 name = "numra-pde"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "faer",
@@ -932,7 +932,7 @@ dependencies = [
 
 [[package]]
 name = "numra-sde"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "numra-core",
@@ -943,7 +943,7 @@ dependencies = [
 
 [[package]]
 name = "numra-signal"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "numra-core",
@@ -952,7 +952,7 @@ dependencies = [
 
 [[package]]
 name = "numra-spde"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "numra-core",
@@ -965,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "numra-special"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "libm",
@@ -974,7 +974,7 @@ dependencies = [
 
 [[package]]
 name = "numra-stats"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "numra-core",
