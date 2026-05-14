@@ -32,6 +32,10 @@ const pages: Record<string, PageMeta> = {
     title: 'API reference',
     description: 'How to read Numra’s Rust API documentation. Until the first crates.io publish, build the docs locally; afterwards, docs.rs hosts every published version.',
   },
+  blog: {
+    title: 'Numra blog',
+    description: 'Release announcements, design notes, and longer-form posts about Numra.',
+  },
   changelog: {
     title: 'Changelog',
     description: 'Release notes, rendered from CHANGELOG.md in the Numra repository at build time.',

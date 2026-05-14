@@ -1,0 +1,146 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+
+const dateFmt = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<BaseLayout
+  title="Blog"
+  description="Release notes, design notes, and longer-form posts about Numra — the composable numerical-methods library for Rust."
+  canonicalPath="/blog"
+>
+  <section class="blog-index">
+    <div class="container-narrow">
+      <h1>Blog.</h1>
+
+      <p class="lede">
+        Release announcements, design notes, and longer-form posts about
+        Numra and the choices behind it. Subscribe via
+        <a href="/blog.xml" rel="alternate">RSS</a>.
+      </p>
+
+      {posts.length === 0 ? (
+        <p class="empty">No posts yet.</p>
+      ) : (
+        <ul class="post-list">
+          {posts.map((post) => (
+            <li class="post-item">
+              <article>
+                <header>
+                  <time datetime={post.data.pubDate.toISOString()}>
+                    {dateFmt.format(post.data.pubDate)}
+                  </time>
+                  <h2>
+                    <a href={`/blog/${post.id}`}>{post.data.title}</a>
+                  </h2>
+                </header>
+                <p class="post-desc">{post.data.description}</p>
+                {post.data.tags.length > 0 && (
+                  <ul class="tag-list" aria-label="Tags">
+                    {post.data.tags.map((t) => (
+                      <li>{t}</li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .blog-index { padding: var(--space-8) 0; }
+
+  h1 { margin-bottom: var(--space-5); }
+
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--color-fg-muted);
+    margin-bottom: var(--space-7);
+    max-width: var(--measure);
+  }
+
+  .lede a {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--motion-fast) var(--ease-out);
+  }
+  .lede a:hover { border-bottom-color: var(--color-accent); }
+
+  .post-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--space-7);
+    max-width: var(--measure);
+  }
+
+  .post-item article {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .post-item time {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--color-fg-muted);
+    letter-spacing: 0.01em;
+  }
+
+  .post-item h2 {
+    font-size: var(--text-2xl);
+    margin: 0;
+    line-height: var(--leading-snug);
+  }
+
+  .post-item h2 a {
+    color: var(--color-fg-strong);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--motion-fast) var(--ease-out);
+  }
+  .post-item h2 a:hover { border-bottom-color: var(--color-fg-strong); }
+
+  .post-desc {
+    color: var(--color-fg);
+    margin: 0;
+  }
+
+  .tag-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-1) 0 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .tag-list li {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-fg-muted);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-elevated);
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+  }
+
+  .empty {
+    color: var(--color-fg-muted);
+    font-style: italic;
+  }
+</style>
