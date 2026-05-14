@@ -5,6 +5,7 @@
 //! Modified: 2 May 2026
 
 use core::fmt;
+use numra_core::NumraError;
 
 /// Error type for curve fitting operations.
 #[derive(Clone, Debug, PartialEq)]
@@ -46,3 +47,9 @@ impl fmt::Display for FitError {
 }
 
 impl std::error::Error for FitError {}
+
+impl From<FitError> for NumraError {
+    fn from(e: FitError) -> Self {
+        NumraError::Fit(e.to_string())
+    }
+}

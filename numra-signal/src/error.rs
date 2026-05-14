@@ -5,6 +5,7 @@
 //! Modified: 2 May 2026
 
 use core::fmt;
+use numra_core::NumraError;
 
 /// Errors that can occur in signal processing operations.
 #[derive(Clone, Debug, PartialEq)]
@@ -38,3 +39,9 @@ impl fmt::Display for SignalError {
 }
 
 impl std::error::Error for SignalError {}
+
+impl From<SignalError> for NumraError {
+    fn from(e: SignalError) -> Self {
+        NumraError::Signal(e.to_string())
+    }
+}

@@ -9,7 +9,7 @@
 //! Date: 5 March 2026
 //! Modified: 2 May 2026
 
-use numra_core::Scalar;
+use numra_core::{NumraError, Scalar};
 
 /// Errors that can occur during line search.
 #[derive(Debug, Clone)]
@@ -33,6 +33,12 @@ impl std::fmt::Display for LineSearchError {
 }
 
 impl std::error::Error for LineSearchError {}
+
+impl From<LineSearchError> for NumraError {
+    fn from(e: LineSearchError) -> Self {
+        NumraError::LineSearch(e.to_string())
+    }
+}
 
 /// Options controlling the Wolfe line search.
 #[derive(Debug, Clone)]

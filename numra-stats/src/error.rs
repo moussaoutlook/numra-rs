@@ -40,6 +40,6 @@ impl fmt::Display for StatsError {
 
 impl From<StatsError> for numra_core::NumraError {
     fn from(e: StatsError) -> Self {
-        numra_core::NumraError::InvalidInput(e.to_string())
+        numra_core::NumraError::Stats(e.to_string())
     }
 }

@@ -4,6 +4,7 @@
 //! Date: 8 February 2026
 //! Modified: 2 May 2026
 
+use numra_core::NumraError;
 use thiserror::Error;
 
 /// Errors that can occur during optimization.
@@ -69,6 +70,12 @@ impl From<numra_nonlinear::LinalgError> for OptimError {
             }
             _ => OptimError::Other(e.to_string()),
         }
+    }
+}
+
+impl From<OptimError> for NumraError {
+    fn from(e: OptimError) -> Self {
+        NumraError::Optim(e.to_string())
     }
 }
 

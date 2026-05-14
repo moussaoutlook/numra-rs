@@ -75,6 +75,8 @@ Details: [public API inventory](docs/audit/public-api-method-inventory.md).
 
 ## Quick start
 
+> **New to Rust on Windows?** See [`docs/getting-started-windows.md`](docs/getting-started-windows.md) for a step-by-step setup (installing `rustup`, MSVC Build Tools, and running your first Numra program).
+
 ```rust
 use numra::ode::{DoPri5, OdeProblem, Solver, SolverOptions};
 

@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-10.
+Last updated: 2026-05-14.
 
 ## Recently retired
 
@@ -18,6 +18,7 @@ One-line entries for follow-ups that landed and were removed from the
 file. Kept here so a future reader can find the closure record without
 git-archaeology.
 
+- **F-ERR: workspace error propagation across crate boundaries** — shipped 2026-05-14. `NumraError` (`numra-core/src/error.rs`) is now `#[non_exhaustive]` and gains 10 new tagged variants (`Ode`, `Optim`, `Ocp`, `Fit`, `Signal`, `LineSearch`, `Interp`, `Integrate`, `Special`, `Stats`); `Optimization` renamed to `NumericalOptim` for unambiguity against the new `Optim`. Six new `From<CrateError> for NumraError` impls in `numra-ode`, `numra-optim`, `numra-ocp`, `numra-fit`, `numra-signal`, `numra-nonlinear`; the four pre-existing impls (`InterpError`, `IntegrationError`, `SpecialError`, `StatsError`) migrated from collapsing-to-`InvalidInput` to the tagged-variant pattern, so the workspace error story is now uniform: every external-crate `?` lands in a programmatically-distinguishable variant. `workflow_ode_interp_integrate` rewritten to return `Result<(), NumraError>` and use `?` across three crate boundaries — structural CI signal that the property is real. Closes Foundation Specification §7 open-question 6 (workspace error type sufficient for cross-crate `?` propagation: yes). Also advances F-INTEROP-Q sub-item 1 (an interop test now exercises cross-crate `?`-propagation). Source-chain preservation deferred to F-ERR-CHAIN.
 - **Parametric MOL systems for forward sensitivity** — shipped 2026-05-08. `ParametricMOLSystem2D` and `ParametricMOLSystem3D` (numra-pde) wrap the heat-equation MOL discretisation as `ParametricOdeSystem`. Parameter layout `[α, reaction_p_0, ...]`; analytical state Jacobian (`α · L0` + diagonal reaction FD), analytical α-column of `J_p` (`L0·y + bc_rhs_0`), all four flag overrides set. Linearity of the Laplacian operator means a single pre-assembled `L0` and `bc_rhs_0` cover both Dirichlet and Neumann BCs without splitting. v1 scope is alpha-on-Laplacian only; full operator parametrisation (D + velocity in advection-diffusion) is the remaining gap, narrowed below.
 - **Jacobian unification & MOL analytical Jacobians** — shipped 2026-05-07. `Radau5` and `Bdf` now route through `OdeSystem::jacobian`; FD step formula unified to `eps * (1 + |y_j|)`; `MOLSystem2D` / `MOLSystem3D` override with CSC-to-dense copy of the spatial operator + diagonal-FD reaction term. ~2.8% measured win on stiff 2D heat-with-reaction; full neutrality on non-MOL systems. See CHANGELOG.
 - **`equations3d` convenience builders** — shipped 2026-05-07. `HeatEquation3D::build`, `AdvectionDiffusion3D::build`, `ReactionDiffusion3D::{build, fisher}` mirroring `equations2d.rs`.
@@ -517,40 +518,51 @@ sub-optimal API choice (candidate: the `SolverOptions` builder, which
 mixes f64 and S generic awkwardly) and run it through deprecation →
 removal across two minor versions. Validates the policy in practice.
 
-### F-ERR: Complete the `NumraError` `From`-impl coverage
+### F-ERR-CHAIN: Source-chain preservation across `NumraError` variants
 
-**Status**: scoped, not started. Surfaced 2026-05-10 by the
-foundation-pass verification (finding B5). Closes Foundation
-Specification §7 open-question 6.
+**Status**: scoped, not started. Surfaced 2026-05-14 during the F-ERR
+audit (Decision B). Out of F-ERR scope by design — F-ERR was bounded
+to the `From`-impl coverage; source-chain preservation is greenfield
+work and warrants its own design pass.
 
-**What's there today**: `numra_core::NumraError`
-(`numra-core/src/error.rs:16`) is the workspace error type and is
-re-exported from the facade (`numra/src/lib.rs:43`). Five fallible
-crates have `From<...> for NumraError` impls (`numra-interp`,
-`numra-integrate`, `numra-special`, `numra-stats`, plus the
-`numra-core` sub-errors). Five fallible crates do **not**:
+**What's there today**: `NumraError` (`numra-core/src/error.rs`) ships
+ten new tagged variants (`Ode(String)`, `Optim(String)`, etc.) but
+**every external-crate variant is stringified**. The `impl
+std::error::Error for NumraError {}` block is empty — no `source()`
+override; no `#[source]` annotations on any variant. A user calling
+`err.source()` on a `NumraError` produced by `?` from a `SolverError`
+gets `None`, even though the originating error is logically the
+parent. The current pattern matches what shipped pre-F-ERR (the four
+pre-existing external-crate impls also flattened); F-ERR continued the
+pattern rather than inventing a new one mid-flight.
 
-- `numra-ode` — `SolverError` (`numra-ode/src/error.rs:12`). The
-  highest-leverage gap: every cross-crate `?` from the ODE world
-  fails to land in `NumraError` without manual conversion.
-- `numra-optim` — `OptimError` (`numra-optim/src/error.rs:11`).
-- `numra-ocp` — `OcpError` (`numra-ocp/src/error.rs:11`).
-- `numra-fit` — `FitError` (`numra-fit/src/error.rs:11`).
-- `numra-signal` — `SignalError` (`numra-signal/src/error.rs:11`).
+**The structural blocker**: `NumraError` derives `Clone + PartialEq`,
+which prevents the standard `Box<dyn std::error::Error + Send + Sync>`
+field idiom for source-chain preservation (`dyn Error` is neither
+`Clone` nor `PartialEq`). Adding source preservation requires either
+(a) dropping the derives (breaking, with downstream-impact unknowable
+beyond what the F-ERR cliff already cost), or (b) per-variant Boxing
+with manual `Display` / `PartialEq`-via-string delegation (workable
+but cumbersome and asymmetric).
 
-The composability contract item 3 reads "Errors compose into the
-workspace error type" — failed today by 10 of 21 capabilities.
+**What needs doing**:
+1. Decide between (a) drop derives and adopt structural source
+   preservation idiomatically, or (b) keep derives and use a
+   per-variant Box-with-manual-delegation pattern, or (c) accept the
+   stringified status quo and document the limitation in `NumraError`'s
+   rustdoc as "source chains are not preserved; use the carried
+   `String` for diagnostic detail".
+2. If (a) or (b): add `#[source]` annotations / `source()` override;
+   update each `From` impl to carry the originating error rather than
+   stringify; pin with a regression test that `NumraError::Ode(...)`
+   produced by `?` from a `SolverError` returns `Some(SolverError)`
+   from `.source()` (downcast-checked).
+3. If (a): paying the second breaking-change cliff in 0.1.x — likely
+   defer to 0.2.0 and bundle with other breaking changes.
 
-**What needs doing**: for each missing crate, add the `From<MyError>
-for NumraError` impl. The mechanical work is small (one impl per
-crate); the design work is naming the `NumraError` variant for each
-domain and deciding whether to expand `NumraError`'s enum or use a
-catch-all `Other(Box<dyn Error>)`-style escape hatch. The
-non-mechanical part is choosing names and ensuring the conversion
-preserves the diagnostic detail downstream consumers want.
-
-Order the work so `numra-ode::SolverError` is first (highest
-consumer count); `numra-optim::OptimError` second.
+This composes with the broader "richer error context" question
+(backtrace, location info) that was explicitly out of scope for F-ERR.
+Worth doing as one design pass.
 
 ### F-SENDSYNC: Audit & remove defensive `Send + Sync` on foundation traits
 
@@ -660,11 +672,15 @@ six workflow tests. Issues:
   fails contract item 7.
 
 **What needs doing**:
-1. Add at least one interop test that returns `NumraResult<()>` and
-   uses `?` across at least two crate boundaries. Pick the cleanest
-   already-converting pair (e.g. `numra-integrate` + `numra-stats`)
-   so the test demonstrates the value without first requiring F-ERR.
-2. After F-ERR lands, expand to cover the formerly-missing pairs.
+1. ~~Add at least one interop test that returns `NumraResult<()>` and
+   uses `?` across at least two crate boundaries.~~ **Landed
+   alongside F-ERR (2026-05-14)**: `workflow_ode_interp_integrate` now
+   returns `Result<(), NumraError>` and uses `?` across three crate
+   boundaries (numra-ode → numra-interp → numra-integrate).
+2. Expand to cover the formerly-missing pairs that F-ERR unblocked
+   (every other interop test in `interop_workflows.rs` still uses
+   `.unwrap()` and could now exercise `?`-propagation through the new
+   `From` impls).
 3. Add at least one interop test with `S = f32` exercising a
    non-trivial pipeline (e.g. ODE → Interp → Quad). Catches the
    silent-`f32`-FD-step issue (F-FD-STEP) and any concrete-`f64`
@@ -675,7 +691,7 @@ six workflow tests. Issues:
 
 This is one consolidated follow-up because the work shape is the
 same for each (write a test in `interop_workflows.rs` or sibling
-file). Sequence: (1) before/alongside F-ERR; (3) before/alongside
+file). Remaining sequence: (2) any time; (3) before/alongside
 F-FD-STEP; (4) over time as capabilities are touched.
 
 ### F-SENS-DOWNSTREAM: Decide downstream consumers for `SensitivityResult`

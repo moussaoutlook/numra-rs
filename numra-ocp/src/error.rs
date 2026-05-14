@@ -4,6 +4,7 @@
 //! Date: 8 February 2026
 //! Modified: 2 May 2026
 
+use numra_core::NumraError;
 use thiserror::Error;
 
 /// Errors from ODE-constrained optimization.
@@ -25,4 +26,10 @@ pub enum OcpError {
     DimensionMismatch(String),
     #[error("{0}")]
     Other(String),
+}
+
+impl From<OcpError> for NumraError {
+    fn from(e: OcpError) -> Self {
+        NumraError::Ocp(e.to_string())
+    }
 }
