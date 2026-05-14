@@ -12,24 +12,83 @@ use core::fmt;
 pub type NumraResult<T> = Result<T, NumraError>;
 
 /// Errors that can occur in Numra operations.
+///
+/// `NumraError` is the workspace-wide error type into which every fallible
+/// crate's error converts via a `From<…> for NumraError` impl. This lets a
+/// user write `solve_ode(...)?.integrate(...)?.fit(...)?` and have `?` work
+/// uniformly across crate boundaries.
+///
+/// Variants fall into two tiers:
+///
+/// - **Low-level numerics-failure modes from `numra-core`** (structurally
+///   preserved): [`Linalg`], [`Convergence`], [`NumericalOptim`].
+/// - **Crate-level user-facing errors** (stringified, tagged by source crate):
+///   [`Ode`], [`Optim`], [`Ocp`], [`Fit`], [`Signal`], [`LineSearch`],
+///   [`Interp`], [`Integrate`], [`Special`], [`Stats`].
+///
+/// The [`NumericalOptim`] variant wraps `numra-core`'s
+/// [`OptimizationError`] (line-search / descent / convergence failures that
+/// happen *inside* algorithms regardless of which crate hosts them); the
+/// [`Optim`] variant carries `numra-optim::OptimError` (the optimization
+/// crate's API-level failures: missing objective, infeasibility, unbounded,
+/// etc.). The two are distinct concerns; do not confuse them.
+///
+/// `NumraError` is `#[non_exhaustive]`; new variants may be added in minor
+/// releases. Match arms must include a `_ => …` catch-all.
+///
+/// [`Linalg`]: NumraError::Linalg
+/// [`Convergence`]: NumraError::Convergence
+/// [`NumericalOptim`]: NumraError::NumericalOptim
+/// [`Ode`]: NumraError::Ode
+/// [`Optim`]: NumraError::Optim
+/// [`Ocp`]: NumraError::Ocp
+/// [`Fit`]: NumraError::Fit
+/// [`Signal`]: NumraError::Signal
+/// [`LineSearch`]: NumraError::LineSearch
+/// [`Interp`]: NumraError::Interp
+/// [`Integrate`]: NumraError::Integrate
+/// [`Special`]: NumraError::Special
+/// [`Stats`]: NumraError::Stats
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub enum NumraError {
-    /// Linear algebra error
+    /// Linear algebra error from `numra-linalg` / `numra-core`.
     Linalg(LinalgError),
-    /// Convergence failure
+    /// Convergence failure from a Newton or fixed-point iteration.
     Convergence(ConvergenceError),
-    /// Invalid input
+    /// Invalid input that doesn't fit a more specific variant.
     InvalidInput(String),
-    /// Step size became too small
+    /// Step size became too small.
     StepSizeTooSmall { h: f64, h_min: f64 },
-    /// Maximum iterations exceeded
+    /// Maximum iterations exceeded.
     MaxIterations { iterations: usize, max: usize },
-    /// Integration reached a singularity or stiffness
+    /// Integration reached a singularity or stiffness.
     Stiffness { t: f64, message: String },
-    /// Event caused termination
+    /// Event caused termination.
     EventTermination { t: f64, event_index: usize },
-    /// Optimization error
-    Optimization(OptimizationError),
+    /// Numerical-optimization failure from inside an algorithm
+    /// (line search, descent, convergence). See [`OptimizationError`].
+    NumericalOptim(OptimizationError),
+    /// ODE solver error from `numra-ode`.
+    Ode(String),
+    /// Optimization error from `numra-optim` (API-level failures).
+    Optim(String),
+    /// ODE-constrained-optimization error from `numra-ocp`.
+    Ocp(String),
+    /// Curve-fitting error from `numra-fit`.
+    Fit(String),
+    /// Signal-processing error from `numra-signal`.
+    Signal(String),
+    /// Line-search error from `numra-nonlinear`.
+    LineSearch(String),
+    /// Interpolation error from `numra-interp`.
+    Interp(String),
+    /// Numerical-integration (quadrature) error from `numra-integrate`.
+    Integrate(String),
+    /// Special-function evaluation error from `numra-special`.
+    Special(String),
+    /// Statistics error from `numra-stats`.
+    Stats(String),
 }
 
 impl fmt::Display for NumraError {
@@ -50,7 +109,17 @@ impl fmt::Display for NumraError {
             NumraError::EventTermination { t, event_index } => {
                 write!(f, "Event {} terminated integration at t={}", event_index, t)
             }
-            NumraError::Optimization(e) => write!(f, "Optimization error: {}", e),
+            NumraError::NumericalOptim(e) => write!(f, "Numerical optimization error: {}", e),
+            NumraError::Ode(s) => write!(f, "ODE error: {}", s),
+            NumraError::Optim(s) => write!(f, "Optimization error: {}", s),
+            NumraError::Ocp(s) => write!(f, "OCP error: {}", s),
+            NumraError::Fit(s) => write!(f, "Fit error: {}", s),
+            NumraError::Signal(s) => write!(f, "Signal error: {}", s),
+            NumraError::LineSearch(s) => write!(f, "Line search error: {}", s),
+            NumraError::Interp(s) => write!(f, "Interpolation error: {}", s),
+            NumraError::Integrate(s) => write!(f, "Integration error: {}", s),
+            NumraError::Special(s) => write!(f, "Special function error: {}", s),
+            NumraError::Stats(s) => write!(f, "Statistics error: {}", s),
         }
     }
 }
@@ -221,6 +290,6 @@ impl fmt::Display for OptimizationError {
 
 impl From<OptimizationError> for NumraError {
     fn from(e: OptimizationError) -> Self {
-        NumraError::Optimization(e)
+        NumraError::NumericalOptim(e)
     }
 }

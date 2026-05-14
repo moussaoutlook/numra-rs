@@ -37,6 +37,6 @@ impl fmt::Display for SpecialError {
 
 impl From<SpecialError> for numra_core::NumraError {
     fn from(e: SpecialError) -> Self {
-        numra_core::NumraError::InvalidInput(e.to_string())
+        numra_core::NumraError::Special(e.to_string())
     }
 }

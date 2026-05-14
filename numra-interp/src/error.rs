@@ -44,6 +44,6 @@ impl fmt::Display for InterpError {
 
 impl From<InterpError> for NumraError {
     fn from(e: InterpError) -> Self {
-        NumraError::InvalidInput(e.to_string())
+        NumraError::Interp(e.to_string())
     }
 }

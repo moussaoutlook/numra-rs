@@ -4,7 +4,7 @@
 //! Date: 8 February 2026
 //! Modified: 2 May 2026
 
-use numra_core::LinalgError;
+use numra_core::{LinalgError, NumraError};
 use thiserror::Error;
 
 /// Errors that can occur during ODE solving.
@@ -55,6 +55,12 @@ impl From<LinalgError> for SolverError {
             | LinalgError::NotPositiveDefinite => SolverError::LuFactorizationFailed,
             _ => SolverError::Other(e.to_string()),
         }
+    }
+}
+
+impl From<SolverError> for NumraError {
+    fn from(e: SolverError) -> Self {
+        NumraError::Ode(e.to_string())
     }
 }
 

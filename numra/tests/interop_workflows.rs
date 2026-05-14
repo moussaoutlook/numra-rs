@@ -22,13 +22,20 @@ use core::f64::consts::PI;
 //
 // Solve an ODE, interpolate the solution with a cubic spline,
 // then numerically integrate the interpolant to verify conservation.
+//
+// Canonical `?`-propagation demonstration: the test signature returns
+// `Result<(), NumraError>` and uses `?` across three crate boundaries
+// (numra-ode → numra-interp → numra-integrate). Compiles only when each
+// crate's `From<…> for NumraError` impl is present, so the workspace
+// composability contract item 3 is structurally enforced by CI.
 // =============================================================================
 
 #[test]
-fn workflow_ode_interp_integrate() {
+fn workflow_ode_interp_integrate() -> Result<(), numra::NumraError> {
     use numra::integrate::{quad, QuadOptions};
     use numra::interp::{CubicSpline, Interpolant};
     use numra::ode::{DoPri5, OdeProblem, Solver, SolverOptions, SolverResult};
+    use numra::NumraError;
 
     // Solve y' = -y, y(0) = 1 on [0, 3]
     let problem = OdeProblem::new(
@@ -40,14 +47,17 @@ fn workflow_ode_interp_integrate() {
         vec![1.0],
     );
     let opts = SolverOptions::default().rtol(1e-8).dense();
-    let result: SolverResult<f64> = DoPri5::solve(&problem, 0.0, 3.0, &[1.0], &opts).unwrap();
+    let result: SolverResult<f64> = DoPri5::solve(&problem, 0.0, 3.0, &[1.0], &opts)?;
 
-    // Use component() helper (A1) to extract the first state variable
-    let y_series = result.component(0).unwrap();
+    // component() returns Option (out-of-bounds is a None, not an Err);
+    // adapt to the workspace error type with .ok_or.
+    let y_series = result
+        .component(0)
+        .ok_or_else(|| NumraError::InvalidInput("component(0) out of bounds".into()))?;
     assert_eq!(y_series.len(), result.t.len());
 
     // Build cubic spline interpolation of the ODE solution
-    let spline = CubicSpline::natural(&result.t, &y_series).unwrap();
+    let spline = CubicSpline::natural(&result.t, &y_series)?;
 
     // Verify interpolant agrees with exact solution at a few points
     for &ti in &[0.5, 1.0, 1.5, 2.0, 2.5] {
@@ -62,13 +72,15 @@ fn workflow_ode_interp_integrate() {
     // Integrate the interpolant from 0 to 3
     // integral_0^3 e^(-t) dt = 1 - e^(-3) ~ 0.9502
     let q_opts = QuadOptions::default();
-    let q_result = quad(|t| spline.interpolate(t), 0.0, 3.0, &q_opts).unwrap();
+    let q_result = quad(|t| spline.interpolate(t), 0.0, 3.0, &q_opts)?;
     let exact_integral = 1.0 - (-3.0_f64).exp();
     assert!(
         (q_result.value - exact_integral).abs() < 1e-3,
         "integral = {}, exact = {exact_integral}",
         q_result.value
     );
+
+    Ok(())
 }
 
 // =============================================================================

@@ -2,6 +2,23 @@
 
 All notable public changes to Numra are recorded here. The project follows semantic-versioning intent, with extra care around solver behavior, public re-exports, and documented book examples while the `0.1.x` API is still settling.
 
+## Unreleased
+
+### Changed (breaking)
+
+- `numra-core`: `NumraError` is now `#[non_exhaustive]`. Exhaustive `match` arms over `NumraError` outside of `numra-core` must add a `_ => …` catch-all. Rationale: future-proofs additive variant changes, so subsequent cross-crate `From` impls can extend the workspace error story without forcing a semver-major bump. Workspace convention going forward: every public enum should be `#[non_exhaustive]` by default unless there's a specific reason not to.
+- `numra-core`: `NumraError::Optimization` variant renamed to `NumraError::NumericalOptim`. The wrapped type stays `numra_core::OptimizationError`; only the `NumraError` variant tag changes. Rationale: disambiguates from the new `NumraError::Optim` variant (which carries `numra-optim::OptimError`, the optimization crate's API-level errors). The renamed variant clarifies its scope — low-level numerics-failure modes from inside algorithms (line search, descent direction, convergence) — distinct from crate-level optimization errors.
+
+### Added
+
+- `numra-core`: ten new `NumraError` variants for cross-crate error propagation — `Ode(String)`, `Optim(String)`, `Ocp(String)`, `Fit(String)`, `Signal(String)`, `LineSearch(String)`, `Interp(String)`, `Integrate(String)`, `Special(String)`, `Stats(String)`. Each variant tags the source crate so callers can `match` on which subsystem failed; the per-crate error's detail flattens into the carried `String` via `Display`. Resolves the workspace composability contract item 3 (errors compose into the workspace error type).
+- `numra-ode`, `numra-optim`, `numra-ocp`, `numra-fit`, `numra-signal`, `numra-nonlinear`: `From<CrateError> for NumraError` impls covering `SolverError`, `OptimError`, `OcpError`, `FitError`, `SignalError`, and `LineSearchError` respectively. Six previously-missing bridges now land directly into `NumraError`, so `?` propagation across these crate boundaries works without manual `.map_err`.
+- `numra/tests/interop_workflows.rs`: `workflow_ode_interp_integrate` rewritten to return `Result<(), NumraError>` and use `?` across three crate boundaries (numra-ode → numra-interp → numra-integrate). Canonical structural CI signal that the workspace `?`-propagation property is real — the test compiles only if all three `From` impls are present. Closes the gap surfaced in the foundation-pass verification (finding D4): no interop test previously exercised cross-crate `?`-propagation.
+
+### Changed
+
+- `numra-interp`, `numra-integrate`, `numra-special`, `numra-stats`: existing `From<…> for NumraError` impls migrated from collapsing into `NumraError::InvalidInput(String)` to the new tagged-variant pattern (`NumraError::Interp`, `NumraError::Integrate`, `NumraError::Special`, `NumraError::Stats`). Workspace-uniform error story: every external-crate error now lands in a tagged variant rather than half-tagged-half-flattened. `Display` output for these errors changes (e.g. `"Invalid input: …"` → `"Interpolation error: …"`); `Display` is not part of any stability guarantee in 0.1.x.
+
 ## 0.1.0 - 2026-05-13
 
 First public release. Archived on Zenodo: concept DOI [10.5281/zenodo.20159709](https://doi.org/10.5281/zenodo.20159709) (all versions; preferred for citation); version DOI [10.5281/zenodo.20159710](https://doi.org/10.5281/zenodo.20159710) (this 0.1.0 release; for reproducibility).

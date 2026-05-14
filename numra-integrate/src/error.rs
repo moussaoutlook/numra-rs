@@ -50,6 +50,6 @@ impl fmt::Display for IntegrationError {
 
 impl From<IntegrationError> for NumraError {
     fn from(e: IntegrationError) -> Self {
-        NumraError::InvalidInput(e.to_string())
+        NumraError::Integrate(e.to_string())
     }
 }
