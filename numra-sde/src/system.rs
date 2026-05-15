@@ -67,7 +67,7 @@ pub trait SdeSystem<S: Scalar>: Sync {
     /// Required for Milstein method. Default implementation uses finite differences.
     fn diffusion_derivative(&self, t: S, x: &[S], gdg: &mut [S]) {
         let dim = self.dim();
-        let eps = S::from_f64(1e-8);
+        let h_factor = S::EPSILON.sqrt();
 
         let mut g = vec![S::ZERO; dim];
         let mut g_plus = vec![S::ZERO; dim];
@@ -76,12 +76,13 @@ pub trait SdeSystem<S: Scalar>: Sync {
         self.diffusion(t, x, &mut g);
 
         for i in 0..dim {
-            x_pert[i] = x[i] + eps;
+            let h = h_factor * (S::ONE + x[i].abs());
+            x_pert[i] = x[i] + h;
             self.diffusion(t, &x_pert, &mut g_plus);
             x_pert[i] = x[i];
 
             // (∂g_i/∂x_i) * g_i for diagonal case
-            gdg[i] = (g_plus[i] - g[i]) / eps * g[i];
+            gdg[i] = (g_plus[i] - g[i]) / h * g[i];
         }
     }
 }
@@ -313,5 +314,58 @@ mod tests {
         let opts: SdeOptions<f64> = SdeOptions::default().dt(0.001).seed(42);
         assert!((opts.dt - 0.001).abs() < 1e-10);
         assert_eq!(opts.seed, Some(42));
+    }
+
+    /// Test SDE with linear-in-x diffusion `g(t, x) = α·x`. Then
+    /// `(∂g_i/∂x_i) · g_i = α · α·x_i = α²·x_i`, which is the closed-form
+    /// answer the trait default's forward-FD computation should approximate.
+    struct LinearDiffusionSde {
+        alpha: f64,
+    }
+
+    impl SdeSystem<f64> for LinearDiffusionSde {
+        fn dim(&self) -> usize {
+            2
+        }
+        fn drift(&self, _t: f64, _x: &[f64], f: &mut [f64]) {
+            f[0] = 0.0;
+            f[1] = 0.0;
+        }
+        fn diffusion(&self, _t: f64, x: &[f64], g: &mut [f64]) {
+            g[0] = self.alpha * x[0];
+            g[1] = self.alpha * x[1];
+        }
+        // Note: deliberately not overriding diffusion_derivative — exercises
+        // the trait default that this test pins.
+    }
+
+    #[test]
+    fn test_diffusion_derivative_default_large_x_no_scaling_bug() {
+        // Pins F-FD-NOSCALE-BUG for the trait-default forward-FD branch: with
+        // unscaled `h = 1e-8`, `x[i] + h == x[i]` in f64 for |x| > ~5e7, so
+        // `g_plus == g` and the result was `0/h * g = 0` instead of `α²·x`.
+        // With canonical `sqrt(EPSILON) * (1 + |x|)` the answer is recovered.
+        // (Note site 4 is *forward* FD — different canonical step than the
+        // central-FD sites in numra-optim and numra-dde.)
+        let alpha = 0.5_f64;
+        let sys = LinearDiffusionSde { alpha };
+        let x = [1e8, 1e8];
+        let mut gdg = [0.0; 2];
+        sys.diffusion_derivative(0.0, &x, &mut gdg);
+
+        // Expected: α² · x_i = 0.25 · 1e8 = 2.5e7
+        let expected = alpha * alpha * 1e8;
+        assert!(
+            (gdg[0] - expected).abs() < 1e-3 * expected.abs(),
+            "gdg[0] = {} should be ≈ {} (within 1e-3 relative); old unscaled formula returns 0",
+            gdg[0],
+            expected
+        );
+        assert!(
+            (gdg[1] - expected).abs() < 1e-3 * expected.abs(),
+            "gdg[1] = {} should be ≈ {} (within 1e-3 relative); old unscaled formula returns 0",
+            gdg[1],
+            expected
+        );
     }
 }

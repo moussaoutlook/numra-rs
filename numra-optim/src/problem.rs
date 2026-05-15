@@ -482,23 +482,34 @@ impl<S: Scalar + faer::SimpleEntity + faer::Conjugate<Canonical = S> + faer::Com
     }
 }
 
-/// Compute a finite-difference gradient of `f` at `x` using central differences.
+/// Compute a finite-difference gradient using the canonical central FD step
+/// `cbrt(S::EPSILON) * (1 + |x|)`, which scales with `|x|` to remain valid for
+/// large-magnitude parameters. The additive scaling prevents silent zero-gradient
+/// failures that occur when an unscaled step falls below the precision floor
+/// of `x + h == x` (manifesting for `|x| > ~5e7` at f64 precision).
 pub fn finite_diff_gradient<S: Scalar>(f: &dyn Fn(&[S]) -> S, x: &[S], g: &mut [S]) {
     let n = x.len();
-    let eps = S::from_f64(1e-8);
+    let h_factor = S::EPSILON.cbrt();
     let mut xp = x.to_vec();
     for i in 0..n {
         let xi_orig = xp[i];
-        xp[i] = xi_orig + eps;
+        let h = h_factor * (S::ONE + xi_orig.abs());
+        xp[i] = xi_orig + h;
         let fp = f(&xp);
-        xp[i] = xi_orig - eps;
+        xp[i] = xi_orig - h;
         let fm = f(&xp);
-        g[i] = (fp - fm) / (S::TWO * eps);
+        g[i] = (fp - fm) / (S::TWO * h);
         xp[i] = xi_orig;
     }
 }
 
-/// Compute a finite-difference Jacobian of residual `r` at `x`.
+/// Compute a finite-difference Jacobian of residual `r` at `x` using the canonical
+/// central FD step `cbrt(S::EPSILON) * (1 + |x|)`, which scales with `|x|` to
+/// remain valid for large-magnitude parameters. The additive scaling prevents
+/// silent zero-Jacobian failures that occur when an unscaled step falls below
+/// the precision floor of `x + h == x` (manifesting for `|x| > ~5e7` at f64
+/// precision).
+///
 /// `jac` is row-major m*n.
 pub fn finite_diff_jacobian<S: Scalar>(
     r: &dyn Fn(&[S], &mut [S]),
@@ -507,18 +518,19 @@ pub fn finite_diff_jacobian<S: Scalar>(
     jac: &mut [S],
 ) {
     let n = x.len();
-    let eps = S::from_f64(1e-8);
+    let h_factor = S::EPSILON.cbrt();
     let mut xp = x.to_vec();
     let mut rp = vec![S::ZERO; m];
     let mut rm = vec![S::ZERO; m];
     for j in 0..n {
         let xj_orig = xp[j];
-        xp[j] = xj_orig + eps;
+        let h = h_factor * (S::ONE + xj_orig.abs());
+        xp[j] = xj_orig + h;
         r(&xp, &mut rp);
-        xp[j] = xj_orig - eps;
+        xp[j] = xj_orig - h;
         r(&xp, &mut rm);
         for i in 0..m {
-            jac[i * n + j] = (rp[i] - rm[i]) / (S::TWO * eps);
+            jac[i * n + j] = (rp[i] - rm[i]) / (S::TWO * h);
         }
         xp[j] = xj_orig;
     }
@@ -635,5 +647,61 @@ mod tests {
         // df/dx0 = 2*x0 = 6.0, df/dx1 = 8*x1 = 16.0
         assert!((g[0] - 6.0).abs() < 1e-5);
         assert!((g[1] - 16.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_finite_diff_gradient_large_x_no_scaling_bug() {
+        // Pins F-FD-NOSCALE-BUG: with the previous unscaled `h = 1e-8`,
+        // `x + h == x` in f64 for |x| > ~5e7, so the FD returned 0 instead
+        // of the analytical gradient. With canonical `cbrt(EPSILON) * (1 + |x|)`
+        // the gradient is recovered.
+        let f = |x: &[f64]| x[0] * x[0] + x[1] * x[1];
+        let x = [1e8, 1e8];
+        let mut g = [0.0; 2];
+        finite_diff_gradient(&f, &x, &mut g);
+        // df/dx_i = 2*x_i = 2e8 (analytical)
+        let expected = 2e8;
+        assert!(
+            (g[0] - expected).abs() < 1e-3 * expected.abs(),
+            "g[0] = {} should be ≈ {} (within 1e-3 relative); old unscaled formula returns 0",
+            g[0],
+            expected
+        );
+        assert!(
+            (g[1] - expected).abs() < 1e-3 * expected.abs(),
+            "g[1] = {} should be ≈ {} (within 1e-3 relative); old unscaled formula returns 0",
+            g[1],
+            expected
+        );
+    }
+
+    #[test]
+    fn test_finite_diff_jacobian_large_x_no_scaling_bug() {
+        // Pins F-FD-NOSCALE-BUG for the Jacobian variant; same threshold logic
+        // as the gradient test. Diagonal residual r_i = x_i^2 → J_ii = 2*x_i.
+        let r = |x: &[f64], out: &mut [f64]| {
+            out[0] = x[0] * x[0];
+            out[1] = x[1] * x[1];
+        };
+        let x = [1e8, 1e8];
+        let mut jac = [0.0; 4];
+        finite_diff_jacobian(&r, &x, 2, &mut jac);
+        // J is row-major 2x2; diagonal entries J[0,0]=jac[0], J[1,1]=jac[3]
+        let expected = 2e8;
+        assert!(
+            (jac[0] - expected).abs() < 1e-3 * expected.abs(),
+            "J[0,0] = {} should be ≈ {} (within 1e-3 relative); old unscaled formula returns 0",
+            jac[0],
+            expected
+        );
+        assert!(
+            (jac[3] - expected).abs() < 1e-3 * expected.abs(),
+            "J[1,1] = {} should be ≈ {} (within 1e-3 relative); old unscaled formula returns 0",
+            jac[3],
+            expected
+        );
+        // Off-diagonals should be ~0 by construction
+        assert!(jac[1].abs() < 1e-3 * expected.abs());
+        assert!(jac[2].abs() < 1e-3 * expected.abs());
     }
 }
