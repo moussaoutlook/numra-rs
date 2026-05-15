@@ -41,7 +41,7 @@ where
     S: Scalar + faer::SimpleEntity + faer::Conjugate<Canonical = S> + faer::ComplexField,
     F: Fn(&[S]) -> OptimProblem<S>,
 {
-    let eps = eps.unwrap_or_else(|| S::from_f64(1e-5));
+    let eps = eps.unwrap_or_else(|| S::EPSILON.cbrt());
     let n_params = params.len();
 
     // Solve the nominal problem to get x* and n_vars.
@@ -215,6 +215,38 @@ mod tests {
             sens_bound.get(0, 0).abs() < 0.1,
             "bound-active dx/dp = {}, expected ~0",
             sens_bound.get(0, 0)
+        );
+    }
+
+    #[test]
+    fn test_sensitivity_canonical_default_eps_at_large_param() {
+        // Regression: with `eps = None` the FD step factor must be the
+        // canonical `cbrt(EPSILON)`, additively scaled by `(1 + |p|)`.
+        // For min (x - p)^2 the analytical sensitivity is dx*/dp = 1
+        // independent of |p|. Exercising at |p| = 100 ensures the
+        // canonical factor (~6e-6) and the additive scaling cooperate
+        // to recover the analytical answer at large parameter magnitude
+        // — pinning the property the canonical formula provides, not
+        // just non-zero output.
+        let params = [100.0];
+        let sens = compute_param_sensitivity(
+            |p: &[f64]| {
+                let p_val = p[0];
+                OptimProblem::new(1)
+                    .x0(&[100.0])
+                    .objective(move |x: &[f64]| (x[0] - p_val) * (x[0] - p_val))
+            },
+            &params,
+            &["p"],
+            None,
+        )
+        .unwrap();
+
+        let s = sens.get(0, 0);
+        assert!(s.is_finite(), "sensitivity must be finite, got {s}");
+        assert!(
+            (s - 1.0).abs() < 1e-2,
+            "canonical default at |p| = 100: dx/dp = {s}, expected ~1.0"
         );
     }
 }

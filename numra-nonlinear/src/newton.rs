@@ -241,15 +241,13 @@ impl<S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField> Newton<
         jac: &mut [S],
     ) {
         let n = system.dim();
-        /// Step size for finite difference Jacobian approximation.
-        const FD_JACOBIAN_EPS: f64 = 1e-8;
-        let eps = S::from_f64(FD_JACOBIAN_EPS);
+        let h_factor = S::EPSILON.sqrt();
         let mut x_pert = x.to_vec();
         let mut f_pert = vec![S::ZERO; n];
 
         for j in 0..n {
             let x_j = x[j];
-            let h = eps * (S::ONE + x_j.abs());
+            let h = h_factor * (S::ONE + x_j.abs());
 
             x_pert[j] = x_j + h;
             system.eval(&x_pert, &mut f_pert);

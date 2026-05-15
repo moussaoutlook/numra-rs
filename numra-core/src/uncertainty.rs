@@ -264,7 +264,8 @@ impl<S: Scalar> ParameterSensitivityResult<S> {
 /// * `f` - Function to evaluate
 /// * `params` - Nominal parameter values
 /// * `names` - Parameter names
-/// * `h` - Step size for finite differences (default: 1e-7)
+/// * `h` - Step size for finite differences (default: `cbrt(S::EPSILON)`,
+///   the canonical central-FD step factor)
 pub fn compute_sensitivities<S: Scalar, F>(
     f: F,
     params: &[S],
@@ -274,9 +275,7 @@ pub fn compute_sensitivities<S: Scalar, F>(
 where
     F: Fn(&[S]) -> S,
 {
-    /// Default step size for central-difference sensitivity computation.
-    const DEFAULT_SENSITIVITY_EPS: f64 = 1e-7;
-    let h = h.unwrap_or(S::from_f64(DEFAULT_SENSITIVITY_EPS));
+    let h = h.unwrap_or(S::EPSILON.cbrt());
     let output = f(params);
 
     let mut sensitivities = Vec::with_capacity(params.len());

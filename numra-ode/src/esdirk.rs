@@ -522,13 +522,13 @@ where
     S: Scalar,
     Sys: OdeSystem<S>,
 {
-    let eps = S::from_f64(1e-8);
+    let h_factor = S::EPSILON.sqrt();
     let mut y_pert = y.to_vec();
     let mut f_pert = vec![S::ZERO; dim];
 
     for j in 0..dim {
         let yj = y[j];
-        let h = eps * (S::ONE + yj.abs());
+        let h = h_factor * (S::ONE + yj.abs());
         y_pert[j] = yj + h;
         problem.rhs(t, &y_pert, &mut f_pert);
         y_pert[j] = yj;
