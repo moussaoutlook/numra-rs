@@ -4,6 +4,21 @@ All notable public changes to Numra are recorded here. The project follows seman
 
 ## Unreleased
 
+### Changed
+
+- `numra-ode`: `OdeSystem::jacobian` default's finite-difference step changed from a hardcoded `1e-8` to the textbook precision-aware `sqrt(S::EPSILON) * (1 + |y_j|)`. The previous step was below `f32::EPSILON ≈ 1.19e-7`, so the FD perturbation quantised to zero on `f32` and the default Jacobian came back as all-zeros — silently. The new form is correct on every `Scalar` precision (`f64` lands at `≈1.49e-8`, within ~50% of the prior value; `f32` at `≈3.45e-4`, no longer quantised). Behavioural impact on `f64`: Jacobian columns shift in the last 1-2 digits at states with `|y_j| ≈ 1`. No regression-suite test asserted on the prior values; the `numra-ode` test suite passes unchanged. Pinned with a new `f32` regression test.
+- `numra-core`: `Signal::eval_derivative` default's central-difference step changed from a hardcoded `1e-8` (no scaling) to the textbook precision-aware `cbrt(S::EPSILON) * (1 + |t|)` — optimal for central FD by the truncation/round-off balance, and useful at every `Scalar` precision (`f64` at `≈6.06e-6`, `f32` at `≈4.92e-3`). Same `f32` quantisation-to-zero failure mode as `OdeSystem::jacobian`; same fix shape. Most built-in `Signal` impls (Harmonic, Ramp, Sum, Product, Scaled, Constant, Zero) override with closed-form derivatives, so the FD path mainly affects `Tabulated`, `FromFile`, and user-supplied signals without an analytical override. Pinned with a new `f32` regression test.
+- `numra-pde`: six MOL hybrid analytical-Jacobian implementations updated in lockstep with the trait-default formula change (`MOLSystem2D::jacobian`, `MOLSystem3D::jacobian`, and the four `ParametricMOLSystem{2,3}D::jacobian_y/_p`). The reaction-FD diagonal in each cited the trait default in code comments — keeping the comment-vs-code consistency the comment claims required moving the implementations together. The 2D / 3D / parametric MOL `analytical-vs-FD-agreement` regression tests pass unchanged at their existing tolerances.
+- `numra-ode`: `Radau5` module-level rustdoc updated to cite the new FD step formula. The `AugmentedSystem` inline FD paths in `numra-ode/src/sensitivity.rs` were already on `sqrt(S::EPSILON)` from the original forward-sensitivity work; no change.
+- `numra-bench`: `pde_mol::FdJacobianMol2D` wrapper takes no jacobian override, so it automatically tracks whatever the current trait default is. `bench_mol2d_radau5_jacobian_path`'s "FD baseline" therefore reports the actual FD path a user without an analytical override would hit today; the wrapper rustdoc is updated to make this explicit.
+
+This is the foundation-trait reconciliation portion of the FD-step audit. **Two related follow-ups remain open** and are not addressed here:
+
+- **F-FD-CROSSCRATE** — formula reconciliation across 13 cross-crate FD sites in `numra-ocp::adjoint`, `numra-dde::history`, `numra-ode::dae_init`, `numra-ode::index_reduction`, `numra-ode::esdirk`, `numra-ode::auto`, `numra-nonlinear::newton`, etc. Existing code is correct (each picks a reasonable FD step); the work is consistency, not bug-fixing.
+- **F-FD-NOSCALE-BUG** — the no-scaling correctness bug in `numra-optim::finite_diff_gradient`, `numra-optim::finite_diff_jacobian`, `numra-optim::robust`, `numra-dde::history`, `numra-sde::system::diffusion_derivative`. These public-API sites use `h = eps` with no `(1 + |x|)` scaling, so `f64` callers with large-magnitude states also see the perturbation quantised. Independent of the f32 framing here; warrants its own correctness analysis and PR.
+
+Closes F-FD-STEP. Both follow-ups tracked in `docs/internal-followups.md`.
+
 ## 0.1.1 - 2026-05-14
 
 ### Changed (breaking)

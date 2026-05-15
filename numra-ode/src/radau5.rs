@@ -56,8 +56,8 @@
 //! Radau5 calls `OdeSystem::jacobian` for each rebuild. Systems that
 //! override the trait method get an analytical Jacobian for free; systems
 //! that don't fall through to the canonical forward-FD default in
-//! `crate::problem` (eps = 1e-8, step = `eps * (1 + |y_j|)`,
-//! row-major dense output).
+//! `crate::problem` (`h = sqrt(S::EPSILON) * (1 + |y_j|)`, row-major
+//! dense output).
 //!
 //! ## References
 //! - Hairer, E. & Wanner, G. (1996), "Solving Ordinary Differential Equations II:

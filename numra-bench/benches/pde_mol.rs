@@ -60,6 +60,12 @@ fn bench_pde_mol_scaling(c: &mut Criterion) {
 /// override `jacobian`, so the trait-default FD path is exercised. Used
 /// only by the benchmark to measure the analytical-Jacobian win against
 /// the path that would have shipped without the override.
+///
+/// The trait default is precision-aware
+/// (`h = sqrt(S::EPSILON) * (1 + |y_j|)`); since this wrapper takes no
+/// override, the bench automatically tracks whatever the current trait
+/// default is. The "FD baseline" the bench reports is the actual FD
+/// path a user without an override would hit today.
 struct FdJacobianMol2D(MOLSystem2D<f64>);
 
 impl OdeSystem<f64> for FdJacobianMol2D {

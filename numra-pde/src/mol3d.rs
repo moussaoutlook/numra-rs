@@ -201,11 +201,12 @@ impl<S: SparseScalar> OdeSystem<S> for MOLSystem3D<S> {
             }
         }
 
-        // Reaction: diagonal-only FD. Same eps formula as the trait default
-        // (eps * (1 + |u|), eps = 1e-8) so the partial-FD-partial-analytical
-        // mix stays numerically consistent.
+        // Reaction: diagonal-only FD. Same step formula as the trait
+        // default (sqrt(S::EPSILON) * (1 + |u|)) so the
+        // partial-FD-partial-analytical mix stays numerically
+        // consistent.
         if let Some(ref reaction) = self.reaction {
-            let eps = S::from_f64(1e-8);
+            let h_factor = S::EPSILON.sqrt();
             let nx_int = self.grid.x_grid.n_interior();
             let ny_int = self.grid.y_grid.n_interior();
             let nz_int = self.grid.z_grid.n_interior();
@@ -217,7 +218,7 @@ impl<S: SparseScalar> OdeSystem<S> for MOLSystem3D<S> {
                         let y_coord = self.grid.y_grid.points()[jj + 1];
                         let z_coord = self.grid.z_grid.points()[kk + 1];
                         let u = y[idx];
-                        let h = eps * (S::ONE + u.abs());
+                        let h = h_factor * (S::ONE + u.abs());
                         let r0 = reaction(t, x, y_coord, z_coord, u);
                         let r1 = reaction(t, x, y_coord, z_coord, u + h);
                         let dr_du = (r1 - r0) / h;
@@ -418,7 +419,7 @@ mod tests {
     /// regression — keeps the test self-contained.
     fn fd_jacobian<Sys: numra_ode::OdeSystem<f64>>(sys: &Sys, t: f64, y: &[f64]) -> Vec<f64> {
         let n = sys.dim();
-        let eps = 1e-8;
+        let h_factor = f64::EPSILON.sqrt();
         let mut jac = vec![0.0; n * n];
         let mut y_pert = y.to_vec();
         let mut f0 = vec![0.0; n];
@@ -426,7 +427,7 @@ mod tests {
         sys.rhs(t, y, &mut f0);
         for j in 0..n {
             let yj = y_pert[j];
-            let h = eps * (1.0 + yj.abs());
+            let h = h_factor * (1.0 + yj.abs());
             y_pert[j] = yj + h;
             sys.rhs(t, &y_pert, &mut f1);
             y_pert[j] = yj;
