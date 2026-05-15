@@ -189,12 +189,12 @@ impl<S: Scalar, H: Fn(S) -> Vec<S>> History<S, H> {
         if t <= self.t0 {
             // Can't easily get derivative from arbitrary history function
             // Use finite difference approximation
-            let eps = S::from_f64(1e-8);
-            let y1 = (self.initial_history)(t - eps);
-            let y2 = (self.initial_history)(t + eps);
+            let h = S::EPSILON.cbrt() * (S::ONE + t.abs());
+            let y1 = (self.initial_history)(t - h);
+            let y2 = (self.initial_history)(t + h);
             let mut deriv = vec![S::ZERO; self.dim];
             for i in 0..self.dim {
-                deriv[i] = (y2[i] - y1[i]) / (S::from_f64(2.0) * eps);
+                deriv[i] = (y2[i] - y1[i]) / (S::from_f64(2.0) * h);
             }
             return deriv;
         }
@@ -362,5 +362,26 @@ mod tests {
         // Test interpolation at various points
         assert!((history.evaluate(2.5)[0] - 2.5).abs() < 0.1);
         assert!((history.evaluate(4.0)[0] - 4.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_evaluate_derivative_large_t_no_scaling_bug() {
+        // Pins F-FD-NOSCALE-BUG for the initial-history FD branch: with
+        // unscaled `h = 1e-8`, both `(t - h)` and `(t + h)` quantize to `t`
+        // for |t| > ~5e7 in f64, so the FD returned 0 instead of the
+        // analytical derivative. With canonical `cbrt(EPSILON) * (1 + |t|)`
+        // the derivative is recovered.
+        //
+        // Initial history is linear in t: y(t) = t, so dy/dt = 1 exactly.
+        let history_fn = |t: f64| vec![t];
+        let history = History::new(history_fn, 0.0, 1);
+
+        // Query at t = -1e8 (well below t0 = 0, well above the bug threshold).
+        let deriv = history.evaluate_derivative(-1e8);
+        assert!(
+            (deriv[0] - 1.0).abs() < 1e-3,
+            "dy/dt = {} should be ≈ 1.0 (within 1e-3); old unscaled formula returns 0",
+            deriv[0]
+        );
     }
 }

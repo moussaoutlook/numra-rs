@@ -4,6 +4,17 @@ All notable public changes to Numra are recorded here. The project follows seman
 
 ## Unreleased
 
+### Fixed
+
+- **F-FD-NOSCALE-BUG**: Four FD utilities used a hardcoded `h = 1e-8` step without scaling by `|x|`, which silently degraded gradient / Jacobian outputs for callers with `|x| > ~5e7` (the precision floor where `x + 1e-8` rounds back to `x` in `f64`). All four now use canonical precision-aware steps with additive scaling: central-FD sites get `cbrt(S::EPSILON) * (1 + |x|)`; the forward-FD `diffusion_derivative` gets `sqrt(S::EPSILON) * (1 + |x|)`.
+  - **Affected utilities**: `numra-optim::finite_diff_gradient` (public free function), `numra-optim::finite_diff_jacobian` (public free function), `numra-dde::History::evaluate_derivative` (initial-history branch), `numra-sde::SdeSystem::diffusion_derivative` (trait default for the Milstein method). The first three are central FD; the fourth is forward FD (different canonical step).
+  - **Affected users**: `OptimProblem::solve()` callers with large-magnitude parameters and no analytical gradient — the bug propagates through `numra-optim::auto`'s solver dispatcher (4 `finite_diff_gradient` / 1 `finite_diff_jacobian` call sites) and `numra-optim::augmented_lagrangian`'s inner loops (5 call sites); DDE callers querying derivatives in the initial-history region with large-magnitude time arguments; SDE Milstein-method users who don't override `diffusion_derivative`.
+  - **Failure-mode shape**: at `|x| = 1e8`, the previous unscaled formula returns either `0` (clean catastrophic case for the central-FD sites — both `x+h` and `x-h` round back to `x`) or a `~50%`-distorted answer (the forward-FD site, where `x+h` rounds to `x + ulp` rather than `x`). Both regimes pass through the optimiser as silently-wrong gradient information. The fix recovers analytical accuracy in both regimes.
+  - Pinned with four regression tests at `|x| = 1e8`: `test_finite_diff_gradient_large_x_no_scaling_bug` and `test_finite_diff_jacobian_large_x_no_scaling_bug` in `numra-optim/src/problem.rs`; `test_evaluate_derivative_large_t_no_scaling_bug` in `numra-dde/src/history.rs`; `test_diffusion_derivative_default_large_x_no_scaling_bug` in `numra-sde/src/system.rs`. Each test asserts proximity to the analytical value within `1e-3` relative tolerance — wide enough to be CI-stable across f64 platforms, narrow enough that the previous formula's outputs (0 or ~50% off) fail by orders of magnitude. Structural-correctness check verified for the forward-FD site (revert formula → confirm test fails → restore).
+  - **Public-API rustdoc**: `finite_diff_gradient` and `finite_diff_jacobian` rustdoc updated to document the canonical step formula, the additive-scaling rationale, and the `|x| > ~5e7` precision floor — durable contract documentation for the next reader of the public API. The two trait/method sites (`History::evaluate_derivative`, `SdeSystem::diffusion_derivative`) were not annotated since they don't have established rustdoc conventions for the FD-step choice.
+
+This closes the no-scaling correctness portion of the FD-step audit. The 0.1.2 CHANGELOG's F-FD-NOSCALE-BUG follow-up note over-listed `numra-optim::robust` as a no-scaling site; the F-FD-CROSSCRATE audit subsequently surfaced that those sites already have proper additive scaling and are F-FD-CROSSCRATE-class hygiene (hardcoded `1e-8`, additive-scaled), not F-FD-NOSCALE-BUG-class correctness. The robust.rs sites remain a small leftover hygiene item, deferred.
+
 ## 0.1.2 - 2026-05-15
 
 ### Changed

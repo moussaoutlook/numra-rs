@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-15 (F-FD-CROSSCRATE retired; F-CI-NODE20 retired; F-FD-STEP retired; F-FD-NOSCALE-BUG, F-WEBSITE-AUDIT-GATES, F-WEBSITE-PR-FLOW added).
+Last updated: 2026-05-15 (F-FD-NOSCALE-BUG retired; F-FD-CROSSCRATE retired; F-CI-NODE20 retired; F-FD-STEP retired; F-WEBSITE-AUDIT-GATES, F-WEBSITE-PR-FLOW added).
 
 ## Recently retired
 
@@ -18,6 +18,7 @@ One-line entries for follow-ups that landed and were removed from the
 file. Kept here so a future reader can find the closure record without
 git-archaeology.
 
+- **F-FD-NOSCALE-BUG: no-scaling correctness bug in public FD utilities** — landed in `Unreleased` (next 0.1.x release) 2026-05-15. Four FD utilities defaulting to hardcoded `h = 1e-8` without `(1 + |x|)` scaling silently degraded gradient/Jacobian outputs for callers with `|x| > ~5e7` (precision floor where `x + 1e-8` rounds back to `x` in `f64`). Fixed at all four named sites: `numra-optim/src/problem.rs:486` (`finite_diff_gradient`, central → `cbrt(EPSILON) * (1 + |x|)`), `numra-optim/src/problem.rs:503` (`finite_diff_jacobian`, central), `numra-dde/src/history.rs:188` (`History::evaluate_derivative` initial-history branch, central), `numra-sde/src/system.rs:68` (`SdeSystem::diffusion_derivative` trait default, **forward → `sqrt(EPSILON) * (1 + |x|)`** — direction-corrected by the audit; the entry had assumed central FD). Each pinned with a regression test at `|x| = 1e8` asserting analytical-truth proximity within `1e-3` relative; structural-correctness check verified on the forward-FD site (revert → fail → restore). Public-API rustdoc on the two `numra-optim` free functions documents the canonical step formula and the `~5e7` precision floor. Audit found exactly the four named sites — first follow-up where the audit confirmed the entry's scope rather than expanding it (different from F-FD-STEP / F-CI-NODE20 / F-FD-CROSSCRATE). The 0.1.2 CHANGELOG's note on this follow-up over-listed `numra-optim::robust` as no-scaling-bug-class; that was already corrected in F-FD-CROSSCRATE's audit pass and stands.
 - **F-CI-NODE20: upgrade GitHub Actions runners to Node.js 24** — shipped 2026-05-15. Five action majors bumped to versions declaring `runs.using: node24`, clearing the 2026-06-02 deprecation deadline ahead of time: `actions/checkout@v4 → @v6` (11 usages), `actions/setup-node@v4 → @v6` (7), `actions/upload-artifact@v4 → @v7` (4), `pnpm/action-setup@v3 → @v6` (4; also dropped redundant `with: version: 9` and deferred to the `packageManager: pnpm@9.15.0` field in `package.json` as the single source of truth — required for the v4+ strict check), `cloudflare/wrangler-action@v3 → @v4` (3; default wrangler version implicitly upgrades v3 → v4 — `pages deploy` syntax is stable across the bump). Actions already on node24-runtime majors (`treosh/lighthouse-ci-action@v12`, `Swatinem/rust-cache@v2`) left at their current pins per scope discipline; composite actions (`taiki-e/install-action`, `dtolnay/rust-toolchain`, `rhysd/actionlint`) not affected by Node-runtime deprecation. Audit surfaced 4 actions missed from the original entry (`upload-artifact` needs bump; the three composites and lighthouse/rust-cache don't) — same audit-surfaces-more-than-named pattern as F-FD-STEP.
 - **F-FD-STEP: foundation-trait FD-step reconciliation** — shipped 2026-05-15. `OdeSystem::jacobian` default switched from hardcoded `1e-8` to `sqrt(S::EPSILON) * (1 + |y_j|)`; `Signal::eval_derivative` default switched from hardcoded `1e-8` (no scaling) to `cbrt(S::EPSILON) * (1 + |t|)` (canonical central-FD step). `ParametricOdeSystem::jacobian_y/_p` defaults were already correct on `sqrt(S::EPSILON)`; no change. The six `MOLSystem{2,3}D::jacobian` and `ParametricMOLSystem{2,3}D::jacobian_y/_p` reaction-FD diagonals updated in lockstep (each referenced the trait default in code comments — preserving the consistency the comments claim required moving them together). Two `f32` regression tests added (`numra-ode/src/problem.rs::test_jacobian_finite_diff_f32`, `numra-core/src/signal.rs::test_signal_derivative_f32`) pinning out the silent-quantisation failure mode. The audit pass also surfaced two adjacent follow-ups that were explicitly out of scope for F-FD-STEP — F-FD-CROSSCRATE (now also retired below) and F-FD-NOSCALE-BUG.
 - **F-FD-CROSSCRATE: cross-crate FD-step formula reconciliation** — shipped 2026-05-15. 18 cross-crate FD bodies aligned to the canonical precision-aware forms (forward → `sqrt(S::EPSILON) * (1 + |x_j|)`, central → `cbrt(S::EPSILON) * (1 + |x_j|)`). Forward sites: `numra-nonlinear/src/newton.rs:245`, `numra-ode/src/{auto.rs:168, dae_init.rs:105, esdirk.rs:525, index_reduction.rs:407,766,788,879}`, `numra-ocp/src/adjoint.rs:82,109,128,147,163`. Central sites: `numra-fit/src/curve_fit.rs:80,187,489` (also a structural recipe shift from multiplicative `orig*eps` to additive `(1+|orig|)*eps`), `numra-core/src/uncertainty.rs:278` (`compute_sensitivities` default), `numra-optim/src/optim_sensitivity.rs:44` (`compute_param_sensitivity` default). Audit pass surfaced 3 sites beyond the entry's named 15 — two `ReducedDaeSystem.fd_eps` field initializers and the `compute_param_sensitivity` default; same audit-surfaces-more-than-named pattern as F-FD-STEP and F-CI-NODE20. New regression test `numra-optim::optim_sensitivity::tests::test_sensitivity_canonical_default_eps_at_large_param` pins the canonical default at `|p| = 100` (asserts `dx*/dp ≈ 1` for `min (x - p)^2` to within `1e-2`). Behavioural deltas documented in CHANGELOG: adjoint/DAE-init sites now use a 6.6× smaller forward-FD step (was `1e-7`); curve_fit's structural shift produces ~120× larger steps at `|orig| ≈ 1` with better roundoff/discretization balance. F-FD-NOSCALE-BUG remains open as the only deferred FD-step item.
@@ -296,66 +297,6 @@ for the API surface so generic pipelines aren't broken at the boundary.
 Recorded as one consolidated follow-up rather than three separate
 entries because the three sites share the same generification approach
 and benefit from being addressed as a single sweep.
-
-### F-FD-NOSCALE-BUG: Fix no-scaling correctness bug in public FD utilities
-
-**Status**: scoped, not started. Surfaced 2026-05-15 by the F-FD-STEP
-audit pass.
-
-**What's there today**: four FD sites use `h = eps` with **no `(1 + |x|)`
-scaling**, so the perturbation is dimensionally wrong for any caller
-with large-magnitude state:
-
-- `numra-optim/src/problem.rs:486` (`finite_diff_gradient`, **public API**)
-- `numra-optim/src/problem.rs:503` (`finite_diff_jacobian`, **public API**)
-- `numra-dde/src/history.rs:188` (`History::evaluate_derivative` for
-  initial-history regions; **public API**)
-- `numra-sde/src/system.rs:68` (`SdeSystem::diffusion_derivative`
-  default for Milstein; **public API trait default**)
-
-For each, with `eps = 1e-8` and any state component `|x| > 1e6`, the
-ratio `h/x = 1e-14` falls below `f64::EPSILON`, so the perturbation is
-absorbed by the addition `x + h = x` and the FD comes back as
-`(f(x) - f(x))/h = 0`. This is independent of the `f32` framing in
-F-FD-STEP — `f64` callers with large state see the same silent zero.
-
-**Why this is a bug, not a style issue**: a user's optimisation problem
-with parameters in the `1e6` range silently gets an all-zeros gradient
-back from `finite_diff_gradient`. No error, no diagnostic — just a
-useless result that the optimiser then dutifully consumes. Same shape
-on the other three sites.
-
-**Cross-reference correction (2026-05-15)**: an earlier draft of this
-entry also listed `numra-optim/src/robust.rs:409,446`, but the
-F-FD-CROSSCRATE audit pass surfaced that those sites actually have
-proper additive scaling (`h = fd_eps * (S::ONE + p_nom[j].abs())` at
-lines 415,456). They are not no-scaling-bug sites; they are forward-FD
-additive-scaled sites at hardcoded `1e-8` — same shape as the
-F-FD-CROSSCRATE entries that landed in `numra-nonlinear::newton`,
-`numra-ode::esdirk`, etc. They were missed by both this entry and the
-F-FD-CROSSCRATE entry; the canonical `S::EPSILON.sqrt()` treatment
-remains a small leftover hygiene item, not a correctness item.
-
-**What needs doing**:
-1. Replace each `h = eps` with `h = eps * (S::ONE + x.abs())` (forward-
-   FD additive scaling) or `h = eps * (S::ONE + |x|)` adapted to
-   central FD per site.
-2. While there: also bring the eps onto the canonical
-   `cbrt(S::EPSILON)` (central) or `sqrt(S::EPSILON)` (forward) per
-   F-FD-CROSSCRATE — this work overlaps but is bounded narrowly here
-   to the no-scaling sites where the consequence is correctness.
-3. Add a regression test for each public-API site: run with `x = [1e6,
-   1e6]` (or analogous), assert FD output is non-zero. The shape of
-   the test mirrors F-FD-STEP's `f32` regression tests.
-4. Estimate: 1-2 focused days plus a correctness-review pass.
-   `numra-optim`'s public `finite_diff_*` deserve careful test
-   coverage given downstream optimisers consume them.
-
-**Why not bundled with F-FD-STEP or F-FD-CROSSCRATE**: F-FD-STEP was
-foundation-trait reconciliation; F-FD-CROSSCRATE is "make existing
-correct code consistent." This is "fix existing incorrect code." Each
-is a different commitment with a different risk profile. Bundling
-would dilute all three — the closure narratives and the review focus.
 
 ### F-SOLVER-FIELDS: Clarify or remove `Bdf::max_order` / `Auto::*` fields the static `Solver::solve` cannot read
 
