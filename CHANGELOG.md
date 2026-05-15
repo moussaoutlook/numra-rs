@@ -4,6 +4,8 @@ All notable public changes to Numra are recorded here. The project follows seman
 
 ## Unreleased
 
+## 0.1.2 - 2026-05-15
+
 ### Changed
 
 - `numra-ode`: `OdeSystem::jacobian` default's finite-difference step changed from a hardcoded `1e-8` to the textbook precision-aware `sqrt(S::EPSILON) * (1 + |y_j|)`. The previous step was below `f32::EPSILON ≈ 1.19e-7`, so the FD perturbation quantised to zero on `f32` and the default Jacobian came back as all-zeros — silently. The new form is correct on every `Scalar` precision (`f64` lands at `≈1.49e-8`, within ~50% of the prior value; `f32` at `≈3.45e-4`, no longer quantised). Behavioural impact on `f64`: Jacobian columns shift in the last 1-2 digits at states with `|y_j| ≈ 1`. No regression-suite test asserted on the prior values; the `numra-ode` test suite passes unchanged. Pinned with a new `f32` regression test.
