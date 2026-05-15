@@ -102,7 +102,7 @@ where
     let mut y = y0.to_vec();
     let mut f = vec![S::ZERO; dim];
     let mut f_pert = vec![S::ZERO; dim];
-    let fd_eps = S::from_f64(1e-7);
+    let h_factor = S::EPSILON.sqrt();
 
     for iter in 0..max_iter {
         // Evaluate the residual f(t, y)
@@ -124,7 +124,7 @@ where
 
         for (col, &j) in alg_indices.iter().enumerate() {
             let y_orig = y[j];
-            let h = fd_eps * (S::ONE + y_orig.abs());
+            let h = h_factor * (S::ONE + y_orig.abs());
             y[j] = y_orig + h;
             system.rhs(t0, &y, &mut f_pert);
             y[j] = y_orig;

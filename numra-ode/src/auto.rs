@@ -165,7 +165,7 @@ impl Auto {
         }
 
         // Compute Jacobian eigenvalues (approximate via power iteration)
-        let eps = S::from_f64(1e-8);
+        let h_factor = S::EPSILON.sqrt();
         let mut f0 = vec![S::ZERO; dim];
         let mut f1 = vec![S::ZERO; dim];
         let _jv = vec![S::ZERO; dim];
@@ -180,7 +180,7 @@ impl Auto {
         for j in 0..dim.min(10) {
             // Sample first 10 components for stiffness detection
             let yj = y[j];
-            let h = eps * (S::ONE + yj.abs());
+            let h = h_factor * (S::ONE + yj.abs());
             y_pert[j] = yj + h;
             problem.rhs(t, &y_pert, &mut f1);
             y_pert[j] = yj;

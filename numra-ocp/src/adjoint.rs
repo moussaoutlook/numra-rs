@@ -79,12 +79,12 @@ fn compute_dfdx<S: Scalar>(
     f0: &[S],
     ns: usize,
 ) -> Vec<S> {
-    let fd_eps = S::from_f64(1e-7);
+    let h_factor = S::EPSILON.sqrt();
     let mut dfdx = vec![S::ZERO; ns * ns]; // row-major: dfdx[i*ns + j] = df_i/dx_j
     let mut x_pert = x.to_vec();
     let mut f_pert = vec![S::ZERO; ns];
     for j in 0..ns {
-        let h = fd_eps * (S::ONE + x[j].abs());
+        let h = h_factor * (S::ONE + x[j].abs());
         let x_orig = x_pert[j];
         x_pert[j] = x_orig + h;
         model(t, &x_pert, &mut f_pert, p);
@@ -106,12 +106,12 @@ fn compute_dfdp<S: Scalar>(
     ns: usize,
     np: usize,
 ) -> Vec<S> {
-    let fd_eps = S::from_f64(1e-7);
+    let h_factor = S::EPSILON.sqrt();
     let mut dfdp = vec![S::ZERO; ns * np]; // row-major: dfdp[i*np + k] = df_i/dp_k
     let mut p_pert = p.to_vec();
     let mut f_pert = vec![S::ZERO; ns];
     for k in 0..np {
-        let h = fd_eps * (S::ONE + p[k].abs());
+        let h = h_factor * (S::ONE + p[k].abs());
         let p_orig = p_pert[k];
         p_pert[k] = p_orig + h;
         model(t, x, &mut f_pert, &p_pert);
@@ -125,12 +125,12 @@ fn compute_dfdp<S: Scalar>(
 
 /// Compute gradient of a scalar function `g(x)` via FD.
 fn grad_fd<S: Scalar>(g: &dyn Fn(&[S]) -> S, x: &[S], n: usize) -> Vec<S> {
-    let fd_eps = S::from_f64(1e-7);
+    let h_factor = S::EPSILON.sqrt();
     let g0 = g(x);
     let mut grad = vec![S::ZERO; n];
     let mut x_pert = x.to_vec();
     for j in 0..n {
-        let h = fd_eps * (S::ONE + x[j].abs());
+        let h = h_factor * (S::ONE + x[j].abs());
         let x_orig = x_pert[j];
         x_pert[j] = x_orig + h;
         grad[j] = (g(&x_pert) - g0) / h;
@@ -144,12 +144,12 @@ type ScalarFn3<S> = dyn Fn(S, &[S], &[S]) -> S;
 
 /// Compute gradient of a scalar function `g(t, x, p)` w.r.t. `x` via FD.
 fn grad_x_fd<S: Scalar>(g: &ScalarFn3<S>, t: S, x: &[S], p: &[S], ns: usize) -> Vec<S> {
-    let fd_eps = S::from_f64(1e-7);
+    let h_factor = S::EPSILON.sqrt();
     let g0 = g(t, x, p);
     let mut grad = vec![S::ZERO; ns];
     let mut x_pert = x.to_vec();
     for j in 0..ns {
-        let h = fd_eps * (S::ONE + x[j].abs());
+        let h = h_factor * (S::ONE + x[j].abs());
         let x_orig = x_pert[j];
         x_pert[j] = x_orig + h;
         grad[j] = (g(t, &x_pert, p) - g0) / h;
@@ -160,12 +160,12 @@ fn grad_x_fd<S: Scalar>(g: &ScalarFn3<S>, t: S, x: &[S], p: &[S], ns: usize) -> 
 
 /// Compute gradient of a scalar function `g(t, x, p)` w.r.t. `p` via FD.
 fn grad_p_fd<S: Scalar>(g: &ScalarFn3<S>, t: S, x: &[S], p: &[S], np: usize) -> Vec<S> {
-    let fd_eps = S::from_f64(1e-7);
+    let h_factor = S::EPSILON.sqrt();
     let g0 = g(t, x, p);
     let mut grad = vec![S::ZERO; np];
     let mut p_pert = p.to_vec();
     for k in 0..np {
-        let h = fd_eps * (S::ONE + p[k].abs());
+        let h = h_factor * (S::ONE + p[k].abs());
         let p_orig = p_pert[k];
         p_pert[k] = p_orig + h;
         grad[k] = (g(t, x, &p_pert) - g0) / h;

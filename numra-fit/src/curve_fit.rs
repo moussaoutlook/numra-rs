@@ -77,16 +77,12 @@ where
     let x_jac = x_data.to_vec();
     let y_jac = y_data.to_vec();
     let jacobian = move |p: &[S], jac: &mut [S]| {
-        let eps = S::from_f64(1e-7);
+        let h_factor = S::EPSILON.cbrt();
         let mut p_plus = p.to_vec();
         let mut p_minus = p.to_vec();
         for j in 0..n {
             let orig = p[j];
-            let h = if orig.abs() > S::from_f64(1e-10) {
-                orig * eps
-            } else {
-                eps
-            };
+            let h = h_factor * (S::ONE + orig.abs());
             p_plus[j] = orig + h;
             p_minus[j] = orig - h;
             for i in 0..m {
@@ -184,16 +180,12 @@ where
     let y_jac = y_data.to_vec();
     let sw_jac = sqrt_w;
     let jacobian = move |p: &[S], jac: &mut [S]| {
-        let eps = S::from_f64(1e-7);
+        let h_factor = S::EPSILON.cbrt();
         let mut p_plus = p.to_vec();
         let mut p_minus = p.to_vec();
         for j in 0..n {
             let orig = p[j];
-            let h = if orig.abs() > S::from_f64(1e-10) {
-                orig * eps
-            } else {
-                eps
-            };
+            let h = h_factor * (S::ONE + orig.abs());
             p_plus[j] = orig + h;
             p_minus[j] = orig - h;
             for i in 0..m {
@@ -486,17 +478,13 @@ fn model_jacobian<S>(
 where
     S: Scalar,
 {
-    let eps = S::from_f64(1e-7);
+    let h_factor = S::EPSILON.cbrt();
     let mut jac = vec![S::ZERO; m * n];
     let mut p_pert = params.to_vec();
 
     for j in 0..n {
         let orig = p_pert[j];
-        let h = if orig.abs() > S::from_f64(1e-10) {
-            orig * eps
-        } else {
-            eps
-        };
+        let h = h_factor * (S::ONE + orig.abs());
         p_pert[j] = orig + h;
         let f_plus: Vec<S> = (0..m).map(|i| model(x_data[i], &p_pert)).collect();
         p_pert[j] = orig - h;

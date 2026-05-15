@@ -404,7 +404,7 @@ where
     let n_alg_eqs = alg_eq_indices.len();
 
     // Probe RHS at y0
-    let eps = S::from_f64(1e-7);
+    let h_factor = S::EPSILON.sqrt();
     let mut f0 = vec![S::ZERO; n];
     system.rhs(t0, y0, &mut f0);
 
@@ -414,7 +414,7 @@ where
 
     for j in 0..n {
         let yj_save = y_pert[j];
-        let h = eps * (S::ONE + yj_save.abs());
+        let h = h_factor * (S::ONE + yj_save.abs());
         y_pert[j] = yj_save + h;
 
         let mut f1 = vec![S::ZERO; n];
@@ -763,7 +763,7 @@ where
         info,
         aug_dim,
         n_new_vars,
-        fd_eps: S::from_f64(1e-7),
+        fd_eps: S::EPSILON.sqrt(),
     })
 }
 
@@ -785,7 +785,7 @@ where
     let n_diff = n - n_alg_eqs;
     let n_alg = n_alg_eqs;
 
-    let eps = S::from_f64(1e-7);
+    let h_factor = S::EPSILON.sqrt();
     let mut f0 = vec![S::ZERO; n];
     rhs_fn(t0, y0, &mut f0);
 
@@ -794,7 +794,7 @@ where
 
     for j in 0..n {
         let yj_save = y_pert[j];
-        let h = eps * (S::ONE + yj_save.abs());
+        let h = h_factor * (S::ONE + yj_save.abs());
         y_pert[j] = yj_save + h;
 
         let mut f1 = vec![S::ZERO; n];
@@ -876,7 +876,7 @@ where
         info: info.clone(),
         aug_dim,
         n_new_vars,
-        fd_eps: S::from_f64(1e-7),
+        fd_eps: S::EPSILON.sqrt(),
     };
 
     Ok((info, reduced))
