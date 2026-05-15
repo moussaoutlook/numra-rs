@@ -26,7 +26,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 rust-version = "1.83"
 license = "LicenseRef-Numra-Academic-Research-NonCommercial"
@@ -38,26 +38,26 @@ authors = ["Moussa <mlablouba@gmail.com>"]
 
 [workspace.dependencies]
 # Internal crates
-numra-core = { path = "numra-core", version = "0.1.1" }
-numra-linalg = { path = "numra-linalg", version = "0.1.1" }
-numra-nonlinear = { path = "numra-nonlinear", version = "0.1.1" }
-numra-ode = { path = "numra-ode", version = "0.1.1" }
-numra-sde = { path = "numra-sde", version = "0.1.1" }
-numra-dde = { path = "numra-dde", version = "0.1.1" }
-numra-fde = { path = "numra-fde", version = "0.1.1" }
-numra-ide = { path = "numra-ide", version = "0.1.1" }
-numra-pde = { path = "numra-pde", version = "0.1.1" }
-numra-spde = { path = "numra-spde", version = "0.1.1" }
-numra-autodiff = { path = "numra-autodiff", version = "0.1.1" }
-numra-optim = { path = "numra-optim", version = "0.1.1" }
-numra-ocp = { path = "numra-ocp", version = "0.1.1" }
-numra-integrate = { path = "numra-integrate", version = "0.1.1" }
-numra-interp = { path = "numra-interp", version = "0.1.1" }
-numra-special = { path = "numra-special", version = "0.1.1" }
-numra-fft = { path = "numra-fft", version = "0.1.1" }
-numra-stats = { path = "numra-stats", version = "0.1.1" }
-numra-fit = { path = "numra-fit", version = "0.1.1" }
-numra-signal = { path = "numra-signal", version = "0.1.1" }
+numra-core = { path = "numra-core", version = "0.1.2" }
+numra-linalg = { path = "numra-linalg", version = "0.1.2" }
+numra-nonlinear = { path = "numra-nonlinear", version = "0.1.2" }
+numra-ode = { path = "numra-ode", version = "0.1.2" }
+numra-sde = { path = "numra-sde", version = "0.1.2" }
+numra-dde = { path = "numra-dde", version = "0.1.2" }
+numra-fde = { path = "numra-fde", version = "0.1.2" }
+numra-ide = { path = "numra-ide", version = "0.1.2" }
+numra-pde = { path = "numra-pde", version = "0.1.2" }
+numra-spde = { path = "numra-spde", version = "0.1.2" }
+numra-autodiff = { path = "numra-autodiff", version = "0.1.2" }
+numra-optim = { path = "numra-optim", version = "0.1.2" }
+numra-ocp = { path = "numra-ocp", version = "0.1.2" }
+numra-integrate = { path = "numra-integrate", version = "0.1.2" }
+numra-interp = { path = "numra-interp", version = "0.1.2" }
+numra-special = { path = "numra-special", version = "0.1.2" }
+numra-fft = { path = "numra-fft", version = "0.1.2" }
+numra-stats = { path = "numra-stats", version = "0.1.2" }
+numra-fit = { path = "numra-fit", version = "0.1.2" }
+numra-signal = { path = "numra-signal", version = "0.1.2" }
 
 # Linear algebra backend (primary)
 faer = "0.20"
