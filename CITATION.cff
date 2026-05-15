@@ -60,8 +60,8 @@ keywords:
   - "computational mathematics"
 
 # Update version and date-released on every release.
-version: "0.1.0"
-date-released: "2026-05-13"
+version: "0.1.1"
+date-released: "2026-05-15"
 
 # Identifiers — both DOIs returned by Zenodo on first publish.
 # The concept DOI always resolves to the latest version; prefer it
@@ -72,8 +72,8 @@ identifiers:
     value: "10.5281/zenodo.20159709"
     description: "All versions (concept DOI; preferred for citation)"
   - type: doi
-    value: "10.5281/zenodo.20159710"
-    description: "Version 0.1.0 (for reproducibility)"
+    value: "10.5281/zenodo.20196300"
+    description: "Version 0.1.1 (for reproducibility)"
 
 # Optional: list preferred citation as a paper rather than the software
 # itself. Useful if a companion methods paper is published.
