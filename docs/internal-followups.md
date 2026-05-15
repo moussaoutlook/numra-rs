@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-15.
+Last updated: 2026-05-15 (F-FD-STEP retired; F-FD-CROSSCRATE and F-FD-NOSCALE-BUG added).
 
 ## Recently retired
 
@@ -18,6 +18,7 @@ One-line entries for follow-ups that landed and were removed from the
 file. Kept here so a future reader can find the closure record without
 git-archaeology.
 
+- **F-FD-STEP: foundation-trait FD-step reconciliation** — shipped 2026-05-15. `OdeSystem::jacobian` default switched from hardcoded `1e-8` to `sqrt(S::EPSILON) * (1 + |y_j|)`; `Signal::eval_derivative` default switched from hardcoded `1e-8` (no scaling) to `cbrt(S::EPSILON) * (1 + |t|)` (canonical central-FD step). `ParametricOdeSystem::jacobian_y/_p` defaults were already correct on `sqrt(S::EPSILON)`; no change. The six `MOLSystem{2,3}D::jacobian` and `ParametricMOLSystem{2,3}D::jacobian_y/_p` reaction-FD diagonals updated in lockstep (each referenced the trait default in code comments — preserving the consistency the comments claim required moving them together). Two `f32` regression tests added (`numra-ode/src/problem.rs::test_jacobian_finite_diff_f32`, `numra-core/src/signal.rs::test_signal_derivative_f32`) pinning out the silent-quantisation failure mode. The audit pass also surfaced two adjacent follow-ups that were explicitly out of scope for F-FD-STEP — see F-FD-CROSSCRATE and F-FD-NOSCALE-BUG below.
 - **F-ERR: workspace error propagation across crate boundaries** — shipped 2026-05-14. `NumraError` (`numra-core/src/error.rs`) is now `#[non_exhaustive]` and gains 10 new tagged variants (`Ode`, `Optim`, `Ocp`, `Fit`, `Signal`, `LineSearch`, `Interp`, `Integrate`, `Special`, `Stats`); `Optimization` renamed to `NumericalOptim` for unambiguity against the new `Optim`. Six new `From<CrateError> for NumraError` impls in `numra-ode`, `numra-optim`, `numra-ocp`, `numra-fit`, `numra-signal`, `numra-nonlinear`; the four pre-existing impls (`InterpError`, `IntegrationError`, `SpecialError`, `StatsError`) migrated from collapsing-to-`InvalidInput` to the tagged-variant pattern, so the workspace error story is now uniform: every external-crate `?` lands in a programmatically-distinguishable variant. `workflow_ode_interp_integrate` rewritten to return `Result<(), NumraError>` and use `?` across three crate boundaries — structural CI signal that the property is real. Closes Foundation Specification §7 open-question 6 (workspace error type sufficient for cross-crate `?` propagation: yes). Also advances F-INTEROP-Q sub-item 1 (an interop test now exercises cross-crate `?`-propagation). Source-chain preservation deferred to F-ERR-CHAIN.
 - **Parametric MOL systems for forward sensitivity** — shipped 2026-05-08. `ParametricMOLSystem2D` and `ParametricMOLSystem3D` (numra-pde) wrap the heat-equation MOL discretisation as `ParametricOdeSystem`. Parameter layout `[α, reaction_p_0, ...]`; analytical state Jacobian (`α · L0` + diagonal reaction FD), analytical α-column of `J_p` (`L0·y + bc_rhs_0`), all four flag overrides set. Linearity of the Laplacian operator means a single pre-assembled `L0` and `bc_rhs_0` cover both Dirichlet and Neumann BCs without splitting. v1 scope is alpha-on-Laplacian only; full operator parametrisation (D + velocity in advection-diffusion) is the remaining gap, narrowed below.
 - **Jacobian unification & MOL analytical Jacobians** — shipped 2026-05-07. `Radau5` and `Bdf` now route through `OdeSystem::jacobian`; FD step formula unified to `eps * (1 + |y_j|)`; `MOLSystem2D` / `MOLSystem3D` override with CSC-to-dense copy of the spatial operator + diagonal-FD reaction term. ~2.8% measured win on stiff 2D heat-with-reaction; full neutrality on non-MOL systems. See CHANGELOG.
@@ -294,40 +295,100 @@ Recorded as one consolidated follow-up rather than three separate
 entries because the three sites share the same generification approach
 and benefit from being addressed as a single sweep.
 
-### F-FD-STEP: Reconcile FD step formula between `OdeSystem` and `ParametricOdeSystem` defaults
+### F-FD-CROSSCRATE: Reconcile FD step formula across non-foundation cross-crate sites
 
-**Status**: scoped, not started. Surfaced 2026-05-10 by the
-foundation-pass verification (finding C4).
+**Status**: scoped, not started. Surfaced 2026-05-15 by the F-FD-STEP
+audit pass (Step 1, Decision B envelope).
 
-**What's there today**: two foundation traits with default FD-Jacobian
-bodies that use different step formulas:
+**What's there today**: 13 cross-crate FD bodies that work correctly at
+`f64` (each picks a reasonable step), but use a mix of three formulas:
 
-- `OdeSystem::jacobian` (`numra-ode/src/problem.rs:24`): `eps =
-  S::from_f64(1e-8)`, `h = eps * (1 + |y_j|)`. Hardcoded `1e-8`.
-- `ParametricOdeSystem::jacobian_y` and `_p` (`numra-ode/src/sensitivity.rs:182,
-  210`): `h_factor = S::EPSILON.sqrt()`, `h = h_factor * (1 + |y|)`.
-  Generic-precision-aware.
+- **Forward + additive `(1+|x|)` (foundation-shape)** at `1e-7` or `1e-8`:
+  `numra-nonlinear/src/newton.rs:245`, `numra-ode/src/esdirk.rs:525`,
+  `numra-ode/src/auto.rs:168`, `numra-ocp/src/adjoint.rs:82,109,128,147,163`,
+  `numra-ode/src/dae_init.rs:105`,
+  `numra-ode/src/index_reduction.rs:407,788`.
+- **Central FD with multiplicative `orig*eps` scaling** (the
+  `numra-fit::curve_fit` pattern) at `1e-7`:
+  `numra-fit/src/curve_fit.rs:80,187,489`.
+- **Central FD with additive `(1+|x|)` scaling**:
+  `numra-core/src/uncertainty.rs:278` (`compute_sensitivities`,
+  `1e-7`).
 
-The `1e-8` `OdeSystem` formula is below `f32::EPSILON ≈ 1.19e-7`,
-which means the default `OdeSystem::jacobian` FD path on `f32` is
-silently useless — the perturbation gets quantised away. The
-`Signal::eval_derivative` default (`numra-core/src/signal.rs`) has
-the same `1e-8` problem.
+None of these are bug-class (no `f32` quantisation; large-`|x|`
+behaviour acceptable because of the additive scaling on the foundation-
+shape sites). The work is purely consistency: pick the canonical
+forward / central formulas (`sqrt(EPSILON) * (1 + |x|)` /
+`cbrt(EPSILON) * (1 + |x|)`) and apply them workspace-wide so a future
+reader doesn't see four different FD-step recipes scattered through
+the codebase.
 
 **What needs doing**:
-1. Decide whether `OdeSystem::jacobian` and `Signal::eval_derivative`
-   should adopt `S::EPSILON.sqrt()` (matching `ParametricOdeSystem`)
-   or some other generic-precision formula.
-2. If yes, change the defaults — measure that no regression happens
-   on `f64` workloads (`bench_jacobian_unification` is the right
-   harness). The Hairer-Wanner reference and standard textbook
-   formula is `sqrt(eps_mach) * (1 + |y_j|)`, so the change aligns
-   the workspace with the standard.
-3. Update the `OdeSystem::jacobian` rustdoc and the relevant CHANGELOG
-   entry; update the §3.3 documented "Known limitation" note in
-   `docs/architecture/foundation-specification.md`.
-4. Add an `f32` regression test covering the FD path so the silent-
-   uselessness mode is pinned out.
+1. Audit each site against the chosen canonical formula (forward FD
+   on the additive-scaling sites; central FD on the others).
+2. Replace the hardcoded `1e-7` / `1e-8` constants with
+   `S::EPSILON.sqrt()` or `S::EPSILON.cbrt()` per the FD direction.
+3. Run the workspace test suite — these sites are all in algorithm
+   internals, so any regression will surface as a test failure rather
+   than a silent behavioral change.
+4. Estimate: 1-2 focused days. The work is mechanical.
+
+**Why not bundled with F-FD-STEP**: F-FD-STEP closes the foundation-
+trait reconciliation (the only sites where divergence was a
+bug-class issue). These cross-crate sites are correct today; touching
+them is consistency hygiene. Different commitment, different risk
+profile, different PR.
+
+### F-FD-NOSCALE-BUG: Fix no-scaling correctness bug in public FD utilities
+
+**Status**: scoped, not started. Surfaced 2026-05-15 by the F-FD-STEP
+audit pass.
+
+**What's there today**: five FD sites use `h = eps` with **no `(1 + |x|)`
+scaling**, so the perturbation is dimensionally wrong for any caller
+with large-magnitude state:
+
+- `numra-optim/src/problem.rs:486` (`finite_diff_gradient`, **public API**)
+- `numra-optim/src/problem.rs:503` (`finite_diff_jacobian`, **public API**)
+- `numra-optim/src/robust.rs:409,446` (worst-case-param FD; private
+  helpers in robust optimisation)
+- `numra-dde/src/history.rs:188` (`History::evaluate_derivative` for
+  initial-history regions; **public API**)
+- `numra-sde/src/system.rs:68` (`SdeSystem::diffusion_derivative`
+  default for Milstein; **public API trait default**)
+
+For each, with `eps = 1e-8` and any state component `|x| > 1e6`, the
+ratio `h/x = 1e-14` falls below `f64::EPSILON`, so the perturbation is
+absorbed by the addition `x + h = x` and the FD comes back as
+`(f(x) - f(x))/h = 0`. This is independent of the `f32` framing in
+F-FD-STEP — `f64` callers with large state see the same silent zero.
+
+**Why this is a bug, not a style issue**: a user's optimisation problem
+with parameters in the `1e6` range silently gets an all-zeros gradient
+back from `finite_diff_gradient`. No error, no diagnostic — just a
+useless result that the optimiser then dutifully consumes. Same shape
+on the other four sites.
+
+**What needs doing**:
+1. Replace each `h = eps` with `h = eps * (S::ONE + x.abs())` (forward-
+   FD additive scaling) or `h = eps * (S::ONE + |x|)` adapted to
+   central FD per site.
+2. While there: also bring the eps onto the canonical
+   `cbrt(S::EPSILON)` (central) or `sqrt(S::EPSILON)` (forward) per
+   F-FD-CROSSCRATE — this work overlaps but is bounded narrowly here
+   to the no-scaling sites where the consequence is correctness.
+3. Add a regression test for each public-API site: run with `x = [1e6,
+   1e6]` (or analogous), assert FD output is non-zero. The shape of
+   the test mirrors F-FD-STEP's `f32` regression tests.
+4. Estimate: 1-2 focused days plus a correctness-review pass.
+   `numra-optim`'s public `finite_diff_*` deserve careful test
+   coverage given downstream optimisers consume them.
+
+**Why not bundled with F-FD-STEP or F-FD-CROSSCRATE**: F-FD-STEP was
+foundation-trait reconciliation; F-FD-CROSSCRATE is "make existing
+correct code consistent." This is "fix existing incorrect code." Each
+is a different commitment with a different risk profile. Bundling
+would dilute all three — the closure narratives and the review focus.
 
 ### F-SOLVER-FIELDS: Clarify or remove `Bdf::max_order` / `Auto::*` fields the static `Solver::solve` cannot read
 
@@ -682,9 +743,11 @@ six workflow tests. Issues:
    `.unwrap()` and could now exercise `?`-propagation through the new
    `From` impls).
 3. Add at least one interop test with `S = f32` exercising a
-   non-trivial pipeline (e.g. ODE → Interp → Quad). Catches the
-   silent-`f32`-FD-step issue (F-FD-STEP) and any concrete-`f64`
-   leak that would otherwise hide in monomorphisation.
+   non-trivial pipeline (e.g. ODE → Interp → Quad). The
+   silent-`f32`-FD-step issue is now pinned at the per-trait level
+   by F-FD-STEP's two regression tests, but a pipeline-level `f32`
+   interop test would catch any concrete-`f64` leak that monomorphises
+   away in single-crate tests.
 4. Add interop tests for the missing capabilities — one per. SDE
    into Stats; DDE into Interp; etc. The audit's roadmap §4 has the
    pairing logic.

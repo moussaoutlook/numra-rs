@@ -138,9 +138,10 @@ impl<S: SparseScalar> ParametricOdeSystem<S> for ParametricMOLSystem3D<S> {
         }
 
         // Diagonal reaction Jacobian; same pointwise-reaction reasoning as
-        // the 2D variant — see ParametricMOLSystem2D::jacobian_y.
+        // the 2D variant — see ParametricMOLSystem2D::jacobian_y. Same step
+        // formula as `ParametricOdeSystem::jacobian_y` default.
         if let Some(ref reaction) = self.reaction {
-            let eps = S::from_f64(1e-8);
+            let h_factor = S::EPSILON.sqrt();
             let nx_int = self.grid.x_grid.n_interior();
             let ny_int = self.grid.y_grid.n_interior();
             let nz_int = self.grid.z_grid.n_interior();
@@ -152,7 +153,7 @@ impl<S: SparseScalar> ParametricOdeSystem<S> for ParametricMOLSystem3D<S> {
                         let y_coord = self.grid.y_grid.points()[jj + 1];
                         let z_coord = self.grid.z_grid.points()[kk + 1];
                         let u = y[idx];
-                        let h = eps * (S::ONE + u.abs());
+                        let h = h_factor * (S::ONE + u.abs());
                         let r0 = reaction(t, x, y_coord, z_coord, u, &self.nominal_params);
                         let r1 = reaction(t, x, y_coord, z_coord, u + h, &self.nominal_params);
                         let dr_du = (r1 - r0) / h;
@@ -178,16 +179,17 @@ impl<S: SparseScalar> ParametricOdeSystem<S> for ParametricMOLSystem3D<S> {
         }
 
         // Reaction contribution to every column. FD on the closure with
-        // the matching parameter slot perturbed.
+        // the matching parameter slot perturbed. Same step formula as
+        // `ParametricOdeSystem::jacobian_p` default.
         if let Some(ref reaction) = self.reaction {
-            let eps = S::from_f64(1e-8);
+            let h_factor = S::EPSILON.sqrt();
             let nx_int = self.grid.x_grid.n_interior();
             let ny_int = self.grid.y_grid.n_interior();
             let nz_int = self.grid.z_grid.n_interior();
             let mut p_pert = self.nominal_params.clone();
             for k in 0..np {
                 let pk = self.nominal_params[k];
-                let h = eps * (S::ONE + pk.abs());
+                let h = h_factor * (S::ONE + pk.abs());
                 p_pert[k] = pk + h;
                 for kk in 0..nz_int {
                     for jj in 0..ny_int {
@@ -227,7 +229,7 @@ mod tests {
     fn fd_jacobian_y<Sys: ParametricOdeSystem<f64>>(sys: &Sys, t: f64, y: &[f64]) -> Vec<f64> {
         let n = sys.n_states();
         let p = sys.params().to_vec();
-        let h_factor = (1e-15_f64).sqrt() * 1.5;
+        let h_factor = f64::EPSILON.sqrt();
         let mut jac = vec![0.0; n * n];
         let mut f0 = vec![0.0; n];
         let mut f1 = vec![0.0; n];
@@ -250,7 +252,7 @@ mod tests {
         let n = sys.n_states();
         let np = sys.n_params();
         let p_nom = sys.params().to_vec();
-        let h_factor = (1e-15_f64).sqrt() * 1.5;
+        let h_factor = f64::EPSILON.sqrt();
         let mut jp = vec![0.0; n * np];
         let mut f0 = vec![0.0; n];
         let mut f1 = vec![0.0; n];

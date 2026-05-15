@@ -52,10 +52,20 @@ pub trait Signal<S: Scalar>: Send + Sync {
     /// Evaluate the signal at time t.
     fn eval(&self, t: S) -> S;
 
-    /// Evaluate derivative of signal at time t (if available).
-    /// Default implementation uses finite differences.
+    /// Compute the derivative of the signal at time `t`.
+    ///
+    /// Default: central finite differences with the textbook
+    /// precision-aware step `h = cbrt(S::EPSILON) * (1 + |t|)` —
+    /// optimal for central FD by the balance of truncation (`O(h²)`)
+    /// and round-off (`O(eps_mach / h)`) error. The
+    /// `cbrt(S::EPSILON)` form (not a hardcoded constant) keeps FD
+    /// useful at every `Scalar` precision: `f64` lands at `≈6.06e-6`,
+    /// `f32` at `≈4.92e-3`. A hardcoded `1e-8` would fall below
+    /// `f32::EPSILON ≈ 1.19e-7` and quantise the perturbation to zero.
+    /// Override when an analytical derivative is available — most
+    /// closed-form `Signal` impls in this module already do.
     fn eval_derivative(&self, t: S) -> S {
-        let h = S::from_f64(1e-8);
+        let h = S::EPSILON.cbrt() * (S::ONE + t.abs());
         (self.eval(t + h) - self.eval(t - h)) / (S::TWO * h)
     }
 }
@@ -1315,6 +1325,32 @@ mod tests {
 
         // At t=0.25, sin(π/2) = 1, so scaled = 2
         assert!((scaled.eval(0.25) - 2.0).abs() < TOL);
+    }
+
+    /// Pin the f32 viability of the FD-default derivative on `Signal`.
+    /// The previous hardcoded `1e-8` step was below
+    /// `f32::EPSILON ≈ 1.19e-7`, so the central-FD perturbation
+    /// quantised to zero and the derivative came back as `0.0` instead
+    /// of the true value. F-FD-STEP switched to the precision-aware
+    /// `cbrt(S::EPSILON) * (1 + |t|)`, which scales correctly across
+    /// every `Scalar` impl. This test guards against a regression to
+    /// the old constant. Uses `Tabulated` because it falls through to
+    /// the trait-default FD path (most other built-in signals override
+    /// with closed-form derivatives).
+    #[test]
+    fn test_signal_derivative_f32() {
+        // Linear interpolant y(t) = 2t over [0, 4]; analytical
+        // derivative is exactly 2.0 everywhere on the interior.
+        let times: Vec<f32> = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+        let values: Vec<f32> = vec![0.0, 2.0, 4.0, 6.0, 8.0];
+        let s = Tabulated::new(times, values, Interpolation::Linear);
+        let d = s.eval_derivative(2.0_f32);
+        assert!(d != 0.0, "FD step quantised to zero on f32");
+        assert!(
+            (d - 2.0_f32).abs() < 1e-2,
+            "central-FD derivative on f32 too inaccurate: d={}",
+            d
+        );
     }
 
     #[test]

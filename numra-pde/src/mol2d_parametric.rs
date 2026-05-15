@@ -186,9 +186,10 @@ impl<S: SparseScalar> ParametricOdeSystem<S> for ParametricMOLSystem2D<S> {
 
         // Diagonal reaction Jacobian: `∂R_i/∂u_j = δ_ij · ∂R_i/∂u_i`
         // (pointwise reaction ⇒ no off-diagonal entries by structure).
-        // FD on the closure at the nominal parameter vector.
+        // FD on the closure at the nominal parameter vector. Same step
+        // formula as `ParametricOdeSystem::jacobian_y` default.
         if let Some(ref reaction) = self.reaction {
-            let eps = S::from_f64(1e-8);
+            let h_factor = S::EPSILON.sqrt();
             let nx_int = self.grid.nx_interior();
             for jj in 0..self.grid.ny_interior() {
                 for ii in 0..nx_int {
@@ -196,7 +197,7 @@ impl<S: SparseScalar> ParametricOdeSystem<S> for ParametricMOLSystem2D<S> {
                     let x = self.grid.x_grid.points()[ii + 1];
                     let y_coord = self.grid.y_grid.points()[jj + 1];
                     let u = y[idx];
-                    let h = eps * (S::ONE + u.abs());
+                    let h = h_factor * (S::ONE + u.abs());
                     let r0 = reaction(t, x, y_coord, u, &self.nominal_params);
                     let r1 = reaction(t, x, y_coord, u + h, &self.nominal_params);
                     let dr_du = (r1 - r0) / h;
@@ -230,13 +231,14 @@ impl<S: SparseScalar> ParametricOdeSystem<S> for ParametricMOLSystem2D<S> {
         // Reaction contribution to every column (including column 0 if R
         // depends on α). FD with the matching parameter slot perturbed.
         // Each grid point contributes only its own row — pointwise R.
+        // Same step formula as `ParametricOdeSystem::jacobian_p` default.
         if let Some(ref reaction) = self.reaction {
-            let eps = S::from_f64(1e-8);
+            let h_factor = S::EPSILON.sqrt();
             let nx_int = self.grid.nx_interior();
             let mut p_pert = self.nominal_params.clone();
             for k in 0..np {
                 let pk = self.nominal_params[k];
-                let h = eps * (S::ONE + pk.abs());
+                let h = h_factor * (S::ONE + pk.abs());
                 p_pert[k] = pk + h;
                 for jj in 0..self.grid.ny_interior() {
                     for ii in 0..nx_int {
@@ -272,11 +274,12 @@ mod tests {
 
     /// Trait-default FD Jacobian helper. Used for analytical-vs-FD
     /// agreement regression. Identical to the FD path in
-    /// `ParametricOdeSystem::jacobian_y`/`jacobian_p` defaults.
+    /// `ParametricOdeSystem::jacobian_y`/`jacobian_p` defaults
+    /// (`sqrt(EPSILON) * (1 + |y|)`).
     fn fd_jacobian_y<Sys: ParametricOdeSystem<f64>>(sys: &Sys, t: f64, y: &[f64]) -> Vec<f64> {
         let n = sys.n_states();
         let p = sys.params().to_vec();
-        let h_factor = (1e-15_f64).sqrt() * 1.5; // ~sqrt(eps)
+        let h_factor = f64::EPSILON.sqrt();
         let mut jac = vec![0.0; n * n];
         let mut f0 = vec![0.0; n];
         let mut f1 = vec![0.0; n];
@@ -299,7 +302,7 @@ mod tests {
         let n = sys.n_states();
         let np = sys.n_params();
         let p_nom = sys.params().to_vec();
-        let h_factor = (1e-15_f64).sqrt() * 1.5;
+        let h_factor = f64::EPSILON.sqrt();
         let mut jp = vec![0.0; n * np];
         let mut f0 = vec![0.0; n];
         let mut f1 = vec![0.0; n];

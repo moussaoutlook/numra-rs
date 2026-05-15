@@ -19,11 +19,19 @@ pub trait OdeSystem<S: Scalar> {
     /// Compute the right-hand side: dydt = f(t, y)
     fn rhs(&self, t: S, y: &[S], dydt: &mut [S]);
 
-    /// Optionally compute the Jacobian: J = ∂f/∂y
-    /// Default implementation uses finite differences.
+    /// Optionally compute the Jacobian: `J = ∂f/∂y`, row-major
+    /// (`jac[i*n + j] = ∂f_i/∂y_j`, length `n²`).
+    ///
+    /// Default: forward finite differences. Step size is the textbook
+    /// precision-aware choice for forward FD,
+    /// `h = sqrt(S::EPSILON) * (1 + |y_j|)`. The
+    /// `sqrt(S::EPSILON)`-not-a-hardcoded-constant form keeps the FD
+    /// useful at every `Scalar` precision: `f64` lands at `≈1.49e-8`,
+    /// `f32` at `≈3.45e-4`. A hardcoded `1e-8` would fall below
+    /// `f32::EPSILON ≈ 1.19e-7` and quantise the perturbation to zero.
     fn jacobian(&self, t: S, y: &[S], jac: &mut [S]) {
         let n = self.dim();
-        let eps = S::from_f64(1e-8);
+        let h_factor = S::EPSILON.sqrt();
         let mut y_pert = y.to_vec();
         let mut f0 = vec![S::ZERO; n];
         let mut f1 = vec![S::ZERO; n];
@@ -32,7 +40,7 @@ pub trait OdeSystem<S: Scalar> {
 
         for j in 0..n {
             let yj_save = y_pert[j];
-            let h = eps * (S::ONE + yj_save.abs());
+            let h = h_factor * (S::ONE + yj_save.abs());
             y_pert[j] = yj_save + h;
             self.rhs(t, &y_pert, &mut f1);
             y_pert[j] = yj_save;
@@ -282,5 +290,32 @@ mod tests {
         let mut jac = vec![0.0];
         problem.jacobian(0.0, &[1.0], &mut jac);
         assert!((jac[0] + 2.0).abs() < 1e-5);
+    }
+
+    /// Pin the f32 viability of the FD-default Jacobian. The previous
+    /// hardcoded `1e-8` step was below `f32::EPSILON ≈ 1.19e-7`, so the
+    /// perturbation quantised to zero and the FD column came back as
+    /// `0.0` instead of the true `-2.0`. F-FD-STEP switched to the
+    /// precision-aware `sqrt(S::EPSILON)`, which scales correctly across
+    /// every `Scalar` impl. This test guards against a regression to the
+    /// old constant.
+    #[test]
+    fn test_jacobian_finite_diff_f32() {
+        let f = |_t: f32, y: &[f32], dydt: &mut [f32]| {
+            dydt[0] = -2.0 * y[0];
+        };
+        let problem = OdeProblem::new(f, 0.0_f32, 1.0_f32, vec![1.0_f32]);
+
+        let mut jac = vec![0.0_f32];
+        problem.jacobian(0.0, &[1.0], &mut jac);
+        // FD column is non-zero (the silent-quantisation failure mode is
+        // exactly `jac[0] == 0.0`) and within FD truncation of the true
+        // derivative.
+        assert!(jac[0] != 0.0, "FD step quantised to zero on f32");
+        assert!(
+            (jac[0] + 2.0).abs() < 1e-3,
+            "FD Jacobian on f32 too inaccurate: jac[0]={}",
+            jac[0]
+        );
     }
 }
