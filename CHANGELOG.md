@@ -19,6 +19,10 @@ This is the foundation-trait reconciliation portion of the FD-step audit. **Two 
 
 Closes F-FD-STEP. Both follow-ups tracked in `docs/internal-followups.md`.
 
+### Tooling
+
+- CI workflow actions upgraded to Node.js 24-runtime majors ahead of GitHub's 2026-06-02 deprecation deadline: `actions/checkout@v4 → @v6`, `actions/setup-node@v4 → @v6`, `actions/upload-artifact@v4 → @v7`, `pnpm/action-setup@v3 → @v6`, `cloudflare/wrangler-action@v3 → @v4`. `pnpm/action-setup` blocks also drop the redundant `with: version: 9` in favour of the `packageManager: pnpm@9.15.0` field in `package.json` as the single source of truth (required for the v4+ strict version-disagreement check). `cloudflare/wrangler-action@v4` defaults wrangler to v4; `pages deploy` syntax is stable across the bump. Closes F-CI-NODE20.
+
 ## 0.1.1 - 2026-05-14
 
 ### Changed (breaking)
