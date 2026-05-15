@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-14.
+Last updated: 2026-05-15.
 
 ## Recently retired
 
@@ -772,6 +772,39 @@ ndarray-linalg in disguise". Defer until there's a story to tell.
 ---
 
 ## Tooling
+
+### F-CI-NODE20: Upgrade GitHub Actions runners to Node.js 24
+
+**Status**: scoped, not started. Surfaced 2026-05-15 by the v0.1.1
+release CI runs (workflow annotations on every push).
+
+**What's there today**: GitHub Actions workflows pin a handful of
+actions that still run on Node.js 20:
+
+- `.github/workflows/ci.yml` — `actions/checkout@v4`
+- `.github/workflows/website.yml` — `actions/checkout@v4`,
+  `actions/setup-node@v4`, `cloudflare/wrangler-action@v3`,
+  `pnpm/action-setup@v3`
+
+GitHub will force these to run on Node.js 24 starting **2026-06-02**;
+Node.js 20 is removed from runners entirely on **2026-09-16**.
+Workflows continue to work for now (the runner emits warnings, not
+failures), but the deprecation has a hard date.
+
+**What needs doing**: bump each pinned action to a Node.js 24
+compatible major. As of 2026-05-15:
+
+- `actions/checkout` — pin to the latest v5 (or whichever release
+  declares Node.js 24 support).
+- `actions/setup-node` — same; check the action's release notes.
+- `cloudflare/wrangler-action` — check for a Node.js 24 release; if
+  none yet, set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` as a
+  per-job env var as a transitional workaround.
+- `pnpm/action-setup` — same triage.
+
+**Effort**: ~15 minutes once the upstream releases are confirmed.
+Schedule before 2026-06-02 to avoid the forced-runtime cutover
+landing at an inconvenient moment.
 
 ### CI: Renovate canary for Astro pre-releases
 
