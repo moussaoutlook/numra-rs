@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-15 (F-CI-NODE20 retired; F-FD-STEP retired; F-FD-CROSSCRATE and F-FD-NOSCALE-BUG added).
+Last updated: 2026-05-15 (F-CI-NODE20 retired; F-FD-STEP retired; F-FD-CROSSCRATE, F-FD-NOSCALE-BUG, F-WEBSITE-AUDIT-GATES, F-WEBSITE-PR-FLOW added).
 
 ## Recently retired
 
@@ -836,6 +836,102 @@ ndarray-linalg in disguise". Defer until there's a story to tell.
 ---
 
 ## Tooling
+
+### F-WEBSITE-AUDIT-GATES: Fix orphan website audit gates surfaced by F-CI-NODE20
+
+**Status**: scoped, not started. Surfaced 2026-05-15 by F-CI-NODE20's PR
+(#5) — first PR ever to trigger `website.yml` on a `pull_request`
+event, which is when these gates fire (`if: github.event_name ==
+'pull_request'`).
+
+**Critical context**: `gh run list --workflow=website.yml
+--event=pull_request --limit=20` returns only the two F-CI-NODE20 runs.
+Every prior website-touching commit landed via direct push to main, so
+these four jobs **have never executed in the repo's history before**.
+Treat the failures as latent issues (some likely accumulated since the
+gates were authored), not recent regressions caused by F-CI-NODE20's
+action upgrades.
+
+**The four failing jobs** (each with its own root cause; investigation
+phase will determine whether they share a fix or need separate
+treatment):
+
+1. **`Lighthouse (marketing site)`** — `lighthouserc.json` references
+   audit IDs that no longer exist in the bundled Lighthouse version
+   (`_comment_pwa`, `_comment_third_party_summary`,
+   `render-blocking-insight` is the new name for the deprecated
+   `render-blocking-resources`). Per-page failures: 10-13 assertions
+   each across 9 pages (`/`, `/install`, `/license`, `/commercial`,
+   `/cite`, `/community`, `/stability`, `/features`, `/privacy`).
+   Fix is likely a `lighthouserc.json` audit-name update. Config is
+   at `website/ci/lighthouserc.json`.
+2. **`Lighthouse (book)`** — likely same root cause; not yet
+   confirmed by inspecting `website/ci/lighthouserc-book.json`.
+3. **`Accessibility (pa11y-ci)`** — unknown root cause until
+   investigated. Job runs `pa11y-ci@4` against per-PR preview URLs
+   for 7 site pages plus book and examples roots; config at
+   `website/ci/pa11yci.json`.
+4. **`Playwright (dark-mode regression)`** — unknown root cause until
+   investigated. Suite is intentionally narrow (theme paint at
+   domcontentloaded); lives at `website/tests/`.
+
+**What needs doing**:
+1. Investigate each of the four failures individually. The shared
+   root cause (orphan gates that have never run) doesn't necessarily
+   imply a shared fix.
+2. For Lighthouse: update `website/ci/lighthouserc.json` and
+   `lighthouserc-book.json` to match the current Lighthouse audit
+   surface; verify thresholds are still appropriate against the
+   current site performance characteristics.
+3. For pa11y and Playwright: read the failure logs from PR #5 (run
+   ID `25910476569`), determine whether these are config-drift
+   issues, site-content regressions, or framework-update issues.
+4. Land each fix in its own focused PR so the closure narrative
+   stays clean. Each PR will need to pass these gates to land,
+   creating a virtuous cycle: each gate gets fixed, tested, and
+   subsequently enforced.
+
+**Priority**: medium-to-high. The gates exist in the workflow; until
+they pass, every PR that touches `website/` or `website.yml` will
+have to either fix them or admin-merge over them. F-CI-NODE20 already
+established admin-merge as a documented one-time exception, not a
+pattern — so these need real fixes before the next website-touching
+PR lands.
+
+### F-WEBSITE-PR-FLOW: Decide whether `website/` changes require PR-flow
+
+**Status**: scoped, not started. Surfaced 2026-05-15 alongside
+F-WEBSITE-AUDIT-GATES.
+
+**The question**: should website-touching commits be required to land
+via PR going forward, so the audit gates (Lighthouse, pa11y,
+Playwright) actually run before the change lands? Currently the
+recent website history shows direct-pushes to main:
+
+- `9975e99 feat(site): derive release-tied content from CITATION.cff`
+- `0a0efaa feat(site): add blog section with v0.1.0 release post`
+- `0b6f7f9 fix(docs, site): unbreak repo README links and align homepage citation with cite.astro`
+
+…and so on. None went through PR-flow, so none triggered the audit
+gates. The gates have been ornamental.
+
+**Two paths**:
+
+- **Yes**: enforce PR-flow for `website/` and `.github/workflows/website.yml`
+  changes (e.g., via branch protection on `main` that gates on the
+  4 currently-failing audit jobs once F-WEBSITE-AUDIT-GATES is closed).
+  Catches regressions before they ship to numra-rs.org. Costs the
+  ergonomics of "fix a typo on the marketing page → push directly".
+- **No**: keep direct-push permitted for website changes; remove the
+  PR-only audit gates from `website.yml` (or change their `if:`
+  guard). Honesty over ornament — gates that don't run shouldn't
+  exist.
+
+**Decision is a workflow-convention call, not implementation work.**
+This entry exists so the question gets decided rather than
+re-litigated each time someone wonders why the website audit gates
+exist. Land F-WEBSITE-AUDIT-GATES first (so we have a working set of
+gates to decide whether to enforce); then decide.
 
 ### CI: Renovate canary for Astro pre-releases
 
