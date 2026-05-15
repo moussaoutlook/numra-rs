@@ -56,18 +56,18 @@ jobs:
       preview_alias: ${{ steps.deploy_site.outputs.pages-deployment-alias-url }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Lighthouse CI needs git history for ancestor comparison
           fetch-depth: 20
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v6
         with:
-          version: 9
+          package_json_file: website/site/package.json
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -86,7 +86,7 @@ jobs:
         run: pnpm build
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         id: deploy_site
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -95,7 +95,7 @@ jobs:
 
       - name: Upload build artifact
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: site-dist
           path: website/site/dist
@@ -111,17 +111,17 @@ jobs:
       preview_alias: ${{ steps.deploy_book.outputs.pages-deployment-alias-url }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 20
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v6
         with:
-          version: 9
+          package_json_file: website/book/package.json
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -140,7 +140,7 @@ jobs:
         run: pnpm build
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         id: deploy_book
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -149,7 +149,7 @@ jobs:
 
       - name: Upload build artifact
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: book-dist
           path: website/book/dist
@@ -165,17 +165,17 @@ jobs:
       preview_alias: ${{ steps.deploy_examples.outputs.pages-deployment-alias-url }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 20
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v6
         with:
-          version: 9
+          package_json_file: website/examples/package.json
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -194,7 +194,7 @@ jobs:
         run: pnpm build
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         id: deploy_examples
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -203,7 +203,7 @@ jobs:
 
       - name: Upload build artifact
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: examples-dist
           path: website/examples/dist
@@ -221,12 +221,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 20
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -266,12 +266,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 20
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -312,10 +312,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -374,15 +374,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v6
         with:
-          version: 9
+          package_json_file: website/tests/package.json
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -419,7 +419,7 @@ jobs:
 
       - name: Upload Playwright report on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: website/tests/playwright-report

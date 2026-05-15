@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-15 (F-FD-STEP retired; F-FD-CROSSCRATE and F-FD-NOSCALE-BUG added).
+Last updated: 2026-05-15 (F-CI-NODE20 retired; F-FD-STEP retired; F-FD-CROSSCRATE and F-FD-NOSCALE-BUG added).
 
 ## Recently retired
 
@@ -18,6 +18,7 @@ One-line entries for follow-ups that landed and were removed from the
 file. Kept here so a future reader can find the closure record without
 git-archaeology.
 
+- **F-CI-NODE20: upgrade GitHub Actions runners to Node.js 24** — shipped 2026-05-15. Five action majors bumped to versions declaring `runs.using: node24`, clearing the 2026-06-02 deprecation deadline ahead of time: `actions/checkout@v4 → @v6` (11 usages), `actions/setup-node@v4 → @v6` (7), `actions/upload-artifact@v4 → @v7` (4), `pnpm/action-setup@v3 → @v6` (4; also dropped redundant `with: version: 9` and deferred to the `packageManager: pnpm@9.15.0` field in `package.json` as the single source of truth — required for the v4+ strict check), `cloudflare/wrangler-action@v3 → @v4` (3; default wrangler version implicitly upgrades v3 → v4 — `pages deploy` syntax is stable across the bump). Actions already on node24-runtime majors (`treosh/lighthouse-ci-action@v12`, `Swatinem/rust-cache@v2`) left at their current pins per scope discipline; composite actions (`taiki-e/install-action`, `dtolnay/rust-toolchain`, `rhysd/actionlint`) not affected by Node-runtime deprecation. Audit surfaced 4 actions missed from the original entry (`upload-artifact` needs bump; the three composites and lighthouse/rust-cache don't) — same audit-surfaces-more-than-named pattern as F-FD-STEP.
 - **F-FD-STEP: foundation-trait FD-step reconciliation** — shipped 2026-05-15. `OdeSystem::jacobian` default switched from hardcoded `1e-8` to `sqrt(S::EPSILON) * (1 + |y_j|)`; `Signal::eval_derivative` default switched from hardcoded `1e-8` (no scaling) to `cbrt(S::EPSILON) * (1 + |t|)` (canonical central-FD step). `ParametricOdeSystem::jacobian_y/_p` defaults were already correct on `sqrt(S::EPSILON)`; no change. The six `MOLSystem{2,3}D::jacobian` and `ParametricMOLSystem{2,3}D::jacobian_y/_p` reaction-FD diagonals updated in lockstep (each referenced the trait default in code comments — preserving the consistency the comments claim required moving them together). Two `f32` regression tests added (`numra-ode/src/problem.rs::test_jacobian_finite_diff_f32`, `numra-core/src/signal.rs::test_signal_derivative_f32`) pinning out the silent-quantisation failure mode. The audit pass also surfaced two adjacent follow-ups that were explicitly out of scope for F-FD-STEP — see F-FD-CROSSCRATE and F-FD-NOSCALE-BUG below.
 - **F-ERR: workspace error propagation across crate boundaries** — shipped 2026-05-14. `NumraError` (`numra-core/src/error.rs`) is now `#[non_exhaustive]` and gains 10 new tagged variants (`Ode`, `Optim`, `Ocp`, `Fit`, `Signal`, `LineSearch`, `Interp`, `Integrate`, `Special`, `Stats`); `Optimization` renamed to `NumericalOptim` for unambiguity against the new `Optim`. Six new `From<CrateError> for NumraError` impls in `numra-ode`, `numra-optim`, `numra-ocp`, `numra-fit`, `numra-signal`, `numra-nonlinear`; the four pre-existing impls (`InterpError`, `IntegrationError`, `SpecialError`, `StatsError`) migrated from collapsing-to-`InvalidInput` to the tagged-variant pattern, so the workspace error story is now uniform: every external-crate `?` lands in a programmatically-distinguishable variant. `workflow_ode_interp_integrate` rewritten to return `Result<(), NumraError>` and use `?` across three crate boundaries — structural CI signal that the property is real. Closes Foundation Specification §7 open-question 6 (workspace error type sufficient for cross-crate `?` propagation: yes). Also advances F-INTEROP-Q sub-item 1 (an interop test now exercises cross-crate `?`-propagation). Source-chain preservation deferred to F-ERR-CHAIN.
 - **Parametric MOL systems for forward sensitivity** — shipped 2026-05-08. `ParametricMOLSystem2D` and `ParametricMOLSystem3D` (numra-pde) wrap the heat-equation MOL discretisation as `ParametricOdeSystem`. Parameter layout `[α, reaction_p_0, ...]`; analytical state Jacobian (`α · L0` + diagonal reaction FD), analytical α-column of `J_p` (`L0·y + bc_rhs_0`), all four flag overrides set. Linearity of the Laplacian operator means a single pre-assembled `L0` and `bc_rhs_0` cover both Dirichlet and Neumann BCs without splitting. v1 scope is alpha-on-Laplacian only; full operator parametrisation (D + velocity in advection-diffusion) is the remaining gap, narrowed below.
@@ -835,39 +836,6 @@ ndarray-linalg in disguise". Defer until there's a story to tell.
 ---
 
 ## Tooling
-
-### F-CI-NODE20: Upgrade GitHub Actions runners to Node.js 24
-
-**Status**: scoped, not started. Surfaced 2026-05-15 by the v0.1.1
-release CI runs (workflow annotations on every push).
-
-**What's there today**: GitHub Actions workflows pin a handful of
-actions that still run on Node.js 20:
-
-- `.github/workflows/ci.yml` — `actions/checkout@v4`
-- `.github/workflows/website.yml` — `actions/checkout@v4`,
-  `actions/setup-node@v4`, `cloudflare/wrangler-action@v3`,
-  `pnpm/action-setup@v3`
-
-GitHub will force these to run on Node.js 24 starting **2026-06-02**;
-Node.js 20 is removed from runners entirely on **2026-09-16**.
-Workflows continue to work for now (the runner emits warnings, not
-failures), but the deprecation has a hard date.
-
-**What needs doing**: bump each pinned action to a Node.js 24
-compatible major. As of 2026-05-15:
-
-- `actions/checkout` — pin to the latest v5 (or whichever release
-  declares Node.js 24 support).
-- `actions/setup-node` — same; check the action's release notes.
-- `cloudflare/wrangler-action` — check for a Node.js 24 release; if
-  none yet, set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` as a
-  per-job env var as a transitional workaround.
-- `pnpm/action-setup` — same triage.
-
-**Effort**: ~15 minutes once the upstream releases are confirmed.
-Schedule before 2026-06-02 to avoid the forced-runtime cutover
-landing at an inconvenient moment.
 
 ### CI: Renovate canary for Astro pre-releases
 
