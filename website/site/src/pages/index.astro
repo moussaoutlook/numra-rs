@@ -17,6 +17,7 @@
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { Image } from 'astro:assets';
+import { version, conceptDoi, releaseYear } from '../lib/citation';
 
 import iconOde         from '../assets/icons/ode.png';
 import iconSde         from '../assets/icons/sde.png';
@@ -689,11 +690,11 @@ println!(<span class="s">"k = {:.4}  (final cost {:.2e})"</span>, fit.x[<span cl
         <pre>{`@software{numra,
   author    = {Leblouba, Moussa},
   title     = {{Numra: Composable Numerical Methods for Rust}},
-  year      = {2026},
+  year      = {${releaseYear}},
   publisher = {Spectral Automata},
-  version   = {0.1.0},
-  doi       = {10.5281/zenodo.20159709},
-  url       = {https://doi.org/10.5281/zenodo.20159709},
+  version   = {${version}},
+  doi       = {${conceptDoi}},
+  url       = {https://doi.org/${conceptDoi}},
 }`}</pre>
       </div>
     </div>

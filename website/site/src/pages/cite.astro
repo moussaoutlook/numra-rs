@@ -5,14 +5,13 @@
 // pointed at LICENSE in-repo, not SPDX, since Numra ships a custom
 // non-commercial license).
 //
-// DOIs minted by Zenodo on the first GitHub release (v0.1.0, 2026-05-13).
-// Concept DOI (all-versions, preferred for citation): 10.5281/zenodo.20159709
-// Version DOI (v0.1.0, for reproducibility):         10.5281/zenodo.20159710
+// All release-tied values (current version, version DOI, BibTeX year)
+// are derived from CITATION.cff at build time via ../lib/citation.ts.
+// Future releases need only update CITATION.cff; this page flows
+// automatically on the next site build.
 
 import BaseLayout from '../layouts/BaseLayout.astro';
-
-const conceptDoi = '10.5281/zenodo.20159709';
-const versionDoi = '10.5281/zenodo.20159710';
+import { version, conceptDoi, versionDoi, releaseYear } from '../lib/citation';
 
 const citeJsonLd = {
   '@context': 'https://schema.org',
@@ -21,7 +20,7 @@ const citeJsonLd = {
   description: 'Composable numerical methods for Rust.',
   applicationCategory: 'ScientificComputing',
   operatingSystem: 'Cross-platform',
-  softwareVersion: '0.1.0',
+  softwareVersion: version,
   author: {
     '@type': 'Person',
     name: 'Moussa Leblouba',
@@ -46,7 +45,7 @@ const citeJsonLd = {
       '@type': 'PropertyValue',
       propertyID: 'doi',
       value: versionDoi,
-      description: 'Version DOI (0.1.0)',
+      description: `Version DOI (${version})`,
     },
   ],
 };
@@ -54,9 +53,9 @@ const citeJsonLd = {
 const bibtex = `@software{numra,
   author    = {Leblouba, Moussa},
   title     = {{Numra: Composable Numerical Methods for Rust}},
-  year      = {2026},
+  year      = {${releaseYear}},
   publisher = {Spectral Automata},
-  version   = {0.1.0},
+  version   = {${version}},
   doi       = {${conceptDoi}},
   url       = {https://doi.org/${conceptDoi}},
 }`;
@@ -64,7 +63,7 @@ const bibtex = `@software{numra,
 const ris = `TY  - COMP
 TI  - Numra: Composable Numerical Methods for Rust
 AU  - Leblouba, Moussa
-PY  - 2026
+PY  - ${releaseYear}
 PB  - Spectral Automata
 DO  - ${conceptDoi}
 UR  - https://doi.org/${conceptDoi}
@@ -108,7 +107,7 @@ ER  -`;
 
       <h2>DOI.</h2>
       <p>
-        Numra v0.1.0 is archived on Zenodo with two DOIs:
+        Numra v{version} is archived on Zenodo with two DOIs:
       </p>
       <ul>
         <li>
@@ -116,7 +115,7 @@ ER  -`;
           <a href={`https://doi.org/${conceptDoi}`} rel="noopener"><code>{conceptDoi}</code></a>
         </li>
         <li>
-          <strong>Version DOI</strong> (this specific 0.1.0 release):
+          <strong>Version DOI</strong> (this specific {version} release):
           <a href={`https://doi.org/${versionDoi}`} rel="noopener"><code>{versionDoi}</code></a>
         </li>
       </ul>

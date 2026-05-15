@@ -5,7 +5,8 @@
 // mark + version pill on the left, link cluster + search hint + GitHub
 // on the right.
 
-const NUMRA_VERSION = 'v0.1.0';
+import { version } from '../lib/citation';
+const NUMRA_VERSION = `v${version}`;
 
 const navItems = [
   { href: 'https://book.numra-rs.org',                 label: 'Book',     external: true  },
