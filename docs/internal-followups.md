@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-15 (F-FD-NOSCALE-BUG retired; F-FD-CROSSCRATE retired; F-CI-NODE20 retired; F-FD-STEP retired; F-WEBSITE-AUDIT-GATES, F-WEBSITE-PR-FLOW added).
+Last updated: 2026-05-16 (F-WEBSITE-AUDIT-GATES partially retired — config-staleness + book URL-list + Playwright wrong-expectation portions landed; four genuine-site-issue follow-ups opened as splits: F-WEBSITE-SEO, F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF, F-WEBSITE-BOOK-LHC-FIXES. Two same-day amendments: (a) the URL-fix unmasked book-specific Lighthouse regressions, so F-WEBSITE-MARKETING-SEO was rescoped to F-WEBSITE-SEO covering both subdomains, and F-WEBSITE-BOOK-LHC-FIXES added for book-specific a11y + perf; (b) the Playwright marketing dark-mode failure was reinterpreted from "real regression" to "gate encoded a wrong expectation" after user-supplied design intent (marketing is deliberately light-only), so the three marketing dark-mode tests were removed in-scope here with a foreclosing docstring. F-WEBSITE-PR-FLOW framing tightened given the audit demonstrated the gates catch real shipping-blockers — and the same audit demonstrated that gates can also encode wrong expectations, which PR-FLOW's eventual scope must address).
 
 ## Recently retired
 
@@ -746,69 +746,398 @@ ndarray-linalg in disguise". Defer until there's a story to tell.
 
 ### F-WEBSITE-AUDIT-GATES: Fix orphan website audit gates surfaced by F-CI-NODE20
 
-**Status**: scoped, not started. Surfaced 2026-05-15 by F-CI-NODE20's PR
-(#5) — first PR ever to trigger `website.yml` on a `pull_request`
-event, which is when these gates fire (`if: github.event_name ==
-'pull_request'`).
+**Status**: partially retired 2026-05-16. Config-staleness and book
+URL-list portions landed in `Unreleased` (next 0.1.x release); the four
+genuine deployed-site regressions the audit pass surfaced are split out
+as their own follow-ups below. Full closure when those land and the
+gates run clean on a PR-event trigger.
 
-**Critical context**: `gh run list --workflow=website.yml
---event=pull_request --limit=20` returns only the two F-CI-NODE20 runs.
-Every prior website-touching commit landed via direct push to main, so
-these four jobs **have never executed in the repo's history before**.
-Treat the failures as latent issues (some likely accumulated since the
-gates were authored), not recent regressions caused by F-CI-NODE20's
-action upgrades.
+**Background**: surfaced 2026-05-15 by F-CI-NODE20's PR (#5) — first PR
+ever to trigger `website.yml` on a `pull_request` event, which is when
+these gates fire (`if: github.event_name == 'pull_request'`). Every
+prior website-touching commit landed via direct push to main, so these
+four jobs had never executed in the repo's history before. PR #5's
+admin-merge was the documented one-time exception.
 
-**The four failing jobs** (each with its own root cause; investigation
-phase will determine whether they share a fix or need separate
-treatment):
+**Audit finding (2026-05-16)**: the entry's pre-diagnosis ("Lighthouse
+stale config, others unknown") was substantially wrong. Reading the
+actual PR #5 CI logs (run `25910476569`) revealed three distinct
+failure modes, not one:
 
-1. **`Lighthouse (marketing site)`** — `lighthouserc.json` references
-   audit IDs that no longer exist in the bundled Lighthouse version
-   (`_comment_pwa`, `_comment_third_party_summary`,
-   `render-blocking-insight` is the new name for the deprecated
-   `render-blocking-resources`). Per-page failures: 10-13 assertions
-   each across 9 pages (`/`, `/install`, `/license`, `/commercial`,
-   `/cite`, `/community`, `/stability`, `/features`, `/privacy`).
-   Fix is likely a `lighthouserc.json` audit-name update. Config is
-   at `website/ci/lighthouserc.json`.
-2. **`Lighthouse (book)`** — likely same root cause; not yet
-   confirmed by inspecting `website/ci/lighthouserc-book.json`.
-3. **`Accessibility (pa11y-ci)`** — unknown root cause until
-   investigated. Job runs `pa11y-ci@4` against per-PR preview URLs
-   for 7 site pages plus book and examples roots; config at
-   `website/ci/pa11yci.json`.
-4. **`Playwright (dark-mode regression)`** — unknown root cause until
-   investigated. Suite is intentionally narrow (theme paint at
-   domcontentloaded); lives at `website/tests/`.
+1. **Config staleness on Lighthouse configs** (in-scope, fixed):
+   `_comment_pwa`, `_comment_third_party_summary`,
+   `_comment_book_specific` keys sitting inside `assertions{}` (LHCI
+   parses any key in that object as an audit ID and reports "is not a
+   known audit"); three deprecated audit assertions
+   (`no-unload-listeners`, `no-vulnerable-libraries`, `uses-https` —
+   all removed in Lighthouse 12; `is-on-https` is the surviving
+   HTTPS-validation audit); and `render-blocking-resources`'s
+   `maxNumericValue` override (no-op in Lighthouse 12, which reshaped
+   the audit to return a list — the preset's `maxLength` is what
+   actually fires). Removed across both `lighthouserc.json` and
+   `lighthouserc-book.json`. Top-level `_comment` fields expanded to
+   document the audits that were removed upstream, as durable context
+   for future readers.
+2. **Workflow URL list mismatch** (in-scope, fixed): Lighthouse-book's
+   workflow ran with `/ch01-fundamentals/numerical-stability/` and
+   similar paths that don't exist in the deployed book — the actual
+   directory is `ch01-introduction/`, with no `numerical-stability`
+   page. Likely a holdover from an early outline. The 404 short-
+   circuited Lighthouse-book's entire run before assertions could
+   fire; fixing the URL list lets the gate exercise the config it
+   was always supposed to.
+3. **Genuine deployed-site regressions on three gates** (split out, see
+   below): 78 WCAG2AA color-contrast violations across two marketing
+   pages (one Astro component instanced many times); `is-crawlable: 0`
+   across **both** the marketing site and the book (the entire Numra
+   web presence is currently un-indexable by search engines); real
+   CLS, render-blocking, image-delivery issues on the marketing site;
+   book-side Lighthouse failures unmasked by this PR's URL fix
+   (`label-content-name-mismatch`, `network-dependency-tree-insight`,
+   `font-display-insight`, `lcp-discovery-insight`, `lcp-lazy-loaded`).
+   Tracked as F-WEBSITE-SEO (highest priority overall — both
+   subdomains), F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
+   and F-WEBSITE-BOOK-LHC-FIXES below.
+4. **Playwright gate encoded a wrong expectation** (in-scope, fixed
+   here). The four marketing dark-mode tests in
+   `website/tests/specs/dark-mode.spec.ts` (three system-dark
+   assertions on `/` and `/install`, plus the stored-preference
+   `data-theme="dark"` assertion) asserted that the marketing site
+   honors `prefers-color-scheme: dark` and applies `data-theme="dark"`
+   from localStorage. **The marketing site is deliberately light-only
+   by design** — that's a chosen product position, not an oversight.
+   The Playwright gate was therefore not detecting a regression; it
+   was asserting a non-requirement that had been silently failing
+   since the gate first ran on a `pull_request` event. Removed in
+   this PR, with a foreclosing docstring update on the spec file
+   documenting the intentional asymmetry with the book (which DOES
+   support dark mode via Starlight) and forbidding future
+   contributors from re-introducing the wrong assertions. The book
+   dark-mode tests, the marketing-light test, and the book-light
+   test all remain — they assert real requirements that the deployed
+   sites genuinely meet.
+
+**What this PR landed**: the three in-scope items above
+(config-staleness fixes across both Lighthouse configs; book chapter
+URL-list correction; removal of the marketing dark-mode Playwright
+assertions). The Lighthouse-book gate may actually pass on this PR's
+own run — the book root loaded cleanly 3× in PR #5 and the only known
+failure-blocker was the chapter-URL 404, which is now fixed (caveat:
+the URL fix also unmasked book-specific assertion failures previously
+hidden by the 404, tracked as F-WEBSITE-BOOK-LHC-FIXES — see same-day
+amendment below). The Playwright gate should pass under the test
+removal alone (the remaining tests already passed). The other two
+gates (Lighthouse-marketing, pa11y) still fail because they're
+catching real site regressions this PR explicitly does not address;
+the PR is admin-merged with per-gate documentation citing each
+split-out follow-up. Same documented-exception discipline as PR #5.
+
+**Pattern callout**: the investigative-audit framing was load-bearing.
+If this had been treated as enumerable config-fixing work per the
+entry's pre-diagnosis, the resulting PR would have "fixed" the gates
+by silencing them while leaving 78 a11y violations, a site-wide
+search-indexing block, and a backlog of real site issues live in
+production. Same lesson as the FD audits surfacing F-FD-NOSCALE-BUG /
+F-FD-CROSSCRATE rather than absorbing everything into one PR — audits
+discover real scope, they don't just confirm pre-stated scope. The
+audit also has limits: it accurately diagnosed each gate's *failure*
+from the CI logs but lacked design-intent context for the Playwright
+marketing dark-mode case, and so misinterpreted a wrong-expectation
+gate as a regression. The hard-stop verification discipline plus
+user-supplied design intent caught the misinterpretation before it
+entered permanent record. Both lessons (audits expand scope; audits
+need design-intent inputs they can't derive from logs alone) belong
+in any future audit playbook.
+
+**Priority for full closure**: medium. The four split-outs have their
+own per-entry priorities (F-WEBSITE-SEO is the highest-priority item in
+the entire backlog — see its entry for cost-of-delay rationale). This
+entry closes fully when those land and all four gates run green on a
+PR-event trigger.
+
+**Same-day amendments (2026-05-16)**:
+
+- **Amendment 1 — URL fix unmasked book Lighthouse failures.** This
+  PR's own gate run confirmed the audit's URL-fix hypothesis
+  (`/ch01-introduction/installation/` now loads cleanly — no more
+  404) but unmasked book-specific Lighthouse failures that the
+  original 404 had hidden. Those are added to the split-out shape
+  as F-WEBSITE-BOOK-LHC-FIXES, and the original
+  F-WEBSITE-MARKETING-SEO was rescoped to F-WEBSITE-SEO because the
+  `is-crawlable: 0` issue shows up on **both** subdomains (likely
+  one shared root cause; the SEO follow-up's investigation will
+  confirm or split).
+- **Amendment 2 — Playwright wrong-expectation correction.** The
+  Playwright marketing dark-mode failure was initially audited as
+  a "real regression" and a fifth split-out follow-up
+  (F-WEBSITE-DARKMODE-REGRESSION) was opened. User-supplied design
+  intent during the pre-merge hard-stop review surfaced that the
+  marketing site is deliberately light-only by design — the gate
+  was asserting a non-requirement, not detecting a regression. The
+  follow-up was retired before landing in PR history; the wrong
+  assertions were removed from the spec file in-scope here as a
+  fourth distinct failure mode (gate-correction-not-gate-silencing,
+  same shape as removing stale Lighthouse audit IDs).
+
+Four split-outs total after both amendments. Both amendments were
+caught by the pre-merge hard-stop verification discipline before
+falsifiable claims entered permanent record.
+
+### F-WEBSITE-SEO: Entire Numra web presence is blocked from search indexing
+
+**Status**: scoped, not started. Surfaced 2026-05-16 by
+F-WEBSITE-AUDIT-GATES's audit pass; rescoped same-day from the
+original F-WEBSITE-MARKETING-SEO after this PR's own gate run showed
+`is-crawlable: 0` on the book as well as the marketing site.
+
+**Finding**: Lighthouse reports `is-crawlable: 0` on **both subdomains**:
+
+- **Marketing site**: every page audited (PR #5 + PR #8) — `/`,
+  `/install`, `/license`, `/commercial`, `/cite`, `/community`,
+  `/stability`, `/features`, `/privacy`. `categories:seo` sits at
+  0.69 (target 0.95) dominated by this audit.
+- **Book**: every page audited (PR #8, after the URL-fix unmasked
+  the gate's assertion phase) — `/`, `/ch01-introduction/installation/`,
+  `/ch02-solving-odes/your-first-ode/`, `/ch13-performance/`,
+  `/ch13-performance/comparisons/`. `categories:seo` also fails.
+
+`is-crawlable: 0` means the page is explicitly blocked from indexing
+— either via `<meta name="robots" content="noindex">`, an
+`X-Robots-Tag` header, a disallowing `robots.txt`, or a Cloudflare
+Pages configuration that does the same.
+
+**Cost-of-delay — highest-priority item in the entire backlog**.
+The entire public Numra web presence has been organically
+undiscoverable by search engines since launch. The marketing site
+exists to introduce the project; the book exists as the long-form
+reference. Both being un-indexable means anyone not given a direct
+link cannot find either. Every day of delay is a day the project
+can't be reached via search. This priority is not local-to-the-
+website-track — it dominates the project-wide backlog.
+
+**Expedite-if-trivial guidance** (this entry's primary load-bearing
+note): the eventual audit should **assess fix size early**. Plausible
+trivial causes:
+
+- An accidental `X-Robots-Tag: noindex` (or `User-agent: * / Disallow: /`)
+  in `website/site/public/_headers` and/or `website/book/public/_headers`
+  — left over from pre-launch staging and never reverted.
+- A disallowing `robots.txt` (only `website/site/public/robots.txt`
+  exists; the book has no `robots.txt` of its own, but a project-wide
+  Cloudflare config could be doing the same).
+- A `<meta name="robots" content="noindex">` in the shared base
+  layout of one or both sites.
+
+If the audit confirms the cause is a trivial config fix, **surface
+that finding immediately** so the fix can land as its own tiny PR
+rather than waiting for normal scheduling. A 1-line `_headers` /
+`robots.txt` change to restore indexing is qualitatively different
+work from the multi-day a11y / perf remediation in the other
+split-outs, and the cost-of-delay justifies the expedite. Don't
+roll it into a larger SEO sweep; ship the small fix the moment the
+root cause is confirmed.
 
 **What needs doing**:
-1. Investigate each of the four failures individually. The shared
-   root cause (orphan gates that have never run) doesn't necessarily
-   imply a shared fix.
-2. For Lighthouse: update `website/ci/lighthouserc.json` and
-   `lighthouserc-book.json` to match the current Lighthouse audit
-   surface; verify thresholds are still appropriate against the
-   current site performance characteristics.
-3. For pa11y and Playwright: read the failure logs from PR #5 (run
-   ID `25910476569`), determine whether these are config-drift
-   issues, site-content regressions, or framework-update issues.
-4. Land each fix in its own focused PR so the closure narrative
-   stays clean. Each PR will need to pass these gates to land,
-   creating a virtuous cycle: each gate gets fixed, tested, and
-   subsequently enforced.
+1. Two-property investigation. Check, in order of likelihood:
+   - `website/site/public/_headers` (Cloudflare Pages headers config —
+     the most likely culprit; will be `X-Robots-Tag: noindex` or similar).
+   - `website/book/public/_headers` (same check for the book subdomain;
+     could be a copy-paste of the marketing config).
+   - `website/site/public/robots.txt` (file exists; check for a
+     blanket Disallow).
+   - The book has no `robots.txt`; verify it isn't being served one
+     by a Cloudflare-level project default.
+   - Both sites' base layouts for `<meta name="robots">` tags.
+   - Astro config in both `astro.config.mjs` for any `build`-level
+     SEO directives.
+2. Confirm whether the cause is one shared source (project-wide) or
+   two divergent sources (separate `_headers` files happen to both
+   contain noindex). If one source: single fix. If two: still one
+   follow-up (this one), but the fix has two touchpoints.
+3. If the audit finds a trivial root cause (single config line on one
+   or both sites), surface immediately and ship as an expedited tiny
+   PR per the guidance above.
+4. Verify with a follow-up Lighthouse run on the fix branch —
+   `is-crawlable` should return to 1 on **both subdomains**;
+   `categories:seo` should climb back above 0.95 on both.
 
-**Priority**: medium-to-high. The gates exist in the workflow; until
-they pass, every PR that touches `website/` or `website.yml` will
-have to either fix them or admin-merge over them. F-CI-NODE20 already
-established admin-merge as a documented one-time exception, not a
-pattern — so these need real fixes before the next website-touching
-PR lands.
+**Priority**: highest in the entire backlog. Should be scheduled
+ahead of every other follow-up — both F-WEBSITE-AUDIT-GATES split-outs
+and any other currently-open follow-up — because the cost-of-delay
+is project-wide visibility, not local to the website track.
+
+### F-WEBSITE-MARKETING-A11Y: WCAG2AA violations on marketing root + examples gallery
+
+**Status**: scoped, not started. Surfaced 2026-05-16 by
+F-WEBSITE-AUDIT-GATES's audit pass.
+
+**Finding**: pa11y on PR #5's preview reported 78 WCAG2AA violations
+across two URLs — marketing root (49 errors) and examples gallery (29
+errors). Lighthouse-marketing independently reports `color-contrast:
+0`, `heading-order: 0`, `label-content-name-mismatch: 0`,
+`link-in-text-block: 0` across all 9 marketing pages, and
+`categories:accessibility` at 0.93–0.98 (target 1.00).
+
+**Scope-bounding finding** (color-contrast is contained): all 78 pa11y
+errors trace to **one Astro component** (`data-astro-cid-j7pv25f6`)
+instanced many times across the two pages. Text spans with classes
+`ch`, `num`, `src` have contrast ratios 2.16:1 or 2.25:1 against their
+backgrounds (AA requires ≥ 4.5:1). pa11y's recommendation: change text
+color to `#080d16` for the `ch`/`num` spans and `#727780` for the
+`src` spans. **One CSS fix in that component clears all 78 errors.**
+
+**The other a11y audits need separate per-issue investigation**:
+- `heading-order`: marketing pages skip heading levels (e.g., `<h1>`
+  directly to `<h3>`). Per-page audit needed to locate each break.
+- `label-content-name-mismatch`: elements with visible text labels
+  don't have matching accessible names. Likely buttons or links with
+  icon + text where the accessible name is just the icon's
+  `aria-label`. **Same-symptom, different-source caveat**:
+  F-WEBSITE-BOOK-LHC-FIXES also includes a `label-content-name-mismatch`
+  failure, but the book's instance is in Starlight templates (upstream
+  theme, possibly fixed upstream rather than in our content); this
+  marketing instance is in custom Astro components under
+  `website/site/src/`. The two share an audit name but not a fix
+  surface — do not conflate them when scheduling or reviewing.
+- `link-in-text-block`: links inside prose are visually
+  indistinguishable from surrounding text (rely only on color).
+  Need underline or other non-color indicator.
+
+**What needs doing**:
+1. Fix the contained color-contrast component first (one CSS change
+   clears 78 of the violations and is the most actionable diagnosis).
+2. Per-issue investigation for `heading-order`,
+   `label-content-name-mismatch`, `link-in-text-block`. Each may need
+   its own component-level fix.
+3. Verify with a follow-up pa11y + Lighthouse run on the fix branch —
+   `categories:accessibility` should return to 1.00; pa11y should
+   report 7/7 URLs passing.
+
+**Priority**: medium. Below F-WEBSITE-SEO (which blocks discovery
+entirely) but above F-WEBSITE-MARKETING-PERF and
+F-WEBSITE-BOOK-LHC-FIXES.
+
+### F-WEBSITE-MARKETING-PERF: Marketing site fails several Lighthouse performance audits
+
+**Status**: scoped, not started. Surfaced 2026-05-16 by
+F-WEBSITE-AUDIT-GATES's audit pass.
+
+**Finding**: Lighthouse-marketing on PR #5 reports several performance
+failures across the 9 marketing pages:
+
+- `cumulative-layout-shift: 0.132803` on `/stability` (target ≤
+  0.05), with `cls-culprits-insight: 0` flagging the culprits. CLS is
+  page-specific; other pages are within budget but `/stability`
+  regresses sharply.
+- `render-blocking-resources` (and the newer companion
+  `render-blocking-insight`): 2 render-blocking items on each page.
+  The preset asserts `maxLength: 0`.
+- `image-delivery-insight: 0.5` and `uses-responsive-images: 0.5`
+  across pages — images aren't being sized correctly for the viewport.
+- `network-dependency-tree-insight: 0` — the critical-request-chain
+  depth exceeds the preset's threshold.
+
+**What needs doing**:
+1. Investigate `/stability`'s CLS specifically —
+   `cls-culprits-insight` in the Lighthouse report identifies the
+   offending elements; likely an unsized image, web font, or
+   late-loaded component.
+2. Identify the two render-blocking resources per page (the
+   Lighthouse report names them; typically CSS in `<head>` or a
+   synchronous script). Defer or inline as appropriate.
+3. Audit images for responsive `srcset` / `sizes` attributes; convert
+   to `modern-image-formats` (AVIF/WebP) where missing.
+4. Trace the network dependency tree — what's the critical-request
+   chain? Often a font or CSS dependency that's deeper than it needs
+   to be.
+5. Verify with a follow-up Lighthouse run on the fix branch —
+   `categories:performance` should sit ≥ 0.95 across all 9 pages.
+
+**Priority**: medium. May need sub-splits if individual issues turn
+out to have separate root causes (the CLS-on-/stability fix is
+probably distinct from the render-blocking fix).
+
+### F-WEBSITE-BOOK-LHC-FIXES: Book Lighthouse failures unmasked by URL fix
+
+**Status**: scoped, not started. Surfaced 2026-05-16 by this PR's own
+gate run, after the F-WEBSITE-AUDIT-GATES URL fix replaced the
+hardcoded chapter URL `/ch01-fundamentals/numerical-stability/` (404)
+with `/ch01-introduction/installation/`. The book gate's assertion
+phase had been short-circuited by that 404 on PR #5 and is now
+exercising its config for the first time. The failures it reports
+are genuine book-site Lighthouse regressions, not staleness in
+`website/ci/lighthouserc-book.json`.
+
+**Finding**: Lighthouse on PR #8's preview reports per-page failures
+across all 5 book URLs (`/`, `/ch01-introduction/installation/`,
+`/ch02-solving-odes/your-first-ode/`, `/ch13-performance/`,
+`/ch13-performance/comparisons/`):
+
+- `label-content-name-mismatch` — fires on every page. **Same-symptom,
+  different-source caveat**: F-WEBSITE-MARKETING-A11Y also has a
+  `label-content-name-mismatch` failure, but the marketing instance
+  is in custom Astro components under `website/site/src/`; the book
+  instance is in Starlight templates (`@astrojs/starlight` upstream).
+  The two share an audit name but not a fix surface — the book's may
+  resolve upstream (file/track a Starlight issue), or may need a
+  Starlight-component override locally. Do not conflate with
+  F-WEBSITE-MARKETING-A11Y's same-named item.
+- `network-dependency-tree-insight` — fires on every page. Book ships
+  Starlight UI runtime (~150 KB) plus Pagefind's WASM search index;
+  the critical-request chain depth likely reflects the Pagefind
+  init or Starlight's bundled UI components. Worth profiling whether
+  Pagefind can be deferred past the critical path.
+- `font-display-insight` — fires on `/` (book root). KaTeX serves
+  several `.woff2` files for math glyphs, and Starlight has its own
+  web fonts. Likely cause: one or more `@font-face` declarations
+  missing `font-display: swap` (or `optional`). Worth checking
+  whether the regression is in KaTeX's bundled CSS, Starlight's, or
+  a project-side override.
+- `lcp-discovery-insight` and `lcp-lazy-loaded` — fire only on
+  `/ch13-performance/comparisons/`. That page has the most
+  benchmark-result content; likely an above-the-fold image or
+  embedded SVG with `loading="lazy"` set inappropriately, or an LCP
+  element that isn't discoverable by Lighthouse's preload-detection
+  heuristic.
+
+`is-crawlable: 0` on the book is excluded from this entry's scope —
+it's tracked in F-WEBSITE-SEO (covers both subdomains; same likely
+root cause as marketing).
+
+**What needs doing**:
+1. Triage the four issues. `label-content-name-mismatch` is probably
+   the biggest unknown — investigate whether the source is in
+   `node_modules/@astrojs/starlight/...` or in a project-side
+   component override, then decide between upstreaming a fix vs.
+   local override.
+2. `font-display-insight`: identify the missing-`font-display`
+   declarations (probably 2–4 declarations across KaTeX and
+   Starlight). The fix is typically a project-side `@font-face`
+   override that reuses the same `src` but adds `font-display: swap`.
+3. `network-dependency-tree-insight`: profile the critical-request
+   chain in the Lighthouse report; assess whether Pagefind can be
+   deferred or its WASM payload can be made non-critical.
+4. `lcp-discovery-insight` / `lcp-lazy-loaded` on
+   `/ch13-performance/comparisons/`: identify the LCP element from
+   the Lighthouse report, fix its `loading=` attribute or add a
+   `<link rel="preload">` hint as appropriate.
+5. Verify with a follow-up Lighthouse-book run on the fix branch —
+   all 5 book pages should clear the four audits (modulo the
+   F-WEBSITE-SEO indexing issue, which is tracked separately).
+
+**Priority**: medium. Lower than F-WEBSITE-SEO (project-wide
+discoverability) but comparable to F-WEBSITE-MARKETING-PERF in scope
+and impact (visitors who do find the book see slower-than-target
+loads). May need a sub-split if the `label-content-name-mismatch`
+investigation determines Starlight's upstream needs a patch and the
+local workaround is materially different work from the other three
+items.
 
 ### F-WEBSITE-PR-FLOW: Decide whether `website/` changes require PR-flow
 
 **Status**: scoped, not started. Surfaced 2026-05-15 alongside
-F-WEBSITE-AUDIT-GATES.
+F-WEBSITE-AUDIT-GATES; framing tightened 2026-05-16 after that audit's
+findings.
 
 **The question**: should website-touching commits be required to land
 via PR going forward, so the audit gates (Lighthouse, pa11y,
@@ -820,25 +1149,78 @@ recent website history shows direct-pushes to main:
 - `0b6f7f9 fix(docs, site): unbreak repo README links and align homepage citation with cite.astro`
 
 …and so on. None went through PR-flow, so none triggered the audit
-gates. The gates have been ornamental.
+gates. The gates have been silent — not ornamental.
 
-**Two paths**:
+**The "silent vs. ornamental" distinction matters here**: ornamental
+means the gates aren't catching anything. The F-WEBSITE-AUDIT-GATES
+audit pass on 2026-05-16 demonstrated the opposite. On their first-ever
+PR-event run (PR #5), the gates correctly fired on 78 WCAG2AA violations
+across two pages, a site-wide search-indexing block
+(`is-crawlable: 0`), real CLS / render-blocking / image-delivery
+regressions, and a broken dark-mode mechanism. The gates were silent
+because direct-push prevented them from running, not because there
+was nothing for them to catch. The "remove the gates" option below is
+therefore not on the table — they demonstrably work.
 
-- **Yes**: enforce PR-flow for `website/` and `.github/workflows/website.yml`
-  changes (e.g., via branch protection on `main` that gates on the
-  4 currently-failing audit jobs once F-WEBSITE-AUDIT-GATES is closed).
-  Catches regressions before they ship to numra-rs.org. Costs the
-  ergonomics of "fix a typo on the marketing page → push directly".
-- **No**: keep direct-push permitted for website changes; remove the
-  PR-only audit gates from `website.yml` (or change their `if:`
-  guard). Honesty over ornament — gates that don't run shouldn't
-  exist.
+**The remaining question is purely "when to enforce, not whether":**
 
-**Decision is a workflow-convention call, not implementation work.**
-This entry exists so the question gets decided rather than
+- **Enforce now**: branch-protect `main` to require the four audit
+  jobs to pass on `website/`-touching changes. Problem: until the
+  four F-WEBSITE-AUDIT-GATES split-outs land (F-WEBSITE-SEO,
+  F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
+  F-WEBSITE-BOOK-LHC-FIXES), 2 of 4 gates still fail on every PR
+  (Lighthouse-marketing, pa11y; Lighthouse-book likely passes after
+  this PR's URL fix; Playwright passes after this PR's wrong-
+  expectation removal) — enforcement now would block all website
+  work behind a still-broken signal.
+- **Enforce after split-outs land**: wait until the four split-out
+  follow-ups close and all four gates run green on a PR-event
+  trigger; then branch-protect. Clean transition.
+
+**Recommended sequencing**: F-WEBSITE-AUDIT-GATES (partial-retired
+2026-05-16) → SEO (highest priority — likely expedited as a tiny PR
+if root cause is trivial) → A11Y / PERF / BOOK-LHC-FIXES land → all
+four gates green → branch-protect `main` on `website/**` paths gated
+on the four audit jobs. The question becomes a one-line config change
+once the gates are clean.
+
+**Lesson F-WEBSITE-PR-FLOW must incorporate into its eventual scope**:
+gates that *run* and gates that *assert the right thing* are
+separate properties; the audit must cover both. F-WEBSITE-AUDIT-GATES
+surfaced concrete worked examples of each failure mode:
+
+- **Gate runs, asserts wrong thing**: the Playwright marketing
+  dark-mode tests asserted that the marketing site honors
+  `prefers-color-scheme: dark` and applies stored-preference
+  `data-theme="dark"`. The marketing site is deliberately light-only
+  by design — those assertions were a non-requirement that had been
+  silently failing since the gate first ran on a `pull_request`
+  event. The gate-correction was removing the wrong assertions, not
+  fixing the deployed site.
+- **Gate runs, asserts right thing, but the asserted thing is
+  broken**: every other failure in F-WEBSITE-AUDIT-GATES — the 78
+  WCAG2AA contrast violations, `is-crawlable: 0` on both subdomains,
+  the book's `font-display` and LCP failures, etc. These are
+  conventional "audit catches real bug" failures.
+
+F-WEBSITE-PR-FLOW's enforce-vs-not decision must therefore include
+**"each gate's expectations are correct against current design
+intent"** as part of its eligibility check, not just **"each gate
+runs and currently passes"**. A gate that runs, passes, and asserts
+the wrong thing is worse than no gate at all — it manufactures
+false confidence. The Playwright dark-mode case caught here is the
+concrete instance proving why this check belongs in the scope.
+Treat the design-intent-review pass as a one-time cost when scoping
+PR-FLOW: walk each gate's expectations against current product
+intent, document each as correct or remove/correct the wrong ones,
+before enforcing.
+
+**Decision is still a workflow-convention call, not implementation
+work.** This entry exists so the question gets decided rather than
 re-litigated each time someone wonders why the website audit gates
-exist. Land F-WEBSITE-AUDIT-GATES first (so we have a working set of
-gates to decide whether to enforce); then decide.
+exist. The audit already discharged the "whether" question; the
+"when" decision waits on the split-outs and the gate-expectations
+review above.
 
 ### CI: Renovate canary for Astro pre-releases
 
