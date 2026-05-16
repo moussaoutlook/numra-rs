@@ -1,5 +1,5 @@
 {
-  "_comment": "Lighthouse CI configuration for the Numra website. LHCI 0.15.x bundles Lighthouse 12; the PWA category was removed in Lighthouse 12 and is intentionally absent from assertions.",
+  "_comment": "Lighthouse CI configuration for the Numra website. LHCI 0.15.x bundles Lighthouse 12; the PWA category and several legacy audits (uses-https, no-unload-listeners, no-vulnerable-libraries) were removed upstream and intentionally absent from assertions below. is-on-https is the current HTTPS-validation audit. Audit IDs go directly as keys in `assertions` — LHCI parses any key there as an audit ID, so do not put commentary keys inside that object.",
 
   "ci": {
     "collect": {
@@ -29,8 +29,6 @@
         "uses-responsive-images":     "error",
         "modern-image-formats":       "error",
         "efficient-animated-content": "error",
-        "no-unload-listeners":        "error",
-        "render-blocking-resources":  ["error", { "maxNumericValue": 200 }],
 
         "color-contrast":     "error",
         "html-has-lang":      "error",
@@ -43,17 +41,13 @@
         "html-lang-valid":    "error",
 
         "is-on-https":             "error",
-        "uses-https":              "error",
-        "no-vulnerable-libraries": "error",
         "csp-xss":                 ["warn",  {}],
 
-        "_comment_pwa": "PWA category and audits removed in Lighthouse 12 — do not add them.",
         "uses-rel-preload":              "off",
         "uses-rel-preconnect":           "off",
         "non-composited-animations":     "warn",
         "unused-css-rules":              "warn",
         "unused-javascript":             "warn",
-        "_comment_third_party_summary": "Sources outside our control (CF beacon) — warn, do not error.",
         "third-party-summary":           "warn"
       }
     },

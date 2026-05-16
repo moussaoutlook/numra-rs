@@ -285,9 +285,14 @@ jobs:
             exit 1
           fi
           base="${base%/}"
+          # Book uses `trailingSlash: 'always'` (Starlight directory output)
+          # so chapter URLs must end with a slash. Paths must exist under
+          # website/book/src/content/docs/ — the chapter slugs `ch01-*`
+          # etc. are derived directly from the directory names. See
+          # `website/book/astro.config.mjs`.
           {
             echo "urls<<EOF"
-            for path in / /ch01-fundamentals/numerical-stability/ /ch02-solving-odes/your-first-ode/ /ch13-performance/ /ch13-performance/comparisons/; do
+            for path in / /ch01-introduction/installation/ /ch02-solving-odes/your-first-ode/ /ch13-performance/ /ch13-performance/comparisons/; do
               echo "$base$path"
             done
             echo "EOF"

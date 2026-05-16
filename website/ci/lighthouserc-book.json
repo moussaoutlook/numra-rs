@@ -1,5 +1,5 @@
 {
-  "_comment": "Lighthouse CI configuration for the Numra book (book.numra-rs.org). Loosened from the marketing-site budget because Starlight ships ~150 KB of UI runtime and Pagefind ships its WASM search index. Math-heavy chapters and chapters with embedded SVGs (e.g. ch13-performance) make the marketing-site budget unrealistic. These thresholds are still strict — they're the bar for a content-heavy docs site, not the bar for a brochure.",
+  "_comment": "Lighthouse CI configuration for the Numra book (book.numra-rs.org). Loosened from the marketing-site budget because Starlight ships ~150 KB of UI runtime and Pagefind ships its WASM search index. Math-heavy chapters and chapters with embedded SVGs (e.g. ch13-performance) make the marketing-site budget unrealistic. These thresholds are still strict — they're the bar for a content-heavy docs site, not the bar for a brochure. PWA category and several legacy audits (uses-https, no-unload-listeners, no-vulnerable-libraries) were removed upstream in Lighthouse 12 and are intentionally absent below; is-on-https is the current HTTPS-validation audit. Audit IDs go directly as keys in `assertions` — LHCI parses any key there as an audit ID, so do not put commentary keys inside that object. Pagefind's WASM search payload is the reason `total-byte-weight` is warn-not-error here.",
 
   "ci": {
     "collect": {
@@ -29,8 +29,6 @@
         "uses-responsive-images":     "error",
         "modern-image-formats":       "error",
         "efficient-animated-content": "error",
-        "no-unload-listeners":        "error",
-        "render-blocking-resources":  ["error", { "maxNumericValue": 400 }],
 
         "color-contrast":     "error",
         "html-has-lang":      "error",
@@ -43,20 +41,14 @@
         "html-lang-valid":    "error",
 
         "is-on-https":             "error",
-        "uses-https":              "error",
-        "no-vulnerable-libraries": "error",
         "csp-xss":                 ["warn",  {}],
 
-        "_comment_pwa": "PWA category and audits removed in Lighthouse 12 — do not add them.",
         "uses-rel-preload":              "off",
         "uses-rel-preconnect":           "off",
         "non-composited-animations":     "warn",
         "unused-css-rules":              "warn",
         "unused-javascript":             "warn",
-        "_comment_third_party_summary":  "Sources outside our control (CF beacon, Pagefind WASM) — warn, do not error.",
         "third-party-summary":           "warn",
-
-        "_comment_book_specific": "Pagefind ships its search WASM payload on most pages; do not error on bundle size for it.",
         "total-byte-weight":             ["warn", { "maxNumericValue": 819200 }]
       }
     },

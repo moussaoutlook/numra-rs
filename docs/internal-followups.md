@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-15 (F-FD-NOSCALE-BUG retired; F-FD-CROSSCRATE retired; F-CI-NODE20 retired; F-FD-STEP retired; F-WEBSITE-AUDIT-GATES, F-WEBSITE-PR-FLOW added).
+Last updated: 2026-05-16 (F-WEBSITE-AUDIT-GATES partially retired — config-staleness + book URL-list portions landed; four genuine-site-issue follow-ups opened as splits: F-WEBSITE-MARKETING-SEO, F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF, F-WEBSITE-DARKMODE-REGRESSION; F-WEBSITE-PR-FLOW framing tightened given the audit demonstrated the gates catch real shipping-blockers).
 
 ## Recently retired
 
@@ -746,69 +746,258 @@ ndarray-linalg in disguise". Defer until there's a story to tell.
 
 ### F-WEBSITE-AUDIT-GATES: Fix orphan website audit gates surfaced by F-CI-NODE20
 
-**Status**: scoped, not started. Surfaced 2026-05-15 by F-CI-NODE20's PR
-(#5) — first PR ever to trigger `website.yml` on a `pull_request`
-event, which is when these gates fire (`if: github.event_name ==
-'pull_request'`).
+**Status**: partially retired 2026-05-16. Config-staleness and book
+URL-list portions landed in `Unreleased` (next 0.1.x release); the four
+genuine deployed-site regressions the audit pass surfaced are split out
+as their own follow-ups below. Full closure when those land and the
+gates run clean on a PR-event trigger.
 
-**Critical context**: `gh run list --workflow=website.yml
---event=pull_request --limit=20` returns only the two F-CI-NODE20 runs.
-Every prior website-touching commit landed via direct push to main, so
-these four jobs **have never executed in the repo's history before**.
-Treat the failures as latent issues (some likely accumulated since the
-gates were authored), not recent regressions caused by F-CI-NODE20's
-action upgrades.
+**Background**: surfaced 2026-05-15 by F-CI-NODE20's PR (#5) — first PR
+ever to trigger `website.yml` on a `pull_request` event, which is when
+these gates fire (`if: github.event_name == 'pull_request'`). Every
+prior website-touching commit landed via direct push to main, so these
+four jobs had never executed in the repo's history before. PR #5's
+admin-merge was the documented one-time exception.
 
-**The four failing jobs** (each with its own root cause; investigation
-phase will determine whether they share a fix or need separate
-treatment):
+**Audit finding (2026-05-16)**: the entry's pre-diagnosis ("Lighthouse
+stale config, others unknown") was substantially wrong. Reading the
+actual PR #5 CI logs (run `25910476569`) revealed three distinct
+failure modes, not one:
 
-1. **`Lighthouse (marketing site)`** — `lighthouserc.json` references
-   audit IDs that no longer exist in the bundled Lighthouse version
-   (`_comment_pwa`, `_comment_third_party_summary`,
-   `render-blocking-insight` is the new name for the deprecated
-   `render-blocking-resources`). Per-page failures: 10-13 assertions
-   each across 9 pages (`/`, `/install`, `/license`, `/commercial`,
-   `/cite`, `/community`, `/stability`, `/features`, `/privacy`).
-   Fix is likely a `lighthouserc.json` audit-name update. Config is
-   at `website/ci/lighthouserc.json`.
-2. **`Lighthouse (book)`** — likely same root cause; not yet
-   confirmed by inspecting `website/ci/lighthouserc-book.json`.
-3. **`Accessibility (pa11y-ci)`** — unknown root cause until
-   investigated. Job runs `pa11y-ci@4` against per-PR preview URLs
-   for 7 site pages plus book and examples roots; config at
-   `website/ci/pa11yci.json`.
-4. **`Playwright (dark-mode regression)`** — unknown root cause until
-   investigated. Suite is intentionally narrow (theme paint at
-   domcontentloaded); lives at `website/tests/`.
+1. **Config staleness on Lighthouse configs** (in-scope, fixed):
+   `_comment_pwa`, `_comment_third_party_summary`,
+   `_comment_book_specific` keys sitting inside `assertions{}` (LHCI
+   parses any key in that object as an audit ID and reports "is not a
+   known audit"); three deprecated audit assertions
+   (`no-unload-listeners`, `no-vulnerable-libraries`, `uses-https` —
+   all removed in Lighthouse 12; `is-on-https` is the surviving
+   HTTPS-validation audit); and `render-blocking-resources`'s
+   `maxNumericValue` override (no-op in Lighthouse 12, which reshaped
+   the audit to return a list — the preset's `maxLength` is what
+   actually fires). Removed across both `lighthouserc.json` and
+   `lighthouserc-book.json`. Top-level `_comment` fields expanded to
+   document the audits that were removed upstream, as durable context
+   for future readers.
+2. **Workflow URL list mismatch** (in-scope, fixed): Lighthouse-book's
+   workflow ran with `/ch01-fundamentals/numerical-stability/` and
+   similar paths that don't exist in the deployed book — the actual
+   directory is `ch01-introduction/`, with no `numerical-stability`
+   page. Likely a holdover from an early outline. The 404 short-
+   circuited Lighthouse-book's entire run before assertions could
+   fire; fixing the URL list lets the gate exercise the config it
+   was always supposed to.
+3. **Genuine deployed-site regressions** (split out, see below): 78
+   WCAG2AA color-contrast violations across two pages (one Astro
+   component instanced many times); `is-crawlable: 0` across the
+   marketing site (the site is currently un-indexable by search
+   engines); real CLS, render-blocking, image-delivery issues; and
+   the marketing site's dark-mode mechanism broken in both its
+   `prefers-color-scheme` and stored-preference paths. Tracked as
+   F-WEBSITE-MARKETING-SEO, F-WEBSITE-MARKETING-A11Y,
+   F-WEBSITE-MARKETING-PERF, and F-WEBSITE-DARKMODE-REGRESSION below.
+
+**What this PR landed**: the two in-scope items above (config-staleness
+fixes across both Lighthouse configs + book chapter URL-list
+correction). The Lighthouse-book gate may actually pass on this PR's
+own run — the book root loaded cleanly 3× in PR #5 and the only
+known failure-blocker was the chapter-URL 404, which is now fixed.
+The other three gates still fail because they're catching real site
+regressions this PR explicitly does not address; the PR is admin-merged
+with per-gate documentation citing each split-out follow-up. Same
+documented-exception discipline as PR #5.
+
+**Pattern callout**: the investigative-audit framing was load-bearing.
+If this had been treated as enumerable config-fixing work per the
+entry's pre-diagnosis, the resulting PR would have "fixed" the gates
+by silencing them while leaving 78 a11y violations, a site-wide
+search-indexing block, and a broken dark-mode mechanism live in
+production. Same lesson as the FD audits surfacing F-FD-NOSCALE-BUG /
+F-FD-CROSSCRATE rather than absorbing everything into one PR — audits
+discover real scope, they don't just confirm pre-stated scope.
+
+**Priority for full closure**: medium. The four split-outs have their
+own per-entry priorities (SEO is highest — see its entry for
+cost-of-delay rationale). This entry closes fully when those land and
+all four gates run green on a PR-event trigger.
+
+### F-WEBSITE-MARKETING-SEO: Marketing site is blocked from search indexing
+
+**Status**: scoped, not started. Surfaced 2026-05-16 by
+F-WEBSITE-AUDIT-GATES's audit pass.
+
+**Finding**: Lighthouse on PR #5's preview reported `is-crawlable: 0`
+across every marketing page (`/`, `/install`, `/license`,
+`/commercial`, `/cite`, `/community`, `/stability`, `/features`,
+`/privacy`). The SEO category as a whole sits at 0.69 (target 0.95),
+dominated by this single audit. `is-crawlable: 0` means the page is
+explicitly blocked from indexing — either via
+`<meta name="robots" content="noindex">`, an `X-Robots-Tag` header,
+a disallowing `robots.txt`, or a Cloudflare Pages configuration that
+does the same.
+
+**Cost-of-delay**: this is the **highest-priority** of the four
+F-WEBSITE-AUDIT-GATES split-outs. The marketing site has been
+un-indexable since launch, so search engines have never been able to
+find it. That directly undercuts discovery of the project. Every day
+it's broken is a day numra-rs.org can't be reached by anyone who
+doesn't already have a direct link.
 
 **What needs doing**:
-1. Investigate each of the four failures individually. The shared
-   root cause (orphan gates that have never run) doesn't necessarily
-   imply a shared fix.
-2. For Lighthouse: update `website/ci/lighthouserc.json` and
-   `lighthouserc-book.json` to match the current Lighthouse audit
-   surface; verify thresholds are still appropriate against the
-   current site performance characteristics.
-3. For pa11y and Playwright: read the failure logs from PR #5 (run
-   ID `25910476569`), determine whether these are config-drift
-   issues, site-content regressions, or framework-update issues.
-4. Land each fix in its own focused PR so the closure narrative
-   stays clean. Each PR will need to pass these gates to land,
-   creating a virtuous cycle: each gate gets fixed, tested, and
-   subsequently enforced.
+1. Find the source of the noindex signal. Check
+   `website/site/public/_headers` (Cloudflare Pages headers config),
+   `website/site/public/robots.txt` if it exists, the base layout for
+   `<meta name="robots">` tags, and the Astro config's `build`
+   settings.
+2. Confirm the signal is intentional or accidental. If it's a left-
+   over from pre-launch staging that was never reverted, simply
+   remove. If there's a real reason some pages should not be indexed
+   (e.g., a draft route), narrow the directive to those pages only.
+3. Verify with a follow-up Lighthouse run on the fix branch —
+   `is-crawlable` should return to 1; `categories:seo` should climb
+   back above 0.95.
 
-**Priority**: medium-to-high. The gates exist in the workflow; until
-they pass, every PR that touches `website/` or `website.yml` will
-have to either fix them or admin-merge over them. F-CI-NODE20 already
-established admin-merge as a documented one-time exception, not a
-pattern — so these need real fixes before the next website-touching
-PR lands.
+**Priority**: high. Should be scheduled before the other three
+F-WEBSITE-AUDIT-GATES split-outs.
+
+### F-WEBSITE-MARKETING-A11Y: WCAG2AA violations on marketing root + examples gallery
+
+**Status**: scoped, not started. Surfaced 2026-05-16 by
+F-WEBSITE-AUDIT-GATES's audit pass.
+
+**Finding**: pa11y on PR #5's preview reported 78 WCAG2AA violations
+across two URLs — marketing root (49 errors) and examples gallery (29
+errors). Lighthouse-marketing independently reports `color-contrast:
+0`, `heading-order: 0`, `label-content-name-mismatch: 0`,
+`link-in-text-block: 0` across all 9 marketing pages, and
+`categories:accessibility` at 0.93–0.98 (target 1.00).
+
+**Scope-bounding finding** (color-contrast is contained): all 78 pa11y
+errors trace to **one Astro component** (`data-astro-cid-j7pv25f6`)
+instanced many times across the two pages. Text spans with classes
+`ch`, `num`, `src` have contrast ratios 2.16:1 or 2.25:1 against their
+backgrounds (AA requires ≥ 4.5:1). pa11y's recommendation: change text
+color to `#080d16` for the `ch`/`num` spans and `#727780` for the
+`src` spans. **One CSS fix in that component clears all 78 errors.**
+
+**The other a11y audits need separate per-issue investigation**:
+- `heading-order`: marketing pages skip heading levels (e.g., `<h1>`
+  directly to `<h3>`). Per-page audit needed to locate each break.
+- `label-content-name-mismatch`: elements with visible text labels
+  don't have matching accessible names. Likely buttons or links with
+  icon + text where the accessible name is just the icon's
+  `aria-label`.
+- `link-in-text-block`: links inside prose are visually
+  indistinguishable from surrounding text (rely only on color).
+  Need underline or other non-color indicator.
+
+**What needs doing**:
+1. Fix the contained color-contrast component first (one CSS change
+   clears 78 of the violations and is the most actionable diagnosis).
+2. Per-issue investigation for `heading-order`,
+   `label-content-name-mismatch`, `link-in-text-block`. Each may need
+   its own component-level fix.
+3. Verify with a follow-up pa11y + Lighthouse run on the fix branch —
+   `categories:accessibility` should return to 1.00; pa11y should
+   report 7/7 URLs passing.
+
+**Priority**: medium. Below F-WEBSITE-MARKETING-SEO (which blocks
+discovery entirely) but above F-WEBSITE-MARKETING-PERF and
+F-WEBSITE-DARKMODE-REGRESSION.
+
+### F-WEBSITE-MARKETING-PERF: Marketing site fails several Lighthouse performance audits
+
+**Status**: scoped, not started. Surfaced 2026-05-16 by
+F-WEBSITE-AUDIT-GATES's audit pass.
+
+**Finding**: Lighthouse-marketing on PR #5 reports several performance
+failures across the 9 marketing pages:
+
+- `cumulative-layout-shift: 0.132803` on `/stability` (target ≤
+  0.05), with `cls-culprits-insight: 0` flagging the culprits. CLS is
+  page-specific; other pages are within budget but `/stability`
+  regresses sharply.
+- `render-blocking-resources` (and the newer companion
+  `render-blocking-insight`): 2 render-blocking items on each page.
+  The preset asserts `maxLength: 0`.
+- `image-delivery-insight: 0.5` and `uses-responsive-images: 0.5`
+  across pages — images aren't being sized correctly for the viewport.
+- `network-dependency-tree-insight: 0` — the critical-request-chain
+  depth exceeds the preset's threshold.
+
+**What needs doing**:
+1. Investigate `/stability`'s CLS specifically —
+   `cls-culprits-insight` in the Lighthouse report identifies the
+   offending elements; likely an unsized image, web font, or
+   late-loaded component.
+2. Identify the two render-blocking resources per page (the
+   Lighthouse report names them; typically CSS in `<head>` or a
+   synchronous script). Defer or inline as appropriate.
+3. Audit images for responsive `srcset` / `sizes` attributes; convert
+   to `modern-image-formats` (AVIF/WebP) where missing.
+4. Trace the network dependency tree — what's the critical-request
+   chain? Often a font or CSS dependency that's deeper than it needs
+   to be.
+5. Verify with a follow-up Lighthouse run on the fix branch —
+   `categories:performance` should sit ≥ 0.95 across all 9 pages.
+
+**Priority**: medium. May need sub-splits if individual issues turn
+out to have separate root causes (the CLS-on-/stability fix is
+probably distinct from the render-blocking fix).
+
+### F-WEBSITE-DARKMODE-REGRESSION: Marketing site fails dark-mode paint
+
+**Status**: scoped, not started. Surfaced 2026-05-16 by
+F-WEBSITE-AUDIT-GATES's audit pass.
+
+**Finding**: Playwright on PR #5 reports 8 of ~12 dark-mode tests
+failing. The marketing site is painting **light** when the system
+preference is **dark** (body background is `rgb(251, 250, 247)` —
+near-white — when `prefers-color-scheme: dark` is set in the test
+browser). The Playwright suite's `expectDarkPaint` helper correctly
+detects this. Both dark-mode mechanisms documented in
+`website/tests/specs/dark-mode.spec.ts`'s header are broken on the
+deployed marketing site:
+
+- **System-preference path**: `tokens.css` is supposed to carry
+  `@media (prefers-color-scheme: dark)` blocks that re-bind color
+  tokens when the system is dark. Tests show this no longer fires
+  (body background is the light value on system-dark).
+- **Stored-preference path**: `theme-init.js` is supposed to set
+  `<html data-theme="dark">` from `localStorage["numra-theme"]`
+  before paint. Tests show `data-theme` is not set when the stored
+  value is `"dark"`.
+
+The book passes both equivalent tests — Starlight's theming is
+unaffected; this is purely a marketing-site regression.
+
+**What needs doing**:
+1. Investigate `website/site/src/styles/tokens.css` for the
+   `@media (prefers-color-scheme: dark)` block. Determine whether it
+   was removed, restructured into a different file, or is no longer
+   being loaded.
+2. Investigate `theme-init.js` (location TBD — see the base layout
+   for the `<head>` script tag) for the localStorage-application
+   path. Check whether the script is still being injected, whether
+   the storage key is still `numra-theme`, and whether it's running
+   early enough to set `data-theme` before paint.
+3. Both mechanisms broken simultaneously suggests a recent broader
+   theming refactor severed both paths. `git log -- website/site/src/styles/`
+   archaeology may show when.
+4. Verify with a follow-up Playwright run on the fix branch — all 8
+   failing tests should pass, and the existing passing tests (book
+   tests and `system-light` marketing tests) should not regress.
+
+**Priority**: medium. The site is still usable in dark mode —
+visitors just see it in light mode regardless of preference. Less
+consequential than the SEO follow-up (discovery entirely blocked) or
+the a11y follow-up (real WCAG violations), but fixing it restores a
+documented user-facing feature.
 
 ### F-WEBSITE-PR-FLOW: Decide whether `website/` changes require PR-flow
 
 **Status**: scoped, not started. Surfaced 2026-05-15 alongside
-F-WEBSITE-AUDIT-GATES.
+F-WEBSITE-AUDIT-GATES; framing tightened 2026-05-16 after that audit's
+findings.
 
 **The question**: should website-touching commits be required to land
 via PR going forward, so the audit gates (Lighthouse, pa11y,
@@ -820,25 +1009,42 @@ recent website history shows direct-pushes to main:
 - `0b6f7f9 fix(docs, site): unbreak repo README links and align homepage citation with cite.astro`
 
 …and so on. None went through PR-flow, so none triggered the audit
-gates. The gates have been ornamental.
+gates. The gates have been silent — not ornamental.
 
-**Two paths**:
+**The "silent vs. ornamental" distinction matters here**: ornamental
+means the gates aren't catching anything. The F-WEBSITE-AUDIT-GATES
+audit pass on 2026-05-16 demonstrated the opposite. On their first-ever
+PR-event run (PR #5), the gates correctly fired on 78 WCAG2AA violations
+across two pages, a site-wide search-indexing block
+(`is-crawlable: 0`), real CLS / render-blocking / image-delivery
+regressions, and a broken dark-mode mechanism. The gates were silent
+because direct-push prevented them from running, not because there
+was nothing for them to catch. The "remove the gates" option below is
+therefore not on the table — they demonstrably work.
 
-- **Yes**: enforce PR-flow for `website/` and `.github/workflows/website.yml`
-  changes (e.g., via branch protection on `main` that gates on the
-  4 currently-failing audit jobs once F-WEBSITE-AUDIT-GATES is closed).
-  Catches regressions before they ship to numra-rs.org. Costs the
-  ergonomics of "fix a typo on the marketing page → push directly".
-- **No**: keep direct-push permitted for website changes; remove the
-  PR-only audit gates from `website.yml` (or change their `if:`
-  guard). Honesty over ornament — gates that don't run shouldn't
-  exist.
+**The remaining question is purely "when to enforce, not whether":**
 
-**Decision is a workflow-convention call, not implementation work.**
-This entry exists so the question gets decided rather than
+- **Enforce now**: branch-protect `main` to require the four audit
+  jobs to pass on `website/`-touching changes. Problem: until the
+  four F-WEBSITE-AUDIT-GATES split-outs land
+  (F-WEBSITE-MARKETING-SEO, -A11Y, -PERF, -DARKMODE-REGRESSION),
+  3 of 4 gates still fail on every PR — enforcement now would block
+  all website work behind a still-broken signal.
+- **Enforce after split-outs land**: wait until the four split-out
+  follow-ups close and all four gates run green on a PR-event
+  trigger; then branch-protect. Clean transition.
+
+**Recommended sequencing**: F-WEBSITE-AUDIT-GATES (partial-retired
+2026-05-16) → SEO / A11Y / PERF / DARKMODE-REGRESSION land → all four
+gates green → branch-protect `main` on `website/**` paths gated on
+the four audit jobs. The question becomes a one-line config change
+once the gates are clean.
+
+**Decision is still a workflow-convention call, not implementation
+work.** This entry exists so the question gets decided rather than
 re-litigated each time someone wonders why the website audit gates
-exist. Land F-WEBSITE-AUDIT-GATES first (so we have a working set of
-gates to decide whether to enforce); then decide.
+exist. The audit already discharged the "whether" question; the
+"when" decision waits on the split-outs.
 
 ### CI: Renovate canary for Astro pre-releases
 
