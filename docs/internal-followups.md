@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-16 (F-WEBSITE-AUDIT-GATES partially retired — config-staleness + book URL-list portions landed; four genuine-site-issue follow-ups opened as splits: F-WEBSITE-MARKETING-SEO, F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF, F-WEBSITE-DARKMODE-REGRESSION; F-WEBSITE-PR-FLOW framing tightened given the audit demonstrated the gates catch real shipping-blockers).
+Last updated: 2026-05-16 (F-WEBSITE-AUDIT-GATES partially retired — config-staleness + book URL-list portions landed; five genuine-site-issue follow-ups opened as splits: F-WEBSITE-SEO, F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF, F-WEBSITE-BOOK-LHC-FIXES, F-WEBSITE-DARKMODE-REGRESSION. Same-day follow-up: the URL-fix unmasked book-specific Lighthouse regressions, so F-WEBSITE-MARKETING-SEO was rescoped to F-WEBSITE-SEO covering both subdomains, and F-WEBSITE-BOOK-LHC-FIXES added for book-specific a11y + perf. F-WEBSITE-PR-FLOW framing tightened given the audit demonstrated the gates catch real shipping-blockers).
 
 ## Recently retired
 
@@ -788,13 +788,18 @@ failure modes, not one:
    was always supposed to.
 3. **Genuine deployed-site regressions** (split out, see below): 78
    WCAG2AA color-contrast violations across two pages (one Astro
-   component instanced many times); `is-crawlable: 0` across the
-   marketing site (the site is currently un-indexable by search
-   engines); real CLS, render-blocking, image-delivery issues; and
-   the marketing site's dark-mode mechanism broken in both its
+   component instanced many times); `is-crawlable: 0` across **both**
+   the marketing site and the book (the entire Numra web presence is
+   currently un-indexable by search engines); real CLS, render-
+   blocking, image-delivery issues on the marketing site; book-side
+   Lighthouse failures unmasked by the URL fix in this PR
+   (`label-content-name-mismatch`, `network-dependency-tree-insight`,
+   `font-display-insight`, `lcp-discovery-insight`, `lcp-lazy-loaded`);
+   and the marketing site's dark-mode mechanism broken in both its
    `prefers-color-scheme` and stored-preference paths. Tracked as
-   F-WEBSITE-MARKETING-SEO, F-WEBSITE-MARKETING-A11Y,
-   F-WEBSITE-MARKETING-PERF, and F-WEBSITE-DARKMODE-REGRESSION below.
+   F-WEBSITE-SEO (highest priority overall — both subdomains),
+   F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
+   F-WEBSITE-BOOK-LHC-FIXES, and F-WEBSITE-DARKMODE-REGRESSION below.
 
 **What this PR landed**: the two in-scope items above (config-staleness
 fixes across both Lighthouse configs + book chapter URL-list
@@ -815,49 +820,104 @@ production. Same lesson as the FD audits surfacing F-FD-NOSCALE-BUG /
 F-FD-CROSSCRATE rather than absorbing everything into one PR — audits
 discover real scope, they don't just confirm pre-stated scope.
 
-**Priority for full closure**: medium. The four split-outs have their
-own per-entry priorities (SEO is highest — see its entry for
-cost-of-delay rationale). This entry closes fully when those land and
-all four gates run green on a PR-event trigger.
+**Priority for full closure**: medium. The five split-outs have their
+own per-entry priorities (F-WEBSITE-SEO is the highest-priority item in
+the entire backlog — see its entry for cost-of-delay rationale). This
+entry closes fully when those land and all four gates run green on a
+PR-event trigger.
 
-### F-WEBSITE-MARKETING-SEO: Marketing site is blocked from search indexing
+**Same-day amendment (2026-05-16)**: this PR's own gate run confirmed
+the audit's URL-fix hypothesis (`/ch01-introduction/installation/` now
+loads cleanly — no more 404) but unmasked book-specific Lighthouse
+failures that the original 404 had hidden. Those are added to the
+split-out shape as F-WEBSITE-BOOK-LHC-FIXES, and the original
+F-WEBSITE-MARKETING-SEO was rescoped to F-WEBSITE-SEO because the
+`is-crawlable: 0` issue shows up on **both** subdomains (likely one
+shared root cause; the SEO follow-up's investigation will confirm or
+split). Five split-outs total, not four.
+
+### F-WEBSITE-SEO: Entire Numra web presence is blocked from search indexing
 
 **Status**: scoped, not started. Surfaced 2026-05-16 by
-F-WEBSITE-AUDIT-GATES's audit pass.
+F-WEBSITE-AUDIT-GATES's audit pass; rescoped same-day from the
+original F-WEBSITE-MARKETING-SEO after this PR's own gate run showed
+`is-crawlable: 0` on the book as well as the marketing site.
 
-**Finding**: Lighthouse on PR #5's preview reported `is-crawlable: 0`
-across every marketing page (`/`, `/install`, `/license`,
-`/commercial`, `/cite`, `/community`, `/stability`, `/features`,
-`/privacy`). The SEO category as a whole sits at 0.69 (target 0.95),
-dominated by this single audit. `is-crawlable: 0` means the page is
-explicitly blocked from indexing — either via
-`<meta name="robots" content="noindex">`, an `X-Robots-Tag` header,
-a disallowing `robots.txt`, or a Cloudflare Pages configuration that
-does the same.
+**Finding**: Lighthouse reports `is-crawlable: 0` on **both subdomains**:
 
-**Cost-of-delay**: this is the **highest-priority** of the four
-F-WEBSITE-AUDIT-GATES split-outs. The marketing site has been
-un-indexable since launch, so search engines have never been able to
-find it. That directly undercuts discovery of the project. Every day
-it's broken is a day numra-rs.org can't be reached by anyone who
-doesn't already have a direct link.
+- **Marketing site**: every page audited (PR #5 + PR #8) — `/`,
+  `/install`, `/license`, `/commercial`, `/cite`, `/community`,
+  `/stability`, `/features`, `/privacy`. `categories:seo` sits at
+  0.69 (target 0.95) dominated by this audit.
+- **Book**: every page audited (PR #8, after the URL-fix unmasked
+  the gate's assertion phase) — `/`, `/ch01-introduction/installation/`,
+  `/ch02-solving-odes/your-first-ode/`, `/ch13-performance/`,
+  `/ch13-performance/comparisons/`. `categories:seo` also fails.
+
+`is-crawlable: 0` means the page is explicitly blocked from indexing
+— either via `<meta name="robots" content="noindex">`, an
+`X-Robots-Tag` header, a disallowing `robots.txt`, or a Cloudflare
+Pages configuration that does the same.
+
+**Cost-of-delay — highest-priority item in the entire backlog**.
+The entire public Numra web presence has been organically
+undiscoverable by search engines since launch. The marketing site
+exists to introduce the project; the book exists as the long-form
+reference. Both being un-indexable means anyone not given a direct
+link cannot find either. Every day of delay is a day the project
+can't be reached via search. This priority is not local-to-the-
+website-track — it dominates the project-wide backlog.
+
+**Expedite-if-trivial guidance** (this entry's primary load-bearing
+note): the eventual audit should **assess fix size early**. Plausible
+trivial causes:
+
+- An accidental `X-Robots-Tag: noindex` (or `User-agent: * / Disallow: /`)
+  in `website/site/public/_headers` and/or `website/book/public/_headers`
+  — left over from pre-launch staging and never reverted.
+- A disallowing `robots.txt` (only `website/site/public/robots.txt`
+  exists; the book has no `robots.txt` of its own, but a project-wide
+  Cloudflare config could be doing the same).
+- A `<meta name="robots" content="noindex">` in the shared base
+  layout of one or both sites.
+
+If the audit confirms the cause is a trivial config fix, **surface
+that finding immediately** so the fix can land as its own tiny PR
+rather than waiting for normal scheduling. A 1-line `_headers` /
+`robots.txt` change to restore indexing is qualitatively different
+work from the multi-day a11y / perf remediation in the other
+split-outs, and the cost-of-delay justifies the expedite. Don't
+roll it into a larger SEO sweep; ship the small fix the moment the
+root cause is confirmed.
 
 **What needs doing**:
-1. Find the source of the noindex signal. Check
-   `website/site/public/_headers` (Cloudflare Pages headers config),
-   `website/site/public/robots.txt` if it exists, the base layout for
-   `<meta name="robots">` tags, and the Astro config's `build`
-   settings.
-2. Confirm the signal is intentional or accidental. If it's a left-
-   over from pre-launch staging that was never reverted, simply
-   remove. If there's a real reason some pages should not be indexed
-   (e.g., a draft route), narrow the directive to those pages only.
-3. Verify with a follow-up Lighthouse run on the fix branch —
-   `is-crawlable` should return to 1; `categories:seo` should climb
-   back above 0.95.
+1. Two-property investigation. Check, in order of likelihood:
+   - `website/site/public/_headers` (Cloudflare Pages headers config —
+     the most likely culprit; will be `X-Robots-Tag: noindex` or similar).
+   - `website/book/public/_headers` (same check for the book subdomain;
+     could be a copy-paste of the marketing config).
+   - `website/site/public/robots.txt` (file exists; check for a
+     blanket Disallow).
+   - The book has no `robots.txt`; verify it isn't being served one
+     by a Cloudflare-level project default.
+   - Both sites' base layouts for `<meta name="robots">` tags.
+   - Astro config in both `astro.config.mjs` for any `build`-level
+     SEO directives.
+2. Confirm whether the cause is one shared source (project-wide) or
+   two divergent sources (separate `_headers` files happen to both
+   contain noindex). If one source: single fix. If two: still one
+   follow-up (this one), but the fix has two touchpoints.
+3. If the audit finds a trivial root cause (single config line on one
+   or both sites), surface immediately and ship as an expedited tiny
+   PR per the guidance above.
+4. Verify with a follow-up Lighthouse run on the fix branch —
+   `is-crawlable` should return to 1 on **both subdomains**;
+   `categories:seo` should climb back above 0.95 on both.
 
-**Priority**: high. Should be scheduled before the other three
-F-WEBSITE-AUDIT-GATES split-outs.
+**Priority**: highest in the entire backlog. Should be scheduled
+ahead of every other follow-up — both F-WEBSITE-AUDIT-GATES split-outs
+and any other currently-open follow-up — because the cost-of-delay
+is project-wide visibility, not local to the website track.
 
 ### F-WEBSITE-MARKETING-A11Y: WCAG2AA violations on marketing root + examples gallery
 
@@ -885,7 +945,13 @@ color to `#080d16` for the `ch`/`num` spans and `#727780` for the
 - `label-content-name-mismatch`: elements with visible text labels
   don't have matching accessible names. Likely buttons or links with
   icon + text where the accessible name is just the icon's
-  `aria-label`.
+  `aria-label`. **Same-symptom, different-source caveat**:
+  F-WEBSITE-BOOK-LHC-FIXES also includes a `label-content-name-mismatch`
+  failure, but the book's instance is in Starlight templates (upstream
+  theme, possibly fixed upstream rather than in our content); this
+  marketing instance is in custom Astro components under
+  `website/site/src/`. The two share an audit name but not a fix
+  surface — do not conflate them when scheduling or reviewing.
 - `link-in-text-block`: links inside prose are visually
   indistinguishable from surrounding text (rely only on color).
   Need underline or other non-color indicator.
@@ -900,9 +966,9 @@ color to `#080d16` for the `ch`/`num` spans and `#727780` for the
    `categories:accessibility` should return to 1.00; pa11y should
    report 7/7 URLs passing.
 
-**Priority**: medium. Below F-WEBSITE-MARKETING-SEO (which blocks
-discovery entirely) but above F-WEBSITE-MARKETING-PERF and
-F-WEBSITE-DARKMODE-REGRESSION.
+**Priority**: medium. Below F-WEBSITE-SEO (which blocks discovery
+entirely) but above F-WEBSITE-MARKETING-PERF, F-WEBSITE-BOOK-LHC-FIXES,
+and F-WEBSITE-DARKMODE-REGRESSION.
 
 ### F-WEBSITE-MARKETING-PERF: Marketing site fails several Lighthouse performance audits
 
@@ -943,6 +1009,82 @@ failures across the 9 marketing pages:
 **Priority**: medium. May need sub-splits if individual issues turn
 out to have separate root causes (the CLS-on-/stability fix is
 probably distinct from the render-blocking fix).
+
+### F-WEBSITE-BOOK-LHC-FIXES: Book Lighthouse failures unmasked by URL fix
+
+**Status**: scoped, not started. Surfaced 2026-05-16 by this PR's own
+gate run, after the F-WEBSITE-AUDIT-GATES URL fix replaced the
+hardcoded chapter URL `/ch01-fundamentals/numerical-stability/` (404)
+with `/ch01-introduction/installation/`. The book gate's assertion
+phase had been short-circuited by that 404 on PR #5 and is now
+exercising its config for the first time. The failures it reports
+are genuine book-site Lighthouse regressions, not staleness in
+`website/ci/lighthouserc-book.json`.
+
+**Finding**: Lighthouse on PR #8's preview reports per-page failures
+across all 5 book URLs (`/`, `/ch01-introduction/installation/`,
+`/ch02-solving-odes/your-first-ode/`, `/ch13-performance/`,
+`/ch13-performance/comparisons/`):
+
+- `label-content-name-mismatch` — fires on every page. **Same-symptom,
+  different-source caveat**: F-WEBSITE-MARKETING-A11Y also has a
+  `label-content-name-mismatch` failure, but the marketing instance
+  is in custom Astro components under `website/site/src/`; the book
+  instance is in Starlight templates (`@astrojs/starlight` upstream).
+  The two share an audit name but not a fix surface — the book's may
+  resolve upstream (file/track a Starlight issue), or may need a
+  Starlight-component override locally. Do not conflate with
+  F-WEBSITE-MARKETING-A11Y's same-named item.
+- `network-dependency-tree-insight` — fires on every page. Book ships
+  Starlight UI runtime (~150 KB) plus Pagefind's WASM search index;
+  the critical-request chain depth likely reflects the Pagefind
+  init or Starlight's bundled UI components. Worth profiling whether
+  Pagefind can be deferred past the critical path.
+- `font-display-insight` — fires on `/` (book root). KaTeX serves
+  several `.woff2` files for math glyphs, and Starlight has its own
+  web fonts. Likely cause: one or more `@font-face` declarations
+  missing `font-display: swap` (or `optional`). Worth checking
+  whether the regression is in KaTeX's bundled CSS, Starlight's, or
+  a project-side override.
+- `lcp-discovery-insight` and `lcp-lazy-loaded` — fire only on
+  `/ch13-performance/comparisons/`. That page has the most
+  benchmark-result content; likely an above-the-fold image or
+  embedded SVG with `loading="lazy"` set inappropriately, or an LCP
+  element that isn't discoverable by Lighthouse's preload-detection
+  heuristic.
+
+`is-crawlable: 0` on the book is excluded from this entry's scope —
+it's tracked in F-WEBSITE-SEO (covers both subdomains; same likely
+root cause as marketing).
+
+**What needs doing**:
+1. Triage the four issues. `label-content-name-mismatch` is probably
+   the biggest unknown — investigate whether the source is in
+   `node_modules/@astrojs/starlight/...` or in a project-side
+   component override, then decide between upstreaming a fix vs.
+   local override.
+2. `font-display-insight`: identify the missing-`font-display`
+   declarations (probably 2–4 declarations across KaTeX and
+   Starlight). The fix is typically a project-side `@font-face`
+   override that reuses the same `src` but adds `font-display: swap`.
+3. `network-dependency-tree-insight`: profile the critical-request
+   chain in the Lighthouse report; assess whether Pagefind can be
+   deferred or its WASM payload can be made non-critical.
+4. `lcp-discovery-insight` / `lcp-lazy-loaded` on
+   `/ch13-performance/comparisons/`: identify the LCP element from
+   the Lighthouse report, fix its `loading=` attribute or add a
+   `<link rel="preload">` hint as appropriate.
+5. Verify with a follow-up Lighthouse-book run on the fix branch —
+   all 5 book pages should clear the four audits (modulo the
+   F-WEBSITE-SEO indexing issue, which is tracked separately).
+
+**Priority**: medium. Lower than F-WEBSITE-SEO (project-wide
+discoverability) but comparable to F-WEBSITE-MARKETING-PERF in scope
+and impact (visitors who do find the book see slower-than-target
+loads). May need a sub-split if the `label-content-name-mismatch`
+investigation determines Starlight's upstream needs a patch and the
+local workaround is materially different work from the other three
+items.
 
 ### F-WEBSITE-DARKMODE-REGRESSION: Marketing site fails dark-mode paint
 
@@ -1026,19 +1168,21 @@ therefore not on the table — they demonstrably work.
 
 - **Enforce now**: branch-protect `main` to require the four audit
   jobs to pass on `website/`-touching changes. Problem: until the
-  four F-WEBSITE-AUDIT-GATES split-outs land
-  (F-WEBSITE-MARKETING-SEO, -A11Y, -PERF, -DARKMODE-REGRESSION),
-  3 of 4 gates still fail on every PR — enforcement now would block
-  all website work behind a still-broken signal.
-- **Enforce after split-outs land**: wait until the four split-out
+  five F-WEBSITE-AUDIT-GATES split-outs land (F-WEBSITE-SEO,
+  F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
+  F-WEBSITE-BOOK-LHC-FIXES, F-WEBSITE-DARKMODE-REGRESSION), 3 of 4
+  gates still fail on every PR — enforcement now would block all
+  website work behind a still-broken signal.
+- **Enforce after split-outs land**: wait until the five split-out
   follow-ups close and all four gates run green on a PR-event
   trigger; then branch-protect. Clean transition.
 
 **Recommended sequencing**: F-WEBSITE-AUDIT-GATES (partial-retired
-2026-05-16) → SEO / A11Y / PERF / DARKMODE-REGRESSION land → all four
-gates green → branch-protect `main` on `website/**` paths gated on
-the four audit jobs. The question becomes a one-line config change
-once the gates are clean.
+2026-05-16) → SEO (highest priority — likely expedited as a tiny PR
+if root cause is trivial) → A11Y / PERF / BOOK-LHC-FIXES /
+DARKMODE-REGRESSION land → all four gates green → branch-protect
+`main` on `website/**` paths gated on the four audit jobs. The
+question becomes a one-line config change once the gates are clean.
 
 **Decision is still a workflow-convention call, not implementation
 work.** This entry exists so the question gets decided rather than
