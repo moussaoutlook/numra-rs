@@ -1,25 +1,38 @@
 /**
- * Dark-mode FOIT (flash of incorrect theme) regression.
+ * Dark-mode FOIT (flash of incorrect theme) regression — book-only.
  *
- * Two different mechanisms ship dark mode on Numra:
+ * **Intentional asymmetry between book and marketing site.** The book
+ * (book.numra-rs.org, Starlight-based) supports dark mode: Starlight's
+ * upstream theme script syncs `<html data-theme="...">` to the system
+ * preference before paint. The marketing site (numra-rs.org, vanilla
+ * Astro) is **deliberately light-only by design** — it does not have a
+ * functioning `@media (prefers-color-scheme: dark)` path and does not
+ * apply `data-theme` from stored preferences. This asymmetry is a
+ * chosen product position, not an oversight.
  *
- *   - Marketing site: tokens.css carries `@media (prefers-color-scheme:
- *     dark)` blocks. theme-init.js *only* applies a stored choice
- *     (`localStorage["numra-theme"]`); when no preference is stored it
- *     intentionally leaves `<html>` alone and lets the media query do
- *     the work. So system-dark users get a dark paint with NO
- *     `data-theme` attribute — that's correct behavior.
+ * This suite therefore asserts:
  *
- *   - Book (Starlight): the upstream theme script syncs <html
- *     data-theme="..."> to the system preference *before* paint, so
- *     system-dark users get an explicit `data-theme="dark"`.
+ *   - **Book**: dark paint under system-dark, light paint under
+ *     system-light, and `data-theme="dark"` set before paint when the
+ *     system is dark. The user-visible invariant is "body background
+ *     reflects the system preference"; we assert that, not the
+ *     implementation detail of how Starlight gets there.
+ *   - **Marketing site**: light paint under system-light only. No
+ *     assertions on what marketing does under system-dark — by
+ *     design, marketing paints light in both modes.
  *
- * The real user-visible invariant for both is "body background is dark
- * when the system is dark". We assert that — not the implementation
- * detail of how it gets there.
- *
- * Stored-preference round-trip is tested separately to lock in the
- * theme-init contract.
+ * **Do not add marketing dark-mode tests for consistency with the
+ * book.** A prior version of this suite did exactly that — asserting
+ * dark paint on the marketing site under `prefers-color-scheme: dark`
+ * and stored-preference `data-theme="dark"` application. Those
+ * assertions were removed in F-WEBSITE-AUDIT-GATES (2026-05-16) because
+ * they encoded a wrong expectation: the marketing site was never
+ * intended to support dark mode, and the assertions had been silently
+ * failing since the gate first ran on a `pull_request` event. If you
+ * want to add marketing dark-mode support, that's a product decision
+ * the user makes; raise it explicitly and update this header before
+ * adding tests. Otherwise, do not re-introduce the assertions this
+ * comment exists to forbid.
  */
 import { test, expect, type Page } from '@playwright/test';
 
@@ -66,14 +79,6 @@ async function expectLightPaint(page: Page, url: string): Promise<void> {
 test.describe('system-dark (no stored preference)', () => {
   test.use({ colorScheme: 'dark' });
 
-  test('marketing root is painted dark', async ({ page }) => {
-    await expectDarkPaint(page, SITE_URL + '/');
-  });
-
-  test('marketing /install is painted dark', async ({ page }) => {
-    await expectDarkPaint(page, SITE_URL + '/install');
-  });
-
   test('book root is painted dark', async ({ page }) => {
     await expectDarkPaint(page, BOOK_URL + '/');
   });
@@ -98,25 +103,5 @@ test.describe('system-light (no stored preference)', () => {
 
   test('book root is painted light', async ({ page }) => {
     await expectLightPaint(page, BOOK_URL + '/');
-  });
-});
-
-test.describe('stored preference', () => {
-  test('marketing site honours stored "dark" before paint', async ({ page, context }) => {
-    // Pretend the user previously chose dark via the toggle.
-    await context.addInitScript(() => {
-      window.localStorage.setItem('numra-theme', 'dark');
-    });
-    await page.goto(SITE_URL + '/', { waitUntil: 'domcontentloaded' });
-
-    const dataTheme = await page.locator('html').getAttribute('data-theme');
-    expect(
-      dataTheme,
-      'theme-init.js should set data-theme="dark" from localStorage at <head>',
-    ).toBe('dark');
-
-    const bg = await readBodyBg(page);
-    const lum = relativeLuminance(bg);
-    expect(lum !== null && lum < 0.4, `body background ${bg} should be dark`).toBe(true);
   });
 });

@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-16 (F-WEBSITE-AUDIT-GATES partially retired — config-staleness + book URL-list portions landed; five genuine-site-issue follow-ups opened as splits: F-WEBSITE-SEO, F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF, F-WEBSITE-BOOK-LHC-FIXES, F-WEBSITE-DARKMODE-REGRESSION. Same-day follow-up: the URL-fix unmasked book-specific Lighthouse regressions, so F-WEBSITE-MARKETING-SEO was rescoped to F-WEBSITE-SEO covering both subdomains, and F-WEBSITE-BOOK-LHC-FIXES added for book-specific a11y + perf. F-WEBSITE-PR-FLOW framing tightened given the audit demonstrated the gates catch real shipping-blockers).
+Last updated: 2026-05-16 (F-WEBSITE-AUDIT-GATES partially retired — config-staleness + book URL-list + Playwright wrong-expectation portions landed; four genuine-site-issue follow-ups opened as splits: F-WEBSITE-SEO, F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF, F-WEBSITE-BOOK-LHC-FIXES. Two same-day amendments: (a) the URL-fix unmasked book-specific Lighthouse regressions, so F-WEBSITE-MARKETING-SEO was rescoped to F-WEBSITE-SEO covering both subdomains, and F-WEBSITE-BOOK-LHC-FIXES added for book-specific a11y + perf; (b) the Playwright marketing dark-mode failure was reinterpreted from "real regression" to "gate encoded a wrong expectation" after user-supplied design intent (marketing is deliberately light-only), so the three marketing dark-mode tests were removed in-scope here with a foreclosing docstring. F-WEBSITE-PR-FLOW framing tightened given the audit demonstrated the gates catch real shipping-blockers — and the same audit demonstrated that gates can also encode wrong expectations, which PR-FLOW's eventual scope must address).
 
 ## Recently retired
 
@@ -786,55 +786,102 @@ failure modes, not one:
    circuited Lighthouse-book's entire run before assertions could
    fire; fixing the URL list lets the gate exercise the config it
    was always supposed to.
-3. **Genuine deployed-site regressions** (split out, see below): 78
-   WCAG2AA color-contrast violations across two pages (one Astro
-   component instanced many times); `is-crawlable: 0` across **both**
-   the marketing site and the book (the entire Numra web presence is
-   currently un-indexable by search engines); real CLS, render-
-   blocking, image-delivery issues on the marketing site; book-side
-   Lighthouse failures unmasked by the URL fix in this PR
+3. **Genuine deployed-site regressions on three gates** (split out, see
+   below): 78 WCAG2AA color-contrast violations across two marketing
+   pages (one Astro component instanced many times); `is-crawlable: 0`
+   across **both** the marketing site and the book (the entire Numra
+   web presence is currently un-indexable by search engines); real
+   CLS, render-blocking, image-delivery issues on the marketing site;
+   book-side Lighthouse failures unmasked by this PR's URL fix
    (`label-content-name-mismatch`, `network-dependency-tree-insight`,
-   `font-display-insight`, `lcp-discovery-insight`, `lcp-lazy-loaded`);
-   and the marketing site's dark-mode mechanism broken in both its
-   `prefers-color-scheme` and stored-preference paths. Tracked as
-   F-WEBSITE-SEO (highest priority overall — both subdomains),
-   F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
-   F-WEBSITE-BOOK-LHC-FIXES, and F-WEBSITE-DARKMODE-REGRESSION below.
+   `font-display-insight`, `lcp-discovery-insight`, `lcp-lazy-loaded`).
+   Tracked as F-WEBSITE-SEO (highest priority overall — both
+   subdomains), F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
+   and F-WEBSITE-BOOK-LHC-FIXES below.
+4. **Playwright gate encoded a wrong expectation** (in-scope, fixed
+   here). The four marketing dark-mode tests in
+   `website/tests/specs/dark-mode.spec.ts` (three system-dark
+   assertions on `/` and `/install`, plus the stored-preference
+   `data-theme="dark"` assertion) asserted that the marketing site
+   honors `prefers-color-scheme: dark` and applies `data-theme="dark"`
+   from localStorage. **The marketing site is deliberately light-only
+   by design** — that's a chosen product position, not an oversight.
+   The Playwright gate was therefore not detecting a regression; it
+   was asserting a non-requirement that had been silently failing
+   since the gate first ran on a `pull_request` event. Removed in
+   this PR, with a foreclosing docstring update on the spec file
+   documenting the intentional asymmetry with the book (which DOES
+   support dark mode via Starlight) and forbidding future
+   contributors from re-introducing the wrong assertions. The book
+   dark-mode tests, the marketing-light test, and the book-light
+   test all remain — they assert real requirements that the deployed
+   sites genuinely meet.
 
-**What this PR landed**: the two in-scope items above (config-staleness
-fixes across both Lighthouse configs + book chapter URL-list
-correction). The Lighthouse-book gate may actually pass on this PR's
-own run — the book root loaded cleanly 3× in PR #5 and the only
-known failure-blocker was the chapter-URL 404, which is now fixed.
-The other three gates still fail because they're catching real site
-regressions this PR explicitly does not address; the PR is admin-merged
-with per-gate documentation citing each split-out follow-up. Same
-documented-exception discipline as PR #5.
+**What this PR landed**: the three in-scope items above
+(config-staleness fixes across both Lighthouse configs; book chapter
+URL-list correction; removal of the marketing dark-mode Playwright
+assertions). The Lighthouse-book gate may actually pass on this PR's
+own run — the book root loaded cleanly 3× in PR #5 and the only known
+failure-blocker was the chapter-URL 404, which is now fixed (caveat:
+the URL fix also unmasked book-specific assertion failures previously
+hidden by the 404, tracked as F-WEBSITE-BOOK-LHC-FIXES — see same-day
+amendment below). The Playwright gate should pass under the test
+removal alone (the remaining tests already passed). The other two
+gates (Lighthouse-marketing, pa11y) still fail because they're
+catching real site regressions this PR explicitly does not address;
+the PR is admin-merged with per-gate documentation citing each
+split-out follow-up. Same documented-exception discipline as PR #5.
 
 **Pattern callout**: the investigative-audit framing was load-bearing.
 If this had been treated as enumerable config-fixing work per the
 entry's pre-diagnosis, the resulting PR would have "fixed" the gates
 by silencing them while leaving 78 a11y violations, a site-wide
-search-indexing block, and a broken dark-mode mechanism live in
+search-indexing block, and a backlog of real site issues live in
 production. Same lesson as the FD audits surfacing F-FD-NOSCALE-BUG /
 F-FD-CROSSCRATE rather than absorbing everything into one PR — audits
-discover real scope, they don't just confirm pre-stated scope.
+discover real scope, they don't just confirm pre-stated scope. The
+audit also has limits: it accurately diagnosed each gate's *failure*
+from the CI logs but lacked design-intent context for the Playwright
+marketing dark-mode case, and so misinterpreted a wrong-expectation
+gate as a regression. The hard-stop verification discipline plus
+user-supplied design intent caught the misinterpretation before it
+entered permanent record. Both lessons (audits expand scope; audits
+need design-intent inputs they can't derive from logs alone) belong
+in any future audit playbook.
 
-**Priority for full closure**: medium. The five split-outs have their
+**Priority for full closure**: medium. The four split-outs have their
 own per-entry priorities (F-WEBSITE-SEO is the highest-priority item in
 the entire backlog — see its entry for cost-of-delay rationale). This
 entry closes fully when those land and all four gates run green on a
 PR-event trigger.
 
-**Same-day amendment (2026-05-16)**: this PR's own gate run confirmed
-the audit's URL-fix hypothesis (`/ch01-introduction/installation/` now
-loads cleanly — no more 404) but unmasked book-specific Lighthouse
-failures that the original 404 had hidden. Those are added to the
-split-out shape as F-WEBSITE-BOOK-LHC-FIXES, and the original
-F-WEBSITE-MARKETING-SEO was rescoped to F-WEBSITE-SEO because the
-`is-crawlable: 0` issue shows up on **both** subdomains (likely one
-shared root cause; the SEO follow-up's investigation will confirm or
-split). Five split-outs total, not four.
+**Same-day amendments (2026-05-16)**:
+
+- **Amendment 1 — URL fix unmasked book Lighthouse failures.** This
+  PR's own gate run confirmed the audit's URL-fix hypothesis
+  (`/ch01-introduction/installation/` now loads cleanly — no more
+  404) but unmasked book-specific Lighthouse failures that the
+  original 404 had hidden. Those are added to the split-out shape
+  as F-WEBSITE-BOOK-LHC-FIXES, and the original
+  F-WEBSITE-MARKETING-SEO was rescoped to F-WEBSITE-SEO because the
+  `is-crawlable: 0` issue shows up on **both** subdomains (likely
+  one shared root cause; the SEO follow-up's investigation will
+  confirm or split).
+- **Amendment 2 — Playwright wrong-expectation correction.** The
+  Playwright marketing dark-mode failure was initially audited as
+  a "real regression" and a fifth split-out follow-up
+  (F-WEBSITE-DARKMODE-REGRESSION) was opened. User-supplied design
+  intent during the pre-merge hard-stop review surfaced that the
+  marketing site is deliberately light-only by design — the gate
+  was asserting a non-requirement, not detecting a regression. The
+  follow-up was retired before landing in PR history; the wrong
+  assertions were removed from the spec file in-scope here as a
+  fourth distinct failure mode (gate-correction-not-gate-silencing,
+  same shape as removing stale Lighthouse audit IDs).
+
+Four split-outs total after both amendments. Both amendments were
+caught by the pre-merge hard-stop verification discipline before
+falsifiable claims entered permanent record.
 
 ### F-WEBSITE-SEO: Entire Numra web presence is blocked from search indexing
 
@@ -967,8 +1014,8 @@ color to `#080d16` for the `ch`/`num` spans and `#727780` for the
    report 7/7 URLs passing.
 
 **Priority**: medium. Below F-WEBSITE-SEO (which blocks discovery
-entirely) but above F-WEBSITE-MARKETING-PERF, F-WEBSITE-BOOK-LHC-FIXES,
-and F-WEBSITE-DARKMODE-REGRESSION.
+entirely) but above F-WEBSITE-MARKETING-PERF and
+F-WEBSITE-BOOK-LHC-FIXES.
 
 ### F-WEBSITE-MARKETING-PERF: Marketing site fails several Lighthouse performance audits
 
@@ -1086,55 +1133,6 @@ investigation determines Starlight's upstream needs a patch and the
 local workaround is materially different work from the other three
 items.
 
-### F-WEBSITE-DARKMODE-REGRESSION: Marketing site fails dark-mode paint
-
-**Status**: scoped, not started. Surfaced 2026-05-16 by
-F-WEBSITE-AUDIT-GATES's audit pass.
-
-**Finding**: Playwright on PR #5 reports 8 of ~12 dark-mode tests
-failing. The marketing site is painting **light** when the system
-preference is **dark** (body background is `rgb(251, 250, 247)` —
-near-white — when `prefers-color-scheme: dark` is set in the test
-browser). The Playwright suite's `expectDarkPaint` helper correctly
-detects this. Both dark-mode mechanisms documented in
-`website/tests/specs/dark-mode.spec.ts`'s header are broken on the
-deployed marketing site:
-
-- **System-preference path**: `tokens.css` is supposed to carry
-  `@media (prefers-color-scheme: dark)` blocks that re-bind color
-  tokens when the system is dark. Tests show this no longer fires
-  (body background is the light value on system-dark).
-- **Stored-preference path**: `theme-init.js` is supposed to set
-  `<html data-theme="dark">` from `localStorage["numra-theme"]`
-  before paint. Tests show `data-theme` is not set when the stored
-  value is `"dark"`.
-
-The book passes both equivalent tests — Starlight's theming is
-unaffected; this is purely a marketing-site regression.
-
-**What needs doing**:
-1. Investigate `website/site/src/styles/tokens.css` for the
-   `@media (prefers-color-scheme: dark)` block. Determine whether it
-   was removed, restructured into a different file, or is no longer
-   being loaded.
-2. Investigate `theme-init.js` (location TBD — see the base layout
-   for the `<head>` script tag) for the localStorage-application
-   path. Check whether the script is still being injected, whether
-   the storage key is still `numra-theme`, and whether it's running
-   early enough to set `data-theme` before paint.
-3. Both mechanisms broken simultaneously suggests a recent broader
-   theming refactor severed both paths. `git log -- website/site/src/styles/`
-   archaeology may show when.
-4. Verify with a follow-up Playwright run on the fix branch — all 8
-   failing tests should pass, and the existing passing tests (book
-   tests and `system-light` marketing tests) should not regress.
-
-**Priority**: medium. The site is still usable in dark mode —
-visitors just see it in light mode regardless of preference. Less
-consequential than the SEO follow-up (discovery entirely blocked) or
-the a11y follow-up (real WCAG violations), but fixing it restores a
-documented user-facing feature.
-
 ### F-WEBSITE-PR-FLOW: Decide whether `website/` changes require PR-flow
 
 **Status**: scoped, not started. Surfaced 2026-05-15 alongside
@@ -1168,27 +1166,61 @@ therefore not on the table — they demonstrably work.
 
 - **Enforce now**: branch-protect `main` to require the four audit
   jobs to pass on `website/`-touching changes. Problem: until the
-  five F-WEBSITE-AUDIT-GATES split-outs land (F-WEBSITE-SEO,
+  four F-WEBSITE-AUDIT-GATES split-outs land (F-WEBSITE-SEO,
   F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
-  F-WEBSITE-BOOK-LHC-FIXES, F-WEBSITE-DARKMODE-REGRESSION), 3 of 4
-  gates still fail on every PR — enforcement now would block all
-  website work behind a still-broken signal.
-- **Enforce after split-outs land**: wait until the five split-out
+  F-WEBSITE-BOOK-LHC-FIXES), 2 of 4 gates still fail on every PR
+  (Lighthouse-marketing, pa11y; Lighthouse-book likely passes after
+  this PR's URL fix; Playwright passes after this PR's wrong-
+  expectation removal) — enforcement now would block all website
+  work behind a still-broken signal.
+- **Enforce after split-outs land**: wait until the four split-out
   follow-ups close and all four gates run green on a PR-event
   trigger; then branch-protect. Clean transition.
 
 **Recommended sequencing**: F-WEBSITE-AUDIT-GATES (partial-retired
 2026-05-16) → SEO (highest priority — likely expedited as a tiny PR
-if root cause is trivial) → A11Y / PERF / BOOK-LHC-FIXES /
-DARKMODE-REGRESSION land → all four gates green → branch-protect
-`main` on `website/**` paths gated on the four audit jobs. The
-question becomes a one-line config change once the gates are clean.
+if root cause is trivial) → A11Y / PERF / BOOK-LHC-FIXES land → all
+four gates green → branch-protect `main` on `website/**` paths gated
+on the four audit jobs. The question becomes a one-line config change
+once the gates are clean.
+
+**Lesson F-WEBSITE-PR-FLOW must incorporate into its eventual scope**:
+gates that *run* and gates that *assert the right thing* are
+separate properties; the audit must cover both. F-WEBSITE-AUDIT-GATES
+surfaced concrete worked examples of each failure mode:
+
+- **Gate runs, asserts wrong thing**: the Playwright marketing
+  dark-mode tests asserted that the marketing site honors
+  `prefers-color-scheme: dark` and applies stored-preference
+  `data-theme="dark"`. The marketing site is deliberately light-only
+  by design — those assertions were a non-requirement that had been
+  silently failing since the gate first ran on a `pull_request`
+  event. The gate-correction was removing the wrong assertions, not
+  fixing the deployed site.
+- **Gate runs, asserts right thing, but the asserted thing is
+  broken**: every other failure in F-WEBSITE-AUDIT-GATES — the 78
+  WCAG2AA contrast violations, `is-crawlable: 0` on both subdomains,
+  the book's `font-display` and LCP failures, etc. These are
+  conventional "audit catches real bug" failures.
+
+F-WEBSITE-PR-FLOW's enforce-vs-not decision must therefore include
+**"each gate's expectations are correct against current design
+intent"** as part of its eligibility check, not just **"each gate
+runs and currently passes"**. A gate that runs, passes, and asserts
+the wrong thing is worse than no gate at all — it manufactures
+false confidence. The Playwright dark-mode case caught here is the
+concrete instance proving why this check belongs in the scope.
+Treat the design-intent-review pass as a one-time cost when scoping
+PR-FLOW: walk each gate's expectations against current product
+intent, document each as correct or remove/correct the wrong ones,
+before enforcing.
 
 **Decision is still a workflow-convention call, not implementation
 work.** This entry exists so the question gets decided rather than
 re-litigated each time someone wonders why the website audit gates
 exist. The audit already discharged the "whether" question; the
-"when" decision waits on the split-outs.
+"when" decision waits on the split-outs and the gate-expectations
+review above.
 
 ### CI: Renovate canary for Astro pre-releases
 
