@@ -10,7 +10,7 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-16 (F-WEBSITE-AUDIT-GATES partially retired — config-staleness + book URL-list + Playwright wrong-expectation portions landed; four genuine-site-issue follow-ups opened as splits: F-WEBSITE-SEO, F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF, F-WEBSITE-BOOK-LHC-FIXES. Two same-day amendments: (a) the URL-fix unmasked book-specific Lighthouse regressions, so F-WEBSITE-MARKETING-SEO was rescoped to F-WEBSITE-SEO covering both subdomains, and F-WEBSITE-BOOK-LHC-FIXES added for book-specific a11y + perf; (b) the Playwright marketing dark-mode failure was reinterpreted from "real regression" to "gate encoded a wrong expectation" after user-supplied design intent (marketing is deliberately light-only), so the three marketing dark-mode tests were removed in-scope here with a foreclosing docstring. F-WEBSITE-PR-FLOW framing tightened given the audit demonstrated the gates catch real shipping-blockers — and the same audit demonstrated that gates can also encode wrong expectations, which PR-FLOW's eventual scope must address).
+Last updated: 2026-05-16 (F-WEBSITE-SEO retired-with-reframe — the highest-priority cost-of-delay framing was based on misreading PR-preview Cloudflare-injected `X-Robots-Tag: noindex` as production-block; production custom domains are not config-blocked from indexing per direct checks on 2026-05-16 (curl, built-HTML grep, `_headers`, robots.txt), though actual in-practice indexing is unverified and tracked as F-WEBSITE-SEO-VERIFY (necessary-not-sufficient distinction preserved rather than collapsed). Lighthouse `is-crawlable` disabled in both preset configs with foreclosing comment (gate-correction-not-gate-silencing, same preview-only-false-signal shape as the dark-mode Playwright tests, structurally narrower because the SEO assertion is right-property-wrong-URL-set vs. dark-mode's wrong-property-period). Two narrower forks opened: F-WEBSITE-SEO-PROD-PROBE (medium, CI-hygiene gap — the unimplemented production-URL audit path), F-WEBSITE-SEO-VERIFY (low, non-engineering sanity-check). F-WEBSITE-AUDIT-GATES Amendment 3 added retracting the production-block framing in the same record that made the claim; symmetric-overclaim guard explicit in both retraction records. F-WEBSITE-PR-FLOW worked-example list recategorized: `is-crawlable` joins the dark-mode tests as a "preview-only false signal" example. Sibling website-track entries (MARKETING-A11Y, MARKETING-PERF, BOOK-LHC-FIXES) priority lines updated to drop "below F-WEBSITE-SEO" framing. — Earlier the same day: F-WEBSITE-AUDIT-GATES partially retired (config-staleness + book URL-list + Playwright wrong-expectation portions landed); four genuine-site-issue follow-ups originally opened, now three after F-WEBSITE-SEO retirement.)
 
 ## Recently retired
 
@@ -18,6 +18,7 @@ One-line entries for follow-ups that landed and were removed from the
 file. Kept here so a future reader can find the closure record without
 git-archaeology.
 
+- **F-WEBSITE-SEO: entire Numra web presence is blocked from search indexing** — retired-with-reframe 2026-05-16, **without shipping a site fix because no site fix was warranted**. The entry's load-bearing premise — "the entire public Numra web presence has been organically undiscoverable by search engines since launch" — was wrong. The `is-crawlable: 0` finding it cited (Lighthouse runs on PR #5 and PR #8) came exclusively from PR **preview** deployments, which Cloudflare Pages deliberately injects `X-Robots-Tag: noindex` on to prevent duplicate-content with production. Direct checks against production on 2026-05-16 disconfirm the config-block hypothesis: `curl -I https://numra-rs.org/` and `curl -I https://book.numra-rs.org/` returned HTTP 200 with no `x-robots-tag` header; both sites' built HTML contains no `<meta name="robots">`; neither `_headers` file declares an `X-Robots-Tag`; `website/site/public/robots.txt` is `Allow: /`; Cloudflare's documented preview-only noindex behavior explicitly excludes production custom domains. **Production custom domains are not config-blocked from indexing** as of those checks. **Whether the production sites are actually indexed in practice** (sitemap pickup, Search Console coverage, organic crawler discovery) **is unverified and separately tracked as F-WEBSITE-SEO-VERIFY** — "config isn't blocking" is necessary-not-sufficient, and the retirement framing preserves that distinction rather than collapsing it. The gate was asserting `is-crawlable` against URLs Cloudflare designs to fail it, not against production. This is the same preview-only-false-signal shape as the marketing dark-mode Playwright tests retired in F-WEBSITE-AUDIT-GATES, though structurally narrower: the dark-mode case was a wrong property (marketing is light-only by design); the SEO case is the right property against the wrong URL set (preview-vs-production divergence in Cloudflare's documented behavior). Re-introducing the SEO assertion against a production-URL audit path would be correct (tracked as F-WEBSITE-SEO-PROD-PROBE); re-introducing the dark-mode marketing assertions against any URL would not. **The "highest priority in the entire backlog" / "every day of delay" / expedite-if-trivial framing is fully retracted**: it was built on the demonstrated misread of preview-noindex as production-block, and the direct checks disconfirm that misread. The in-scope action taken was instead to disable the `is-crawlable` assertion in both Lighthouse preset configs (`website/ci/lighthouserc.json`, `website/ci/lighthouserc-book.json`) with a foreclosing top-level `_comment` documenting the preview-noindex semantics — gate-correction-not-gate-silencing, same as the dark-mode tests. Two narrower follow-ups forked from the audit's residual observations: F-WEBSITE-SEO-PROD-PROBE (the unimplemented production-URL audit path the workflow comment at `.github/workflows/website.yml:213-215` aspires to but doesn't ship — a real CI-hygiene gap, medium priority) and F-WEBSITE-SEO-VERIFY (the necessary-not-sufficient sanity-check above — low priority, explicitly non-engineering). Neither fork inherits the original entry's highest-priority framing. The audit pattern lesson: gates that run against preview URLs cannot assert properties whose semantics differ between preview and production — same shape lesson F-WEBSITE-PR-FLOW must already incorporate, now with a third worked example. The premise correction was caught at the audit hard-stop before any code edit, before any CHANGELOG claim, and before the planned tiny-PR expedite — the hard-stop discipline was load-bearing in exactly the way it was for F-WEBSITE-AUDIT-GATES's URL-fix and Playwright corrections. **Symmetric-overclaim guard**: this retraction was further reviewed against the inverse risk — replacing "production is blocked" with "production was always correctly indexable" would have been one unverified absolute swapped for another, an emotionally-satisfying shape for a fourth correction in this arc that the necessary-not-sufficient discipline must specifically catch. The replacement claim is stated at the precision the direct checks support ("not config-blocked from indexing, as of 2026-05-16 checks"); the in-practice question is held open via F-WEBSITE-SEO-VERIFY rather than closed by inference. Same discipline that caught the original preview-vs-production misread, applied one level deeper to the correction itself.
 - **F-FD-NOSCALE-BUG: no-scaling correctness bug in public FD utilities** — landed in `Unreleased` (next 0.1.x release) 2026-05-15. Four FD utilities defaulting to hardcoded `h = 1e-8` without `(1 + |x|)` scaling silently degraded gradient/Jacobian outputs for callers with `|x| > ~5e7` (precision floor where `x + 1e-8` rounds back to `x` in `f64`). Fixed at all four named sites: `numra-optim/src/problem.rs:486` (`finite_diff_gradient`, central → `cbrt(EPSILON) * (1 + |x|)`), `numra-optim/src/problem.rs:503` (`finite_diff_jacobian`, central), `numra-dde/src/history.rs:188` (`History::evaluate_derivative` initial-history branch, central), `numra-sde/src/system.rs:68` (`SdeSystem::diffusion_derivative` trait default, **forward → `sqrt(EPSILON) * (1 + |x|)`** — direction-corrected by the audit; the entry had assumed central FD). Each pinned with a regression test at `|x| = 1e8` asserting analytical-truth proximity within `1e-3` relative; structural-correctness check verified on the forward-FD site (revert → fail → restore). Public-API rustdoc on the two `numra-optim` free functions documents the canonical step formula and the `~5e7` precision floor. Audit found exactly the four named sites — first follow-up where the audit confirmed the entry's scope rather than expanding it (different from F-FD-STEP / F-CI-NODE20 / F-FD-CROSSCRATE). The 0.1.2 CHANGELOG's note on this follow-up over-listed `numra-optim::robust` as no-scaling-bug-class; that was already corrected in F-FD-CROSSCRATE's audit pass and stands.
 - **F-CI-NODE20: upgrade GitHub Actions runners to Node.js 24** — shipped 2026-05-15. Five action majors bumped to versions declaring `runs.using: node24`, clearing the 2026-06-02 deprecation deadline ahead of time: `actions/checkout@v4 → @v6` (11 usages), `actions/setup-node@v4 → @v6` (7), `actions/upload-artifact@v4 → @v7` (4), `pnpm/action-setup@v3 → @v6` (4; also dropped redundant `with: version: 9` and deferred to the `packageManager: pnpm@9.15.0` field in `package.json` as the single source of truth — required for the v4+ strict check), `cloudflare/wrangler-action@v3 → @v4` (3; default wrangler version implicitly upgrades v3 → v4 — `pages deploy` syntax is stable across the bump). Actions already on node24-runtime majors (`treosh/lighthouse-ci-action@v12`, `Swatinem/rust-cache@v2`) left at their current pins per scope discipline; composite actions (`taiki-e/install-action`, `dtolnay/rust-toolchain`, `rhysd/actionlint`) not affected by Node-runtime deprecation. Audit surfaced 4 actions missed from the original entry (`upload-artifact` needs bump; the three composites and lighthouse/rust-cache don't) — same audit-surfaces-more-than-named pattern as F-FD-STEP.
 - **F-FD-STEP: foundation-trait FD-step reconciliation** — shipped 2026-05-15. `OdeSystem::jacobian` default switched from hardcoded `1e-8` to `sqrt(S::EPSILON) * (1 + |y_j|)`; `Signal::eval_derivative` default switched from hardcoded `1e-8` (no scaling) to `cbrt(S::EPSILON) * (1 + |t|)` (canonical central-FD step). `ParametricOdeSystem::jacobian_y/_p` defaults were already correct on `sqrt(S::EPSILON)`; no change. The six `MOLSystem{2,3}D::jacobian` and `ParametricMOLSystem{2,3}D::jacobian_y/_p` reaction-FD diagonals updated in lockstep (each referenced the trait default in code comments — preserving the consistency the comments claim required moving them together). Two `f32` regression tests added (`numra-ode/src/problem.rs::test_jacobian_finite_diff_f32`, `numra-core/src/signal.rs::test_signal_derivative_f32`) pinning out the silent-quantisation failure mode. The audit pass also surfaced two adjacent follow-ups that were explicitly out of scope for F-FD-STEP — F-FD-CROSSCRATE (now also retired below) and F-FD-NOSCALE-BUG.
@@ -795,9 +796,14 @@ failure modes, not one:
    book-side Lighthouse failures unmasked by this PR's URL fix
    (`label-content-name-mismatch`, `network-dependency-tree-insight`,
    `font-display-insight`, `lcp-discovery-insight`, `lcp-lazy-loaded`).
+   (The `is-crawlable: 0` finding in this enumeration was
+   subsequently determined to be a preview-only Cloudflare artifact
+   rather than a production block — see Amendment 3 below; the
+   production-block framing is retracted.)
    Tracked as F-WEBSITE-SEO (highest priority overall — both
-   subdomains), F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
-   and F-WEBSITE-BOOK-LHC-FIXES below.
+   subdomains) (F-WEBSITE-SEO subsequently retired-with-reframe —
+   see Amendment 3.), F-WEBSITE-MARKETING-A11Y,
+   F-WEBSITE-MARKETING-PERF, and F-WEBSITE-BOOK-LHC-FIXES below.
 4. **Playwright gate encoded a wrong expectation** (in-scope, fixed
    here). The four marketing dark-mode tests in
    `website/tests/specs/dark-mode.spec.ts` (three system-dark
@@ -835,9 +841,8 @@ split-out follow-up. Same documented-exception discipline as PR #5.
 **Pattern callout**: the investigative-audit framing was load-bearing.
 If this had been treated as enumerable config-fixing work per the
 entry's pre-diagnosis, the resulting PR would have "fixed" the gates
-by silencing them while leaving 78 a11y violations, a site-wide
-search-indexing block, and a backlog of real site issues live in
-production. Same lesson as the FD audits surfacing F-FD-NOSCALE-BUG /
+by silencing them while leaving 78 a11y violations and a backlog of
+real site issues live in production. Same lesson as the FD audits surfacing F-FD-NOSCALE-BUG /
 F-FD-CROSSCRATE rather than absorbing everything into one PR — audits
 discover real scope, they don't just confirm pre-stated scope. The
 audit also has limits: it accurately diagnosed each gate's *failure*
@@ -850,10 +855,10 @@ need design-intent inputs they can't derive from logs alone) belong
 in any future audit playbook.
 
 **Priority for full closure**: medium. The four split-outs have their
-own per-entry priorities (F-WEBSITE-SEO is the highest-priority item in
-the entire backlog — see its entry for cost-of-delay rationale). This
-entry closes fully when those land and all four gates run green on a
-PR-event trigger.
+own per-entry priorities (F-WEBSITE-SEO subsequently retired-with-reframe
+2026-05-16 — the highest-priority framing was retracted; see Amendment 3.).
+This entry closes fully when the remaining three split-outs land and all
+four gates run green on a PR-event trigger.
 
 **Same-day amendments (2026-05-16)**:
 
@@ -878,93 +883,218 @@ PR-event trigger.
   assertions were removed from the spec file in-scope here as a
   fourth distinct failure mode (gate-correction-not-gate-silencing,
   same shape as removing stale Lighthouse audit IDs).
+- **Amendment 3 — F-WEBSITE-SEO retired-with-reframe; production-block
+  claim retracted to its precisely-supported form.** The audit pass on
+  F-WEBSITE-SEO (2026-05-16, same day as this entry's partial
+  retirement) found the "entire Numra web presence is currently
+  un-indexable by search engines" framing — used here at the "genuine
+  deployed-site regressions" enumeration above and at the
+  priority/cost-of-delay rationale — to be wrong. The `is-crawlable: 0`
+  signal was preview-only: Cloudflare Pages deliberately injects
+  `X-Robots-Tag: noindex` on PR-preview deployments to prevent
+  duplicate-content with production. Direct checks against production
+  on 2026-05-16 disconfirm the config-block hypothesis: live custom
+  domains return HTTP 200 with no `x-robots-tag` header on both
+  `numra-rs.org/` and `book.numra-rs.org/`; built HTML contains no
+  `<meta name="robots">`; `_headers` declares none; `robots.txt` is
+  `Allow: /`; Cloudflare's documented preview-only noindex behavior
+  explicitly excludes production custom domains. **Production custom
+  domains are not config-blocked from indexing** as of those checks.
+  Whether the production sites are actually indexed in practice
+  (sitemap pickup, Search Console coverage, organic discovery) is
+  separately unverified and tracked as F-WEBSITE-SEO-VERIFY —
+  preserved as a tracked sanity-check rather than rolled into this
+  retraction, because "config isn't blocking" is
+  necessary-not-sufficient. The four "genuine deployed-site
+  regressions" framing in item 3 above is therefore three regressions
+  (the marketing color-contrast violations, the marketing CLS /
+  render-blocking / image-delivery issues, the book-side Lighthouse
+  failures), not four — F-WEBSITE-SEO is reclassified as a
+  preview-only false signal, structurally similar to the retired
+  marketing dark-mode tests in Amendment 2 but narrower: the dark-mode
+  assertion was wrong as a property (marketing is light-only by
+  design), whereas the SEO assertion is the right property against
+  the wrong URL set (preview-vs-production divergence in Cloudflare's
+  documented behavior). Re-introducing the SEO assertion against a
+  production-URL audit path would be correct (tracked as
+  F-WEBSITE-SEO-PROD-PROBE); re-introducing the dark-mode marketing
+  assertions against any URL would not. The in-scope fix moves from
+  the retired F-WEBSITE-SEO entry's hypothesized "tiny `_headers` /
+  `robots.txt` PR" to disabling `is-crawlable` in both Lighthouse
+  preset configs with a foreclosing comment (same gate-correction-
+  not-gate-silencing pattern). Two narrower follow-ups
+  (F-WEBSITE-SEO-PROD-PROBE for the unimplemented production-URL
+  audit path; F-WEBSITE-SEO-VERIFY for the necessary-not-sufficient
+  go-look-at-the-world check) replace F-WEBSITE-SEO in the open
+  follow-up list; neither inherits the original entry's
+  highest-priority framing. The audit pattern call-out earlier in
+  this entry — that audits discover real scope rather than just
+  confirming pre-stated scope — applies here too: the F-WEBSITE-SEO
+  audit discovered the premise was wrong, not that the entry's
+  hypothesized fix was wrong. The hard-stop verification discipline
+  caught it before any edit; same load-bearing role it played for
+  the URL-fix and Playwright corrections in Amendments 1 and 2.
+  **Symmetric-overclaim guard**: the retraction itself was reviewed
+  for the inverse risk — replacing "production is blocked" with
+  "production is always indexable" would have been one unverified
+  absolute swapped for another, the emotionally-satisfying shape a
+  fourth correction in this arc was vulnerable to. The replacement
+  claim is stated at the precision the direct checks support, with
+  the in-practice indexing question held open as F-WEBSITE-SEO-VERIFY
+  rather than closed by inference. Same necessary-not-sufficient
+  discipline applied one level deeper, to the correction itself.
 
-Four split-outs total after both amendments. Both amendments were
+Four split-outs total after both amendments (three remaining after
+Amendment 3's retirement of F-WEBSITE-SEO). All three amendments were
 caught by the pre-merge hard-stop verification discipline before
 falsifiable claims entered permanent record.
 
-### F-WEBSITE-SEO: Entire Numra web presence is blocked from search indexing
+### F-WEBSITE-SEO-PROD-PROBE: Implement production-URL audit path that the workflow comment aspires to but doesn't ship
 
-**Status**: scoped, not started. Surfaced 2026-05-16 by
-F-WEBSITE-AUDIT-GATES's audit pass; rescoped same-day from the
-original F-WEBSITE-MARKETING-SEO after this PR's own gate run showed
-`is-crawlable: 0` on the book as well as the marketing site.
+**Status**: scoped, not started. Surfaced 2026-05-16 by the F-WEBSITE-SEO
+audit pass — a real CI-hygiene gap that was hiding behind the false
+"production is blocked" framing in the retired F-WEBSITE-SEO entry.
 
-**Finding**: Lighthouse reports `is-crawlable: 0` on **both subdomains**:
+**Finding**: `.github/workflows/website.yml:213-215` comments:
 
-- **Marketing site**: every page audited (PR #5 + PR #8) — `/`,
-  `/install`, `/license`, `/commercial`, `/cite`, `/community`,
-  `/stability`, `/features`, `/privacy`. `categories:seo` sits at
-  0.69 (target 0.95) dominated by this audit.
-- **Book**: every page audited (PR #8, after the URL-fix unmasked
-  the gate's assertion phase) — `/`, `/ch01-introduction/installation/`,
-  `/ch02-solving-odes/your-first-ode/`, `/ch13-performance/`,
-  `/ch13-performance/comparisons/`. `categories:seo` also fails.
+> On PRs, audit the per-deployment preview URLs (so the score reflects
+> the diff under review). On push-to-main, fall back to the production
+> apex URLs so post-merge regressions still page someone.
 
-`is-crawlable: 0` means the page is explicitly blocked from indexing
-— either via `<meta name="robots" content="noindex">`, an
-`X-Robots-Tag` header, a disallowing `robots.txt`, or a Cloudflare
-Pages configuration that does the same.
+The push-to-main fallback is **not implemented**. Every audit job
+(`lighthouse-site`, `lighthouse-book`, `pa11y`, `playwright`) is
+`if: github.event_name == 'pull_request'` and resolves URLs from
+wrangler-action's `preview_alias`/`preview_url` outputs. There is no CI
+signal on production SEO, performance, accessibility, or dark-mode
+behavior — post-merge regressions only surface if a subsequent PR
+happens to touch the gates' input shapes.
 
-**Cost-of-delay — highest-priority item in the entire backlog**.
-The entire public Numra web presence has been organically
-undiscoverable by search engines since launch. The marketing site
-exists to introduce the project; the book exists as the long-form
-reference. Both being un-indexable means anyone not given a direct
-link cannot find either. Every day of delay is a day the project
-can't be reached via search. This priority is not local-to-the-
-website-track — it dominates the project-wide backlog.
-
-**Expedite-if-trivial guidance** (this entry's primary load-bearing
-note): the eventual audit should **assess fix size early**. Plausible
-trivial causes:
-
-- An accidental `X-Robots-Tag: noindex` (or `User-agent: * / Disallow: /`)
-  in `website/site/public/_headers` and/or `website/book/public/_headers`
-  — left over from pre-launch staging and never reverted.
-- A disallowing `robots.txt` (only `website/site/public/robots.txt`
-  exists; the book has no `robots.txt` of its own, but a project-wide
-  Cloudflare config could be doing the same).
-- A `<meta name="robots" content="noindex">` in the shared base
-  layout of one or both sites.
-
-If the audit confirms the cause is a trivial config fix, **surface
-that finding immediately** so the fix can land as its own tiny PR
-rather than waiting for normal scheduling. A 1-line `_headers` /
-`robots.txt` change to restore indexing is qualitatively different
-work from the multi-day a11y / perf remediation in the other
-split-outs, and the cost-of-delay justifies the expedite. Don't
-roll it into a larger SEO sweep; ship the small fix the moment the
-root cause is confirmed.
+For the SEO category specifically this gap is load-bearing: the
+preview-URL audit can never validate `is-crawlable` (Cloudflare
+deliberately noindexes previews — see retired F-WEBSITE-SEO), and the
+in-scope fix from that retirement explicitly disables the assertion in
+the preview config. So `is-crawlable` is currently asserted against zero
+URLs in CI. A production-URL audit path would close that gap and would
+also catch any other audit whose semantics differ between preview and
+production (canonical URLs, hreflang against the apex domain, etc.).
 
 **What needs doing**:
-1. Two-property investigation. Check, in order of likelihood:
-   - `website/site/public/_headers` (Cloudflare Pages headers config —
-     the most likely culprit; will be `X-Robots-Tag: noindex` or similar).
-   - `website/book/public/_headers` (same check for the book subdomain;
-     could be a copy-paste of the marketing config).
-   - `website/site/public/robots.txt` (file exists; check for a
-     blanket Disallow).
-   - The book has no `robots.txt`; verify it isn't being served one
-     by a Cloudflare-level project default.
-   - Both sites' base layouts for `<meta name="robots">` tags.
-   - Astro config in both `astro.config.mjs` for any `build`-level
-     SEO directives.
-2. Confirm whether the cause is one shared source (project-wide) or
-   two divergent sources (separate `_headers` files happen to both
-   contain noindex). If one source: single fix. If two: still one
-   follow-up (this one), but the fix has two touchpoints.
-3. If the audit finds a trivial root cause (single config line on one
-   or both sites), surface immediately and ship as an expedited tiny
-   PR per the guidance above.
-4. Verify with a follow-up Lighthouse run on the fix branch —
-   `is-crawlable` should return to 1 on **both subdomains**;
-   `categories:seo` should climb back above 0.95 on both.
+1. Decide the production-URL audit shape. Three plausible designs:
+   - **Same workflow, push-to-main branch**: add an `if:
+     github.event_name == 'push' && github.ref == 'refs/heads/main'`
+     sibling job to each gate, resolving URLs from the production
+     custom domains (`numra-rs.org`, `book.numra-rs.org`,
+     `examples.numra-rs.org`) rather than wrangler outputs. Simplest;
+     post-merge surface.
+   - **Scheduled workflow**: separate `cron`-triggered workflow that
+     audits production daily/weekly. Independent of merge cadence;
+     catches drift that isn't tied to a commit. Higher friction to
+     wire.
+   - **Both**: push-to-main for fast post-merge signal, cron for
+     drift detection.
+2. Decide which assertions diverge between preview and production
+   contexts and need a production-only preset. Beyond `is-crawlable`,
+   probable candidates: canonical-URL audits, hreflang, sitemap
+   reachability. A separate `lighthouserc-production.json` (and the
+   book equivalent) may be cleanest; or a base-config-plus-overlay
+   pattern.
+3. Decide failure semantics. Production-gate failures on push-to-main
+   can't block the merge (it's already happened) — what's the action?
+   Auto-file a follow-up? Page a maintainer? Soft-warn?
+4. Implement and verify with at least one end-to-end run on production
+   that demonstrates `is-crawlable` greens on the actual production
+   URLs (which the F-WEBSITE-SEO audit empirically confirmed via curl
+   but not via Lighthouse).
 
-**Priority**: highest in the entire backlog. Should be scheduled
-ahead of every other follow-up — both F-WEBSITE-AUDIT-GATES split-outs
-and any other currently-open follow-up — because the cost-of-delay
-is project-wide visibility, not local to the website track.
+**Priority**: medium. This is a CI-hygiene gap — there is no evidence
+that any of the production-only-detectable issues are currently active
+(`curl` already confirms `is-crawlable` greens in production for SEO,
+and pa11y / Lighthouse against preview URLs catches most other classes
+of regression). The gap matters for *future* regressions that ship via
+direct-push to main (still possible until F-WEBSITE-PR-FLOW lands
+branch protection) or for properties that differ between preview and
+production. Below the three remaining website-track follow-ups
+(F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
+F-WEBSITE-BOOK-LHC-FIXES) which address live shipping defects.
+
+**Sequencing**: not blocking. Land after the three remaining website
+split-outs close, or earlier as a small standalone item if convenient.
+Probably benefits from F-WEBSITE-PR-FLOW resolving direction first
+(branch-protection landing on green PR gates would reduce the
+post-merge-regression class this entry addresses).
+
+**Relationship to F-WEBSITE-PR-FLOW**: PR-FLOW already needs to
+incorporate the "gates must assert correct things for the URLs they
+target" lesson. This entry is the concrete adjacent CI work that
+follows from that lesson on the SEO axis specifically. Worth deciding
+during PR-FLOW's scoping whether this gets absorbed into PR-FLOW or
+kept separate.
+
+### F-WEBSITE-SEO-VERIFY: Verify production is actually indexed in practice (go-look-at-the-world)
+
+**Status**: scoped, not started. Surfaced 2026-05-16 by the F-WEBSITE-SEO
+audit pass — the necessary-not-sufficient gap that retiring F-WEBSITE-SEO
+on "config isn't blocking" would otherwise leave open. Explicitly **not
+engineering work**; this is a tracked sanity-check.
+
+**The distinction**: F-WEBSITE-SEO's audit verified that nothing in the
+Numra-controlled surface (built HTML, `_headers`, `robots.txt`,
+Cloudflare's documented behavior, live production response headers)
+blocks search-engine crawlers from indexing `numra-rs.org` or
+`book.numra-rs.org`. **"We don't block crawlers" is not the same as
+"crawlers found us."** A site can be perfectly indexable in config and
+still be undiscoverable in practice — sitemap not submitted to Search
+Console, no inbound links, robots.txt not yet picked up, sitemap URL
+404ing, etc.
+
+The disconfirmation evidence from the F-WEBSITE-SEO audit makes a
+genuine practical-discoverability problem unlikely (we ship a valid
+robots.txt that points at a sitemap; the marketing site declares a
+sitemap in robots.txt; Astro generates the sitemap at build time), but
+"unlikely" is not "verified." This follow-up exists so closing the SEO
+question entirely on the config audit would be exactly the
+necessary-not-sufficient error the F-WEBSITE-SEO retirement was about
+not making.
+
+**What needs doing** (none of these are code changes):
+1. Run `site:numra-rs.org` and `site:book.numra-rs.org` queries in
+   Google, Bing, and DuckDuckGo. Note what's indexed. Headline pages
+   (`/`, `/install`, `/cite`, the book root, chapter roots) should all
+   surface.
+2. Verify `https://numra-rs.org/sitemap-index.xml` returns 200 and
+   parses (Astro's `@astrojs/sitemap` integration generates it; the
+   robots.txt declares it).
+3. Check whether either domain is registered in Google Search Console
+   and/or Bing Webmaster Tools. If so, look at coverage reports and
+   any error/warning surface (`Excluded by 'noindex' tag` would be
+   especially diagnostic — its absence confirms production indexing).
+   If not, decide whether to register them.
+4. Optional: spot-check `numra-rs.org` shows up for relevant queries
+   ("numra rust", "numra-rs", "numra ODE solver", etc.) and whether
+   the book ranks for any Numra-specific queries that aren't direct
+   hits.
+5. If something surfaces (e.g., sitemap not submitted, no Search
+   Console registration), decide whether the action is in-scope here
+   (a small one-shot configuration task) or warrants opening a
+   narrower follow-up.
+
+**Priority**: low. The audit's disconfirmation chain (config doesn't
+block; live curl confirms; Cloudflare's documented behavior doesn't
+apply to production custom domains) makes a real problem unlikely. This
+exists as a tracked sanity-check so the SEO question isn't closed on a
+partial signal — same discipline as the F-WEBSITE-AUDIT-GATES audit's
+"each gate's expectations are correct against current design" lesson
+applied to ourselves: don't close on a necessary-but-not-sufficient
+check.
+
+**Scheduling**: pick up when convenient. Could plausibly take 20
+minutes if Search Console is already registered, or up to a couple
+hours if it isn't and you want to do that setup as part of this. Not
+blocking anything.
+
+**Does NOT inherit F-WEBSITE-SEO's highest-priority framing.** This is
+deliberately low-priority because the disconfirmation evidence is
+strong; it exists for completeness, not urgency.
 
 ### F-WEBSITE-MARKETING-A11Y: WCAG2AA violations on marketing root + examples gallery
 
@@ -1013,9 +1143,10 @@ color to `#080d16` for the `ch`/`num` spans and `#727780` for the
    `categories:accessibility` should return to 1.00; pa11y should
    report 7/7 URLs passing.
 
-**Priority**: medium. Below F-WEBSITE-SEO (which blocks discovery
-entirely) but above F-WEBSITE-MARKETING-PERF and
-F-WEBSITE-BOOK-LHC-FIXES.
+**Priority**: medium. Above F-WEBSITE-MARKETING-PERF and
+F-WEBSITE-BOOK-LHC-FIXES on the website track (78 a11y violations are
+real and contained to a fixable component; the other two split-outs
+have larger investigation surfaces).
 
 ### F-WEBSITE-MARKETING-PERF: Marketing site fails several Lighthouse performance audits
 
@@ -1101,8 +1232,9 @@ across all 5 book URLs (`/`, `/ch01-introduction/installation/`,
   heuristic.
 
 `is-crawlable: 0` on the book is excluded from this entry's scope —
-it's tracked in F-WEBSITE-SEO (covers both subdomains; same likely
-root cause as marketing).
+it was subsequently determined to be a preview-only Cloudflare artifact
+rather than a book-side issue (see retired F-WEBSITE-SEO and
+F-WEBSITE-AUDIT-GATES Amendment 3). No book-side action needed.
 
 **What needs doing**:
 1. Triage the four issues. `label-content-name-mismatch` is probably
@@ -1122,11 +1254,11 @@ root cause as marketing).
    the Lighthouse report, fix its `loading=` attribute or add a
    `<link rel="preload">` hint as appropriate.
 5. Verify with a follow-up Lighthouse-book run on the fix branch —
-   all 5 book pages should clear the four audits (modulo the
-   F-WEBSITE-SEO indexing issue, which is tracked separately).
+   all 5 book pages should clear the four audits (F-WEBSITE-SEO is
+   retired-with-reframe; not a confounder for the verification run on
+   this entry's audits).
 
-**Priority**: medium. Lower than F-WEBSITE-SEO (project-wide
-discoverability) but comparable to F-WEBSITE-MARKETING-PERF in scope
+**Priority**: medium. Comparable to F-WEBSITE-MARKETING-PERF in scope
 and impact (visitors who do find the book see slower-than-target
 loads). May need a sub-split if the `label-content-name-mismatch`
 investigation determines Starlight's upstream needs a patch and the
@@ -1166,9 +1298,11 @@ therefore not on the table — they demonstrably work.
 
 - **Enforce now**: branch-protect `main` to require the four audit
   jobs to pass on `website/`-touching changes. Problem: until the
-  four F-WEBSITE-AUDIT-GATES split-outs land (F-WEBSITE-SEO,
-  F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
-  F-WEBSITE-BOOK-LHC-FIXES), 2 of 4 gates still fail on every PR
+  three remaining F-WEBSITE-AUDIT-GATES split-outs land
+  (F-WEBSITE-MARKETING-A11Y, F-WEBSITE-MARKETING-PERF,
+  F-WEBSITE-BOOK-LHC-FIXES — F-WEBSITE-SEO was retired-with-reframe
+  2026-05-16 and the in-scope `is-crawlable` assertion-disable lands
+  with this PR), 2 of 4 gates still fail on every PR
   (Lighthouse-marketing, pa11y; Lighthouse-book likely passes after
   this PR's URL fix; Playwright passes after this PR's wrong-
   expectation removal) — enforcement now would block all website
@@ -1178,11 +1312,13 @@ therefore not on the table — they demonstrably work.
   trigger; then branch-protect. Clean transition.
 
 **Recommended sequencing**: F-WEBSITE-AUDIT-GATES (partial-retired
-2026-05-16) → SEO (highest priority — likely expedited as a tiny PR
-if root cause is trivial) → A11Y / PERF / BOOK-LHC-FIXES land → all
-four gates green → branch-protect `main` on `website/**` paths gated
-on the four audit jobs. The question becomes a one-line config change
-once the gates are clean.
+2026-05-16) → SEO retired-with-reframe + Lighthouse `is-crawlable`
+disabled in preset configs (2026-05-16) → A11Y / PERF / BOOK-LHC-FIXES
+land → all four gates green → branch-protect `main` on `website/**`
+paths gated on the four audit jobs. The question becomes a one-line
+config change once the gates are clean. (F-WEBSITE-SEO-PROD-PROBE and
+F-WEBSITE-SEO-VERIFY are sequenced independently of this critical path
+— see their entries.)
 
 **Lesson F-WEBSITE-PR-FLOW must incorporate into its eventual scope**:
 gates that *run* and gates that *assert the right thing* are
@@ -1196,12 +1332,28 @@ surfaced concrete worked examples of each failure mode:
   by design — those assertions were a non-requirement that had been
   silently failing since the gate first ran on a `pull_request`
   event. The gate-correction was removing the wrong assertions, not
-  fixing the deployed site.
+  fixing the deployed site. **(A second worked example landed
+  2026-05-16: the Lighthouse `is-crawlable` audit asserted production
+  indexability against PR-preview URLs that Cloudflare deliberately
+  noindexes. Same "preview-only false signal" shape as the dark-mode
+  tests, but structurally narrower: the dark-mode case was a wrong
+  property (marketing is light-only by design), whereas the SEO case
+  is the right property against the wrong URL set
+  (preview-vs-production divergence in Cloudflare's documented
+  behavior). Re-introducing the SEO assertion against a production-URL
+  audit path would be correct (tracked as F-WEBSITE-SEO-PROD-PROBE);
+  re-introducing dark-mode marketing assertions against any URL would
+  not. Gate-correction was disabling the preview-config assertion with
+  a foreclosing comment; no site code or config changed. Direct
+  production checks on 2026-05-16 (curl headers, built-HTML grep,
+  `_headers`, robots.txt) disconfirm the config-block hypothesis;
+  in-practice indexing is separately tracked as F-WEBSITE-SEO-VERIFY.
+  See retired F-WEBSITE-SEO and F-WEBSITE-AUDIT-GATES Amendment 3.)**
 - **Gate runs, asserts right thing, but the asserted thing is
   broken**: every other failure in F-WEBSITE-AUDIT-GATES — the 78
-  WCAG2AA contrast violations, `is-crawlable: 0` on both subdomains,
-  the book's `font-display` and LCP failures, etc. These are
-  conventional "audit catches real bug" failures.
+  WCAG2AA contrast violations, the book's `font-display` and LCP
+  failures, etc. These are conventional "audit catches real bug"
+  failures.
 
 F-WEBSITE-PR-FLOW's enforce-vs-not decision must therefore include
 **"each gate's expectations are correct against current design

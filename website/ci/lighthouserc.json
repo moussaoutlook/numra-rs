@@ -1,5 +1,5 @@
 {
-  "_comment": "Lighthouse CI configuration for the Numra website. LHCI 0.15.x bundles Lighthouse 12; the PWA category and several legacy audits (uses-https, no-unload-listeners, no-vulnerable-libraries) were removed upstream and intentionally absent from assertions below. is-on-https is the current HTTPS-validation audit. Audit IDs go directly as keys in `assertions` — LHCI parses any key there as an audit ID, so do not put commentary keys inside that object.",
+  "_comment": "Lighthouse CI configuration for the Numra website. LHCI 0.15.x bundles Lighthouse 12; the PWA category and several legacy audits (uses-https, no-unload-listeners, no-vulnerable-libraries) were removed upstream and intentionally absent from assertions below. is-on-https is the current HTTPS-validation audit. Audit IDs go directly as keys in `assertions` — LHCI parses any key there as an audit ID, so do not put commentary keys inside that object. `is-crawlable` is explicitly disabled below: this preset runs only against PR-preview deployments (per `.github/workflows/website.yml`), and Cloudflare Pages deliberately injects `X-Robots-Tag: noindex` on every preview URL to prevent duplicate-content with production. The audit is therefore guaranteed to fail by design on the URLs this config targets, regardless of the production site's actual crawlability (production custom domains do not receive the preview noindex per Cloudflare's documented behavior, and direct curl checks on 2026-05-16 confirmed `numra-rs.org/` returns HTTP 200 with no `x-robots-tag` header). This is the same preview-only-false-signal shape as the retired marketing dark-mode Playwright tests, though structurally narrower — the SEO assertion is the right property against the wrong URL set rather than a wrong property entirely. Do not re-enable without first implementing a production-URL audit path (tracked as F-WEBSITE-SEO-PROD-PROBE in `docs/internal-followups.md`); restoring it here would re-introduce the false signal that drove the now-retired F-WEBSITE-SEO follow-up.",
 
   "ci": {
     "collect": {
@@ -45,6 +45,7 @@
 
         "uses-rel-preload":              "off",
         "uses-rel-preconnect":           "off",
+        "is-crawlable":                  "off",
         "non-composited-animations":     "warn",
         "unused-css-rules":              "warn",
         "unused-javascript":             "warn",
