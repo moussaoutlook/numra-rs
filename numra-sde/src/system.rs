@@ -88,6 +88,18 @@ pub trait SdeSystem<S: Scalar>: Sync {
 }
 
 /// Options for SDE solvers.
+///
+/// **Divergence from `numra_ode::SolverOptions`** (per Foundation Spec §2.5):
+/// SDE solvers carry stochastic noise, so step size also controls the Wiener
+/// increment `δW ~ N(0, h)` — not just truncation accuracy. The fixed `dt`
+/// field is distinguished from `rtol` / `atol` (used by adaptive SRA-family
+/// methods) rather than collapsed onto a shared `h0` / `h_max`, because the
+/// noise-discretisation interpretation matters at every step. `seed:
+/// Option<u64>` is required for reproducibility — deterministic ODE
+/// configuration has no analog. `save_trajectory: bool` toggles
+/// trajectory-vs-final-only collection for Monte Carlo workloads where
+/// intermediate states aren't kept. See
+/// `docs/architecture/foundation-specification.md` §2.5.
 #[derive(Clone, Debug)]
 pub struct SdeOptions<S: Scalar> {
     /// Fixed time step (for non-adaptive methods)

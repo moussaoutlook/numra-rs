@@ -39,6 +39,15 @@ pub trait IdeSystem<S: Scalar> {
 }
 
 /// Options for IDE solvers.
+///
+/// **Divergence from `numra_ode::SolverOptions`** (per Foundation Spec §2.5):
+/// integral-equation solvers (Volterra, RK4-Volterra, Prony) ship as
+/// fixed-step today and add a `quad_points` knob for the integral-kernel
+/// quadrature rule per step — neither concept exists in `SolverOptions`.
+/// `tol` and `max_iter` govern the implicit iteration on the integral term,
+/// not local truncation; same shape as `FdeOptions`. Adaptive-step IDE
+/// methods are not in v1 scope. See
+/// `docs/architecture/foundation-specification.md` §2.5.
 #[derive(Clone, Debug)]
 pub struct IdeOptions<S: Scalar> {
     /// Time step size

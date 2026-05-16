@@ -52,6 +52,20 @@ pub enum SpdeMethod {
 }
 
 /// Options for SPDE solver.
+///
+/// **Divergence from `numra_ode::SolverOptions`** (per Foundation Spec §2.5):
+/// SPDE solvers carry both stochastic noise (like SDE — Wiener time
+/// control, `seed`) and an explicit method selector (`SpdeMethod`,
+/// `EulerMaruyama` | `Milstein`). The method selector is unusual:
+/// `numra-ode` solvers dispatch at the type level
+/// (`DoPri5::solve(...)`, `Tsit5::solve(...)`); SPDE collapses to a single
+/// `solve` entry that branches on the enum because noise-discretisation
+/// logic is shared across methods. `n_output` discretises sampled-output
+/// count rather than `SolverOptions::t_eval`-style explicit time grid —
+/// appropriate for stochastic workloads where exact output times matter
+/// less than density. `adaptive: bool` gates between fixed-step EM
+/// (default) and adaptive variants. See
+/// `docs/architecture/foundation-specification.md` §2.5.
 #[derive(Clone, Debug)]
 pub struct SpdeOptions<S: Scalar> {
     /// Time step

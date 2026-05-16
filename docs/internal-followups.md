@@ -10,7 +10,29 @@ a closed GitHub issue, or the public roadmap — and remove it from this
 file once it lands. Stale follow-ups files are how good intentions become
 embarrassments.
 
-Last updated: 2026-05-16 (F-WEBSITE-SEO retired-with-reframe — the highest-priority cost-of-delay framing was based on misreading PR-preview Cloudflare-injected `X-Robots-Tag: noindex` as production-block; production custom domains are not config-blocked from indexing per direct checks on 2026-05-16 (curl, built-HTML grep, `_headers`, robots.txt), though actual in-practice indexing is unverified and tracked as F-WEBSITE-SEO-VERIFY (necessary-not-sufficient distinction preserved rather than collapsed). Lighthouse `is-crawlable` disabled in both preset configs with foreclosing comment (gate-correction-not-gate-silencing, same preview-only-false-signal shape as the dark-mode Playwright tests, structurally narrower because the SEO assertion is right-property-wrong-URL-set vs. dark-mode's wrong-property-period). Two narrower forks opened: F-WEBSITE-SEO-PROD-PROBE (medium, CI-hygiene gap — the unimplemented production-URL audit path), F-WEBSITE-SEO-VERIFY (low, non-engineering sanity-check). F-WEBSITE-AUDIT-GATES Amendment 3 added retracting the production-block framing in the same record that made the claim; symmetric-overclaim guard explicit in both retraction records. F-WEBSITE-PR-FLOW worked-example list recategorized: `is-crawlable` joins the dark-mode tests as a "preview-only false signal" example. Sibling website-track entries (MARKETING-A11Y, MARKETING-PERF, BOOK-LHC-FIXES) priority lines updated to drop "below F-WEBSITE-SEO" framing. — Earlier the same day: F-WEBSITE-AUDIT-GATES partially retired (config-staleness + book URL-list + Playwright wrong-expectation portions landed); four genuine-site-issue follow-ups originally opened, now three after F-WEBSITE-SEO retirement.)
+## Release-trigger conditions (working agreement)
+
+What gates a `0.1.x` release is recorded here so the trigger doesn't
+remain an undocumented working agreement. Append-only; update when the
+trigger conditions change.
+
+**0.1.3** (current target): ships when **F-FD-NOSCALE-BUG** (already
+landed in `Unreleased`) and **F-OPTS** (landing 2026-05-16) close. The
+crate-affecting trio item F-SOLVER-FIELDS is **deferred** to a fresh
+foundation-process session (decision recorded 2026-05-16, implementation
+not on the 0.1.3 path); F-MATRIX-SHAPE is **deferred** as a Foundation
+Spec §7 #5 open question under the spec's named trigger. Website-track
+follow-ups (F-WEBSITE-AUDIT-GATES split-outs, F-WEBSITE-PR-FLOW, etc.)
+**never enter the release-trigger condition** because they're
+CI/website-quality work that lands on `main` and redeploys via
+Cloudflare Pages independent of `cargo publish`. With F-SOLVER-FIELDS
+deferred, 0.1.3's crate content is thin (one correctness bug fix plus
+a rustdoc paragraph across five options structs) — that thinness is
+itself a reason not to rush 0.1.3; it can sit in `Unreleased` until a
+substantive item joins, or ship now as a small focused release.
+Decision deferred to the next release session.
+
+Last updated: 2026-05-16 (F-OPTS closed in `Unreleased` — five solver-family options structs (SDE/FDE/IDE/DDE/SPDE) now carry paragraph-form rustdoc divergence rationales pointing at Foundation Spec §2.5; audit found 2 sites beyond the named 3 (DdeOptions, SpdeOptions). F-MATRIX-SHAPE entry re-scoped as the operational tracker for Foundation Spec §7 #5; both the original "design question pending" framing and the audit's same-day "(b) de-facto" reading are retracted — the existing `&SparseMatrix<S>`-concrete pattern in iterative.rs/preconditioner.rs is expedient, not deliberate, and does not license either unification or "deliberately dense-only" documentation; question deferred per spec's named trigger. F-SOLVER-FIELDS decision recorded: option (b) (wire `max_order`/`min_order` through `SolverOptions`) per §2.5's centralized-configuration principle and §3.7's per-family extension anticipation; (a) rejected (deletes legitimate BDF capability); (c) recorded as deferred foundation open question (overriding §2.5 would need deliberate foundation design); implementation deferred to a fresh foundation-process session, not tonight. `Auto` struct cleanup (vestigial — `Solver<S>` impl ignores `self`, fields have zero workspace reads) rides with the (b) implementation. §3.7 spec-vs-reality drift flagged (spec says BDF max_order lives in `SolverOptions`; reality has it on the `Bdf` struct as a non-functional builder) for the implementer to close when (b) lands. New "Release-trigger conditions" section added — 0.1.3 gates on F-FD-NOSCALE-BUG + F-OPTS only; F-SOLVER-FIELDS and F-MATRIX-SHAPE deferred foundation work; website-track never enters the release trigger. — Earlier the same day: F-WEBSITE-SEO retired-with-reframe (preview-noindex misread as production-block; full retraction); Lighthouse `is-crawlable` disabled in both preset configs; F-WEBSITE-SEO-PROD-PROBE and F-WEBSITE-SEO-VERIFY forked; F-WEBSITE-AUDIT-GATES Amendment 3; F-WEBSITE-PR-FLOW recategorization. And earlier: F-WEBSITE-AUDIT-GATES partially retired.)
 
 ## Recently retired
 
@@ -18,6 +40,7 @@ One-line entries for follow-ups that landed and were removed from the
 file. Kept here so a future reader can find the closure record without
 git-archaeology.
 
+- **F-OPTS: SDE/FDE/IDE options divergence from `SolverOptions` documentation** — closed 2026-05-16 in `Unreleased`. Foundation Spec §2.5 explicitly named F-OPTS as the documentation follow-up for the divergent solver-family options structs predating §2.5's "Configuration objects are shared across solver families" principle. Audit pass surfaced 2 additional sites beyond the entry's named 3: `DdeOptions` (`numra-dde/src/system.rs:54`) and `SpdeOptions` (`numra-spde/src/solver.rs:56`) — same audit-surfaces-more-than-named pattern as F-FD-STEP / F-CI-NODE20 / F-FD-CROSSCRATE / F-ERR (5-of-6 follow-ups now). Each of the five (`SdeOptions`, `FdeOptions`, `IdeOptions`, `DdeOptions`, `SpdeOptions`) gains a paragraph-form rustdoc divergence rationale grounded in the family's actual fields (noise-discretisation time control for SDE/SPDE; fixed-step-by-construction for FDE/IDE; discontinuity-propagation for DDE) plus a pointer to `docs/architecture/foundation-specification.md` §2.5. Per-family claims pre-commit-verified against consuming solver code: SRA-family (`sra.rs:128,296`) confirms adaptive `rtol`/`atol` consumption; DDE `dense_output: true` default confirmed at `system.rs:87`; SPDE `adaptive: bool` gates real branching at `solver.rs:395` between fixed-step EM/Milstein dispatch and adaptive variant code. The entry's "Optionally consider whether the divergence is still justified" question is *not* rolled into this close — `DdeOptions` is the most plausible retrofit candidate (closest shape to `SolverOptions`); if pursued it would open as F-OPTS-RETROFIT-DDE only when a real retrofit is contemplated, not speculatively. Rustdoc-only change; no public-API behavior altered.
 - **F-WEBSITE-SEO: entire Numra web presence is blocked from search indexing** — retired-with-reframe 2026-05-16, **without shipping a site fix because no site fix was warranted**. The entry's load-bearing premise — "the entire public Numra web presence has been organically undiscoverable by search engines since launch" — was wrong. The `is-crawlable: 0` finding it cited (Lighthouse runs on PR #5 and PR #8) came exclusively from PR **preview** deployments, which Cloudflare Pages deliberately injects `X-Robots-Tag: noindex` on to prevent duplicate-content with production. Direct checks against production on 2026-05-16 disconfirm the config-block hypothesis: `curl -I https://numra-rs.org/` and `curl -I https://book.numra-rs.org/` returned HTTP 200 with no `x-robots-tag` header; both sites' built HTML contains no `<meta name="robots">`; neither `_headers` file declares an `X-Robots-Tag`; `website/site/public/robots.txt` is `Allow: /`; Cloudflare's documented preview-only noindex behavior explicitly excludes production custom domains. **Production custom domains are not config-blocked from indexing** as of those checks. **Whether the production sites are actually indexed in practice** (sitemap pickup, Search Console coverage, organic crawler discovery) **is unverified and separately tracked as F-WEBSITE-SEO-VERIFY** — "config isn't blocking" is necessary-not-sufficient, and the retirement framing preserves that distinction rather than collapsing it. The gate was asserting `is-crawlable` against URLs Cloudflare designs to fail it, not against production. This is the same preview-only-false-signal shape as the marketing dark-mode Playwright tests retired in F-WEBSITE-AUDIT-GATES, though structurally narrower: the dark-mode case was a wrong property (marketing is light-only by design); the SEO case is the right property against the wrong URL set (preview-vs-production divergence in Cloudflare's documented behavior). Re-introducing the SEO assertion against a production-URL audit path would be correct (tracked as F-WEBSITE-SEO-PROD-PROBE); re-introducing the dark-mode marketing assertions against any URL would not. **The "highest priority in the entire backlog" / "every day of delay" / expedite-if-trivial framing is fully retracted**: it was built on the demonstrated misread of preview-noindex as production-block, and the direct checks disconfirm that misread. The in-scope action taken was instead to disable the `is-crawlable` assertion in both Lighthouse preset configs (`website/ci/lighthouserc.json`, `website/ci/lighthouserc-book.json`) with a foreclosing top-level `_comment` documenting the preview-noindex semantics — gate-correction-not-gate-silencing, same as the dark-mode tests. Two narrower follow-ups forked from the audit's residual observations: F-WEBSITE-SEO-PROD-PROBE (the unimplemented production-URL audit path the workflow comment at `.github/workflows/website.yml:213-215` aspires to but doesn't ship — a real CI-hygiene gap, medium priority) and F-WEBSITE-SEO-VERIFY (the necessary-not-sufficient sanity-check above — low priority, explicitly non-engineering). Neither fork inherits the original entry's highest-priority framing. The audit pattern lesson: gates that run against preview URLs cannot assert properties whose semantics differ between preview and production — same shape lesson F-WEBSITE-PR-FLOW must already incorporate, now with a third worked example. The premise correction was caught at the audit hard-stop before any code edit, before any CHANGELOG claim, and before the planned tiny-PR expedite — the hard-stop discipline was load-bearing in exactly the way it was for F-WEBSITE-AUDIT-GATES's URL-fix and Playwright corrections. **Symmetric-overclaim guard**: this retraction was further reviewed against the inverse risk — replacing "production is blocked" with "production was always correctly indexable" would have been one unverified absolute swapped for another, an emotionally-satisfying shape for a fourth correction in this arc that the necessary-not-sufficient discipline must specifically catch. The replacement claim is stated at the precision the direct checks support ("not config-blocked from indexing, as of 2026-05-16 checks"); the in-practice question is held open via F-WEBSITE-SEO-VERIFY rather than closed by inference. Same discipline that caught the original preview-vs-production misread, applied one level deeper to the correction itself.
 - **F-FD-NOSCALE-BUG: no-scaling correctness bug in public FD utilities** — landed in `Unreleased` (next 0.1.x release) 2026-05-15. Four FD utilities defaulting to hardcoded `h = 1e-8` without `(1 + |x|)` scaling silently degraded gradient/Jacobian outputs for callers with `|x| > ~5e7` (precision floor where `x + 1e-8` rounds back to `x` in `f64`). Fixed at all four named sites: `numra-optim/src/problem.rs:486` (`finite_diff_gradient`, central → `cbrt(EPSILON) * (1 + |x|)`), `numra-optim/src/problem.rs:503` (`finite_diff_jacobian`, central), `numra-dde/src/history.rs:188` (`History::evaluate_derivative` initial-history branch, central), `numra-sde/src/system.rs:68` (`SdeSystem::diffusion_derivative` trait default, **forward → `sqrt(EPSILON) * (1 + |x|)`** — direction-corrected by the audit; the entry had assumed central FD). Each pinned with a regression test at `|x| = 1e8` asserting analytical-truth proximity within `1e-3` relative; structural-correctness check verified on the forward-FD site (revert → fail → restore). Public-API rustdoc on the two `numra-optim` free functions documents the canonical step formula and the `~5e7` precision floor. Audit found exactly the four named sites — first follow-up where the audit confirmed the entry's scope rather than expanding it (different from F-FD-STEP / F-CI-NODE20 / F-FD-CROSSCRATE). The 0.1.2 CHANGELOG's note on this follow-up over-listed `numra-optim::robust` as no-scaling-bug-class; that was already corrected in F-FD-CROSSCRATE's audit pass and stands.
 - **F-CI-NODE20: upgrade GitHub Actions runners to Node.js 24** — shipped 2026-05-15. Five action majors bumped to versions declaring `runs.using: node24`, clearing the 2026-06-02 deprecation deadline ahead of time: `actions/checkout@v4 → @v6` (11 usages), `actions/setup-node@v4 → @v6` (7), `actions/upload-artifact@v4 → @v7` (4), `pnpm/action-setup@v3 → @v6` (4; also dropped redundant `with: version: 9` and deferred to the `packageManager: pnpm@9.15.0` field in `package.json` as the single source of truth — required for the v4+ strict check), `cloudflare/wrangler-action@v3 → @v4` (3; default wrangler version implicitly upgrades v3 → v4 — `pages deploy` syntax is stable across the bump). Actions already on node24-runtime majors (`treosh/lighthouse-ci-action@v12`, `Swatinem/rust-cache@v2`) left at their current pins per scope discipline; composite actions (`taiki-e/install-action`, `dtolnay/rust-toolchain`, `rhysd/actionlint`) not affected by Node-runtime deprecation. Audit surfaced 4 actions missed from the original entry (`upload-artifact` needs bump; the three composites and lighthouse/rust-cache don't) — same audit-surfaces-more-than-named pattern as F-FD-STEP.
@@ -299,31 +322,149 @@ Recorded as one consolidated follow-up rather than three separate
 entries because the three sites share the same generification approach
 and benefit from being addressed as a single sweep.
 
-### F-SOLVER-FIELDS: Clarify or remove `Bdf::max_order` / `Auto::*` fields the static `Solver::solve` cannot read
+### F-SOLVER-FIELDS: Wire `Bdf::max_order`/`min_order` through `SolverOptions`; clean up vestigial `Auto`
 
-**Status**: scoped, not started. Surfaced 2026-05-10 by the
-foundation-pass verification (finding C5).
+**Status**: decision recorded 2026-05-16; implementation deferred to a
+fresh session. **Decision: option (b)** — wire `max_order` and
+`min_order` (the BDF order-control knobs) through `SolverOptions` (or a
+BDF-namespaced subset thereof), per Foundation Spec §3.4's documented
+(a)/(b)/(c) and §2.5's centralized-configuration principle. (a) is
+rejected; (c) is recorded as a deferred foundation open question, not
+adopted as the resolution here.
 
-**What's there today**: `Solver::solve` (`numra-ode/src/solver.rs:291`)
-is a static method (no `&self`). `DoPri5`, `Tsit5`, `Vern6/7/8`,
-`Radau5`, `Esdirk32/43/54` are zero-size unit structs and don't carry
-state — fine. But:
+**Audit findings (2026-05-16) that informed the decision**:
 
-- `Bdf { max_order: usize, min_order: usize }` (`numra-ode/src/bdf.rs:83`)
-  has fields, with builder methods `Bdf::new()`, `Bdf::with_max_order(...)`,
-  `Bdf::fixed_order(...)`. The fields cannot be read from inside the
-  static `Solver::solve` because no `&self` is passed.
-- `Auto { ... }` (`numra-ode/src/auto.rs:119`) — same shape.
+- `Bdf::max_order` / `min_order` are read internally
+  (`numra-ode/src/bdf.rs:814,830,836`) via `solve_internal(&self, ...)`,
+  but the `Solver<S>` impl at `bdf.rs:164-175` discards `self` and
+  instantiates a fresh `Bdf::new()` for every static `Bdf::solve(...)`
+  call. The builder methods `Bdf::with_max_order` and `Bdf::fixed_order`
+  are therefore **silently non-functional** at the public trait surface —
+  the only call site that exercises caller-chosen order is the internal
+  test at `bdf.rs:1024-1025`, which bypasses the trait via
+  `solver.solve_internal(...)`. Every external invocation in the
+  workspace uses static `Bdf::solve(...)` syntax.
+- `Auto` is the same shape but worse: the entire `Auto` struct is
+  vestigial. `Auto::hints` is annotated `#[allow(dead_code)]` and has
+  zero workspace reads; `Auto::new` / `Auto::with_hints` are never
+  called externally; the `impl Solver<S> for Auto` at
+  `auto.rs:291-302` ignores `self.hints` and creates a fresh
+  `SolverHints::new()`. The user-facing API is the free function
+  `auto_solve` / `auto_solve_with_hints`, which takes `&SolverHints`
+  directly. The `Auto` struct exists but has no functional path.
 
-So either (a) the fields are dead code, (b) the builders are sketched
-but the trait method needs a reshape to `fn solve(&self, ...)` to use
-them, or (c) there's an internal adapter I missed.
+**Why (b), not (a) or (c)**:
 
-**What needs doing**: investigate and either delete the fields/builders
-(if dead), wire them through `SolverOptions` (if they encode caller
-preferences), or reshape `Solver::solve` to take `&self` (if the fields
-encode genuine per-solver state). Option (c) is the most foundation-
-affecting; pin the design before changing the trait.
+- **(a) — delete the non-functional builders**: rejected. BDF
+  caller-side order control is a legitimate numerical-library
+  capability (cap at order 2 to preserve L-stability;
+  fixed-low-order for problems with structural constraints).
+  Deleting a real capability because its plumbing is broken is the
+  least professional resolution; fixing the plumbing is correct.
+- **(c) — reshape `Solver::solve` to `fn solve(&self, ...)`**:
+  rejected as the resolution here, but **not closed** — it is a
+  legitimate foundation-design alternative that would also fix the
+  plumbing. (c) is rejected as the resolution because it fights
+  Foundation Spec §2.5's stated centralized-configuration
+  principle ("Users learn one configuration vocabulary, not
+  eighteen"). Overriding §2.5 in favor of instance-shaped
+  per-solver configuration would be a deliberate foundation-design
+  decision, not an end-of-session implementation. Recorded as
+  deferred foundation open question for a future session.
+- **(b) — wire through `SolverOptions`**: adopted. Aligns with
+  §2.5 (single shared configuration vocabulary) and §3.7's
+  documented "per-family extension mechanism may be needed" for
+  per-solver knobs. Additive `SolverOptions` evolution is
+  precedented (decision-log entries §6 #1 added `dense_output`;
+  §6 #10 made `t_eval` honored). Low-risk by precedent;
+  deliberate by foundation process.
+
+**Implementation requirements (when this lands as its own focused
+session)**:
+
+1. Decide the shape: a top-level `SolverOptions::max_order` /
+   `min_order` field (potentially `Option<usize>` so non-BDF solvers
+   ignore it without payload), or a BDF-namespaced sub-struct
+   (`SolverOptions::bdf: BdfOptions`). The top-level path matches
+   §2.5 most cleanly; the sub-struct path matches §3.7's
+   "per-family extension mechanism" anticipation. Default to the
+   top-level path unless the foundation-design conversation surfaces
+   a reason for the sub-struct.
+2. Update the `Bdf` static trait method to read the fields from
+   `SolverOptions` rather than ignoring `self`. Keep `Bdf::with_max_order`
+   / `Bdf::fixed_order` as ergonomic builders that produce a
+   pre-configured `SolverOptions` (or deprecate them in favor of
+   `SolverOptions::max_order(2)` if cleaner).
+3. **Clean up vestigial `Auto` in the same PR**: delete `Auto`
+   struct, `Auto::new`, `Auto::with_hints`, the `impl Solver<S> for
+   Auto`, and `Auto::hints` field. The user-facing API
+   (`auto_solve`, `auto_solve_with_hints`, `SolverHints`) is
+   unaffected. Auto's `Solver<S>` impl is also silently
+   non-functional under the same pattern; (b) doesn't fix it because
+   `auto_solve` is the actual entry point — so removal is the
+   correct action and rides naturally with the BDF wiring.
+4. Foundation-process discipline per §2.8:
+   - **§6 decision log entry**: append new entry recording this
+     decision, citing the audit and the §2.5 alignment.
+   - **§3.7 update**: spec currently says BDF max order "lives in
+     `SolverOptions` itself" — **spec-vs-reality drift**: in reality
+     it has been living on the `Bdf` struct as a non-functional
+     builder. The (b) implementation corrects §3.7 to match the new
+     reality (drift closed).
+   - **§3.4 update**: remove the "Tracked as F-SOLVER-FIELDS" bullet
+     and update the design-tension paragraph to reflect the resolution.
+   - **TWO distinct CHANGELOG "Changed" entries**, not one collapsed
+     "F-SOLVER-FIELDS" bullet. The PR couples two genuinely-different
+     change classes that §2.8 requires be visible separately:
+     - **Additive `SolverOptions` evolution** (low-risk, precedented
+       per decision-log #1 and #10): `max_order` / `min_order` added
+       to `SolverOptions`, `Bdf::solve` reads them. Same shape as the
+       `dense_output` / `t_eval` additions before it.
+     - **Subtractive public-API removal of `Auto`**: `Auto` struct,
+       `Auto::new`, `Auto::with_hints`, and `impl Solver<S> for Auto`
+       all deleted. **Technically breaking even at 0.1.x** — the
+       items are `pub` and visible in rustdoc. The breaking-removal
+       entry must call out: (i) the user-facing API (`auto_solve`,
+       `auto_solve_with_hints`, `SolverHints`) is unaffected;
+       (ii) the removed surface was silently non-functional (same
+       trait-discards-self pattern as Bdf, but unlike Bdf there is
+       no order-control capability to preserve since `auto_solve`
+       was always the actual entry point); (iii) anyone calling
+       `Auto::solve(...)` or `Auto::with_hints(...)` directly
+       should migrate to `auto_solve_with_hints(...)` which takes
+       the same `SolverHints` directly.
+     The PR is not split (the two changes are genuinely coupled by the
+     same non-functional-trait-impl pattern), but the future-session
+     implementer must produce both CHANGELOG entries distinctly so the
+     breaking removal is not concealed behind the additive bullet.
+   - **CHANGELOG `### Removed`** subsection if Keep-a-Changelog
+     ordering applies — `### Removed` is the natural home for the
+     `Auto` deletion under that taxonomy, with `### Changed` carrying
+     the additive `SolverOptions` evolution. The implementer chooses
+     between (i) single `### Changed` subsection with two bullets
+     clearly labeled "additive" / "breaking removal," or (ii) split
+     across `### Changed` (additive) + `### Removed` (Auto). Either
+     satisfies §2.8 as long as both change classes are visible.
+5. Tests: add a regression test that constructs
+   `SolverOptions::default().max_order(2).fixed_order(2)` (or the
+   chosen surface), passes it to `Bdf::solve`, and verifies the
+   resulting `SolverResult` exhibits the order-pinned behavior the
+   builder previously *claimed* to provide.
+
+**Priority**: medium. Real bug fix (the public-API builders are
+silently non-functional), but not user-reported. Below
+F-FD-NOSCALE-BUG-class active-correctness issues; above pure-doc
+items.
+
+**Sequencing**: implement as the first focused item of a fresh
+session, per the foundation-process discipline. Not tonight, not
+under throughput pressure.
+
+**0.1.3 gating note**: per the release-trigger conditions section,
+this is **not** a 0.1.3 gate. 0.1.3 ships F-FD-NOSCALE-BUG +
+F-OPTS as the crate-affecting close set; F-SOLVER-FIELDS lands
+when (b) is implemented, which is a deliberate foundation pass
+not tied to the 0.1.3 cadence.
 
 ---
 
@@ -569,57 +710,60 @@ removal is safe; the work is the audit, not the change. Bundle the
 `Scalar` bound with §3.1's documented-rationale follow-up (either
 keep with rustdoc explaining why, or drop).
 
-### F-OPTS: Document SDE/FDE/IDE options divergence from `SolverOptions`
+### F-MATRIX-SHAPE: Track Foundation Spec §7 #5 — sparse joins `Matrix<S>` trait?
 
-**Status**: scoped, not started. Surfaced 2026-05-10 by the
-foundation-pass verification (finding B6). Low priority; documentation
-only.
+**Status**: deferred — open foundation question per Foundation Spec §7 #5,
+under the spec's named trigger ("when a sparse-aware solver path needs to
+dispatch across both dense and sparse via a single trait"). This entry is
+the operational tracker for that spec item; the question stays open where
+the spec already put it.
 
-**What's there today**: `numra-sde`, `numra-fde`, `numra-ide` have
-their own options structs (predating the §2.5 principle that new
-solver families must justify divergence from `SolverOptions`). Their
-rustdoc does not currently explain why they diverge — typically because
-the principle didn't exist when they were written.
+**Reframe history (2026-05-16)**: this entry previously framed the
+sparse-vs-`Matrix`-trait question as a project-side "design question
+pending" awaiting a (a)/(b) decision. An audit pass on the same day
+found existing sparse-aware code in `numra-linalg/src/iterative.rs`
+(6+ functions taking `&SparseMatrix<S>` directly) and
+`numra-linalg/src/preconditioner.rs` (ILU0/Jacobi/SOR-ish constructors,
+same shape) and momentarily concluded "option (b) has been chosen
+de-facto, work is rustdoc-only." **Both framings are retracted.**
 
-**What needs doing**: add a one-paragraph rustdoc note to each
-divergent options struct explaining the rationale (fixed-step
-algorithm, distinct adaptivity story, scalar-vs-Wiener noise time
-control, etc.). Optionally consider whether the divergence is still
-justified or whether one of these can be retro-fitted onto
-`SolverOptions`.
+The current `&SparseMatrix<S>`-concrete pattern in iterative.rs /
+preconditioner.rs was expedient (the code shipped without a deliberate
+foundation decision), not deliberate. "Expedient" cannot honestly be
+documented as "deliberately dense-only by design" — that would be
+false. And it does not license unifying now, because Foundation Spec
+§3.2 + §7 #5 already track this as an open question coupled to
+sparse-Jacobian-return (§7 #5 explicitly: "When sparse Jacobian is
+added, does `OdeSystem::jacobian` return `impl MatrixView` or does a
+new method appear? Related: should `SparseMatrix` join the `Matrix`
+trait (F-MATRIX-SHAPE)?"). The audit confirmed: the spec's named
+deferral trigger has **not** fired — every existing sparse consumer
+dispatches concretely, none through a polymorphic-`Matrix<S>` site.
 
-### F-MATRIX-SHAPE: Decide whether `SparseMatrix` joins `Matrix` trait or stays separate
+**What lands today** (alongside this entry-rewrite): an honest
+rustdoc note on `Matrix<S>` and `SparseMatrix<S>` explicitly saying
+"sparse is not currently in this trait; unification is an open
+foundation question coupled to sparse-Jacobian-return, deferred per
+Foundation Spec §7 #5" — not "deliberately dense-only by design."
+The question is held open, not closed by inference.
 
-**Status**: scoped, not started. Surfaced 2026-05-10 by the
-foundation-pass verification (finding C3). Design question, not
-mechanical work.
+**What needs doing**: nothing, until the spec's trigger fires. When
+the trigger fires (the audit anticipates this could come from
+sparse-Jacobian-return work, an iterative-solver path that wants to
+dispatch over `dyn Matrix<S>`, or a sparse-aware MOL pipeline that
+needs `MOLSystem::jacobian` to return sparse output), the
+foundation-design decision belongs in §7 #5 with a §6 decision-log
+entry, not as a rushed implementation under this entry.
 
-**What's there today**: `numra-linalg::Matrix<S>`
-(`matrix.rs:15`) has one workspace impl, `DenseMatrix<S>` (with the
-faer-bound `S: Scalar + SimpleEntity + Conjugate<Canonical = S> +
-ComplexField`). `SparseMatrix<S>` (`sparse.rs`) is a separate concrete
-type that does **not** implement `Matrix<S>`. Sparse direct solvers
-(`SparseLU<S>`) currently convert to dense internally
-(`sparse.rs:148–149`).
+**Priority**: deferred. Not on any release-trigger path; not blocking.
 
-The §3.2 design claim "Foundation is dense + sparse (CSC)" is
-contradicted by the actual shape — sparse is parallel to the trait,
-not within it. The Foundation Spec revision moves this question into
-§7 (open questions, item 5).
-
-**What needs doing**: decide one of:
-- (a) Sparse joins the `Matrix` trait. Likely requires a `solve`
-  method that can dispatch on storage layout, an iteration story,
-  and probably a separator at the trait level for which operations
-  make sense (matvec yes, dense indexing no).
-- (b) Sparse stays separate; the trait stays dense-only and the
-  rustdoc says so explicitly. Solvers that need to dispatch across
-  both write their own enum or generic abstraction at the consumer
-  layer.
-
-This becomes urgent when a sparse-aware iterative solver path lands
-that needs to call `solve` polymorphically over dense and sparse.
-Until then it's a clarification, not a blocker.
+**Symmetric-overclaim guard**: the audit-time retraction of the
+"(b) de-facto" reading was itself reviewed for the inverse risk —
+replacing "(b) is the answer" with "the trigger hasn't fired" is
+the right level of precision (the spec's deferral condition is
+explicit), not a smaller opposite-direction overclaim. Same
+discipline applied at the Track-1 F-WEBSITE-SEO retraction, applied
+here to the audit's own reframe.
 
 ### F-INTEROP-Q: Backfill interop tests covering `?`-propagation, non-`f64` Scalar, and capabilities currently missing an interop edge
 

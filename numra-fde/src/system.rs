@@ -33,6 +33,17 @@ pub trait FdeSystem<S: Scalar> {
 }
 
 /// Options for FDE solvers.
+///
+/// **Divergence from `numra_ode::SolverOptions`** (per Foundation Spec §2.5):
+/// fractional-order methods shipped here (the L1 scheme) are inherently
+/// fixed-step — the Caputo-derivative discretisation writes the convolution
+/// memory against a fixed `dt` grid. Variable-step fractional methods exist
+/// in the literature but are not in v1 scope, so `rtol` / `atol`-style
+/// adaptive step control would be a dead knob. `tol` and `max_iter` govern
+/// the nonlinear iteration inside implicit schemes (Newton on the convolved
+/// residual), not local truncation error — same identifier, different
+/// meaning from `SolverOptions::atol`. See
+/// `docs/architecture/foundation-specification.md` §2.5.
 #[derive(Clone, Debug)]
 pub struct FdeOptions<S: Scalar> {
     /// Time step size

@@ -50,6 +50,17 @@ pub trait DdeSystem<S: Scalar> {
 }
 
 /// Options for DDE solvers.
+///
+/// **Divergence from `numra_ode::SolverOptions`** (per Foundation Spec §2.5):
+/// the field set most closely mirrors `SolverOptions` (`rtol`, `atol`, `h0`,
+/// `h_max`, `h_min`, `max_steps`, `t_eval`, `dense_output`) but diverges on
+/// two DDE-specific concerns: (1) `dense_output` defaults to `true` here
+/// because the Method-of-Steps solver evaluates `y(t − τ)` at delay-shifted
+/// times that don't generally land on integration grid points; (2)
+/// `track_discontinuities` + `discontinuity_order` encode the inherent DDE
+/// discontinuity-propagation structure (initial-history non-smoothness
+/// propagates forward at integer multiples of the delays), which has no
+/// ODE analog. See `docs/architecture/foundation-specification.md` §2.5.
 #[derive(Clone, Debug)]
 pub struct DdeOptions<S: Scalar> {
     /// Relative tolerance

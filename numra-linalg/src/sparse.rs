@@ -12,7 +12,14 @@ use faer::sparse::SparseColMat;
 use faer::{ComplexField, Conjugate, Entity, SimpleEntity};
 use numra_core::LinalgError;
 
-/// CSC sparse matrix wrapping faer's SparseColMat.
+/// CSC sparse matrix wrapping faer's `SparseColMat`.
+///
+/// **Trait relationship**: `SparseMatrix<S>` does not currently implement
+/// the [`crate::Matrix`] trait. Sparse-aware solvers in this crate
+/// (`crate::iterative`, `crate::preconditioner`) consume `&SparseMatrix<S>`
+/// concretely. Whether sparse should join the [`crate::Matrix`] trait is an
+/// open foundation question deferred per Foundation Spec §7 #5 — see
+/// F-MATRIX-SHAPE in `docs/internal-followups.md`.
 pub struct SparseMatrix<S: Scalar + Entity> {
     inner: SparseColMat<usize, S>,
     nrows: usize,

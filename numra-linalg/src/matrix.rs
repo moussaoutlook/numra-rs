@@ -11,7 +11,19 @@ use numra_core::LinalgError;
 
 /// Trait for matrix types.
 ///
-/// Provides a backend-agnostic interface for matrix operations needed by ODE solvers.
+/// Provides a backend-agnostic interface for matrix operations needed by ODE
+/// solvers.
+///
+/// **Sparse storage**: [`crate::SparseMatrix`] is not currently in this trait.
+/// Sparse-aware solvers (`crate::iterative`, `crate::preconditioner`) dispatch
+/// on `&SparseMatrix<S>` concretely rather than through `dyn Matrix<S>`.
+/// Whether sparse should join this trait is an open foundation question
+/// coupled to sparse-Jacobian-return, deferred per Foundation Spec §7 #5
+/// under the spec's named trigger ("when a sparse-aware solver path needs to
+/// dispatch across both dense and sparse via a single trait"). The current
+/// dense-only scope is the expedient state, not a deliberate design — see
+/// F-MATRIX-SHAPE in `docs/internal-followups.md` for the operational
+/// tracker, and Foundation Spec §3.2 + §7 #5 for the design context.
 pub trait Matrix<S: Scalar>: Clone + Sized {
     /// Create a zero matrix with given dimensions.
     fn zeros(rows: usize, cols: usize) -> Self;
