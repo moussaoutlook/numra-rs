@@ -746,11 +746,11 @@ ndarray-linalg in disguise". Defer until there's a story to tell.
 
 ### F-WEBSITE-AUDIT-GATES: Fix orphan website audit gates surfaced by F-CI-NODE20
 
-**Status**: partially retired 2026-05-16. Config-staleness and book
-URL-list portions landed in `Unreleased` (next 0.1.x release); the four
-genuine deployed-site regressions the audit pass surfaced are split out
-as their own follow-ups below. Full closure when those land and the
-gates run clean on a PR-event trigger.
+**Status**: partially retired 2026-05-16. Config-staleness, book
+URL-list, and Playwright wrong-expectation portions landed in
+`Unreleased` (next 0.1.x release); the four split-out follow-ups for
+genuine deployed-site regressions are below. Full closure when those
+land and the gates run clean on a PR-event trigger.
 
 **Background**: surfaced 2026-05-15 by F-CI-NODE20's PR (#5) — first PR
 ever to trigger `website.yml` on a `pull_request` event, which is when
