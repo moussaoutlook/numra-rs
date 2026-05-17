@@ -37,6 +37,20 @@ pub struct SolverOptions<S: Scalar> {
     pub t_eval: Option<Vec<S>>,
     /// Enable dense output
     pub dense_output: bool,
+    /// Maximum BDF order during adaptive order selection.
+    ///
+    /// `None` (default) = use the BDF solver's natural cap (order 5).
+    /// `Some(n)` clamps to `[1, 5]`. No effect on non-BDF solvers.
+    pub max_order: Option<usize>,
+    /// Minimum BDF order during adaptive order selection.
+    ///
+    /// `None` (default) = use the BDF solver's natural floor (order 1).
+    /// `Some(n)` clamps to `[1, 5]`. BDF always starts at order 1
+    /// (only single-step information is available at startup); the floor
+    /// is enforced during downward order adaptation, so combining
+    /// `max_order(n)` with `min_order(n)` of the same value pins the order
+    /// to `n` once it has risen there. No effect on non-BDF solvers.
+    pub min_order: Option<usize>,
     /// Event functions for zero-crossing detection (Arc enables Clone)
     pub events: Vec<Arc<dyn EventFunction<S>>>,
 }
@@ -52,6 +66,8 @@ impl<S: Scalar> Clone for SolverOptions<S> {
             max_steps: self.max_steps,
             t_eval: self.t_eval.clone(),
             dense_output: self.dense_output,
+            max_order: self.max_order,
+            min_order: self.min_order,
             events: self.events.clone(),
         }
     }
@@ -68,6 +84,8 @@ impl<S: Scalar> fmt::Debug for SolverOptions<S> {
             .field("max_steps", &self.max_steps)
             .field("t_eval", &self.t_eval)
             .field("dense_output", &self.dense_output)
+            .field("max_order", &self.max_order)
+            .field("min_order", &self.min_order)
             .field("events", &format!("[{} event(s)]", self.events.len()))
             .finish()
     }
@@ -88,6 +106,8 @@ impl<S: Scalar> Default for SolverOptions<S> {
             max_steps: 100_000,
             t_eval: None,
             dense_output: false,
+            max_order: None,
+            min_order: None,
             events: Vec::new(),
         }
     }
@@ -139,6 +159,27 @@ impl<S: Scalar> SolverOptions<S> {
     /// Set minimum step size.
     pub fn h_min(mut self, h_min: S) -> Self {
         self.h_min = h_min;
+        self
+    }
+
+    /// Cap the maximum BDF order during adaptive order selection.
+    ///
+    /// Useful for keeping BDF L-stable (`max_order(2)`) on problems that
+    /// need strict L-stability. No effect on non-BDF solvers. Values are
+    /// clamped to `[1, 5]` (BDF's algorithmic limit).
+    pub fn max_order(mut self, n: usize) -> Self {
+        self.max_order = Some(n);
+        self
+    }
+
+    /// Pin the minimum BDF order during adaptive order selection.
+    ///
+    /// Combined with `max_order(n)` of the same value, pins the BDF order
+    /// to `n` once adaptive selection reaches it (BDF always starts at
+    /// order 1). No effect on non-BDF solvers. Values are clamped to
+    /// `[1, 5]` (BDF's algorithmic limit).
+    pub fn min_order(mut self, n: usize) -> Self {
+        self.min_order = Some(n);
         self
     }
 

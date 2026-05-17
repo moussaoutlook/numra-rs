@@ -38,7 +38,8 @@
 //! - [`Bdf`] - BDF orders 1-5 with variable order
 //!
 //! ### Automatic Selection
-//! - [`Auto`] - Automatic solver selection based on problem characteristics
+//! - [`auto_solve`] / [`auto_solve_with_hints`] - Automatic solver selection
+//!   based on problem characteristics
 //!
 //! ## Example
 //!
@@ -106,7 +107,7 @@ pub use esdirk::{Esdirk32, Esdirk43, Esdirk54};
 pub use radau5::Radau5;
 
 // Automatic selection
-pub use auto::{auto_solve, auto_solve_with_hints, Accuracy, Auto, SolverHints, Stiffness};
+pub use auto::{auto_solve, auto_solve_with_hints, Accuracy, SolverHints, Stiffness};
 
 pub use sensitivity::{
     solve_forward_sensitivity, solve_forward_sensitivity_with, AugmentedSystem, ClosureSystem,

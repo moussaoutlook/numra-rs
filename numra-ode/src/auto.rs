@@ -114,190 +114,75 @@ impl SolverHints {
     }
 }
 
-/// Automatic solver selection.
-#[derive(Clone, Debug, Default)]
-pub struct Auto {
-    #[allow(dead_code)]
-    hints: SolverHints,
-}
-
-impl Auto {
-    /// Create auto-selector with default hints.
-    pub fn new() -> Self {
-        Self {
-            hints: SolverHints::new(),
-        }
-    }
-
-    /// Create auto-selector with custom hints.
-    pub fn with_hints(hints: SolverHints) -> Self {
-        Self { hints }
-    }
-
-    /// Determine accuracy level from options.
-    fn classify_accuracy<S: Scalar>(options: &SolverOptions<S>) -> Accuracy {
-        let rtol = options.rtol.to_f64();
-        if rtol >= 1e-3 {
-            Accuracy::Low
-        } else if rtol >= 1e-7 {
-            Accuracy::Standard
-        } else if rtol >= 1e-11 {
-            Accuracy::High
-        } else {
-            Accuracy::VeryHigh
-        }
-    }
-
-    /// Attempt stiffness detection.
-    fn detect_stiffness<S, Sys>(
-        problem: &Sys,
-        t: S,
-        y: &[S],
-        _options: &SolverOptions<S>,
-    ) -> Stiffness
-    where
-        S: Scalar,
-        Sys: OdeSystem<S>,
-    {
-        let dim = problem.dim();
-        if dim == 0 {
-            return Stiffness::Unknown;
-        }
-
-        // Compute Jacobian eigenvalues (approximate via power iteration)
-        let h_factor = S::EPSILON.sqrt();
-        let mut f0 = vec![S::ZERO; dim];
-        let mut f1 = vec![S::ZERO; dim];
-        let _jv = vec![S::ZERO; dim];
-
-        problem.rhs(t, y, &mut f0);
-
-        // Simple stiffness indicator: ratio of max/min Jacobian elements
-        let mut max_jac = S::ZERO;
-        let mut min_jac = S::INFINITY;
-        let mut y_pert = y.to_vec();
-
-        for j in 0..dim.min(10) {
-            // Sample first 10 components for stiffness detection
-            let yj = y[j];
-            let h = h_factor * (S::ONE + yj.abs());
-            y_pert[j] = yj + h;
-            problem.rhs(t, &y_pert, &mut f1);
-            y_pert[j] = yj;
-
-            for i in 0..dim {
-                let jij = ((f1[i] - f0[i]) / h).abs();
-                if jij > S::from_f64(1e-15) {
-                    max_jac = max_jac.max(jij);
-                    min_jac = min_jac.min(jij);
-                }
-            }
-        }
-
-        // Stiffness ratio
-        if max_jac < S::from_f64(1e-10) {
-            return Stiffness::NonStiff;
-        }
-
-        let ratio = max_jac / min_jac.max(S::from_f64(1e-15));
-        let ratio_f64 = ratio.to_f64();
-
-        if ratio_f64 > 1e4 {
-            Stiffness::VeryStiff
-        } else if ratio_f64 > 100.0 {
-            Stiffness::ModeratelyStiff
-        } else {
-            Stiffness::NonStiff
-        }
-    }
-
-    /// Select and run appropriate solver.
-    pub fn solve_with_hints<S, Sys>(
-        problem: &Sys,
-        t0: S,
-        tf: S,
-        y0: &[S],
-        options: &SolverOptions<S>,
-        hints: &SolverHints,
-    ) -> Result<SolverResult<S>, SolverError>
-    where
-        S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField,
-        Sys: OdeSystem<S>,
-    {
-        // Determine accuracy
-        let accuracy = hints
-            .accuracy
-            .unwrap_or_else(|| Self::classify_accuracy(options));
-
-        // Determine stiffness
-        let stiffness = hints.stiffness.unwrap_or_else(|| {
-            if hints.detect_stiffness {
-                Self::detect_stiffness(problem, t0, y0, options)
-            } else {
-                Stiffness::Unknown
-            }
-        });
-
-        // Select solver based on characteristics
-        match (stiffness, accuracy, hints.prefer_implicit) {
-            // Non-stiff problems
-            (Stiffness::NonStiff, Accuracy::Low, false)
-            | (Stiffness::NonStiff, Accuracy::Standard, false) => {
-                Tsit5::solve(problem, t0, tf, y0, options)
-            }
-            (Stiffness::NonStiff, Accuracy::High, false) => {
-                Vern6::solve(problem, t0, tf, y0, options)
-            }
-            (Stiffness::NonStiff, Accuracy::VeryHigh, false) => {
-                Vern8::solve(problem, t0, tf, y0, options)
-            }
-
-            // Moderately stiff
-            (Stiffness::ModeratelyStiff, _, _) => Esdirk54::solve(problem, t0, tf, y0, options),
-
-            // Very stiff
-            (Stiffness::VeryStiff, Accuracy::Low, _)
-            | (Stiffness::VeryStiff, Accuracy::Standard, _) => {
-                Bdf::solve(problem, t0, tf, y0, options)
-            }
-            (Stiffness::VeryStiff, Accuracy::High, _)
-            | (Stiffness::VeryStiff, Accuracy::VeryHigh, _) => {
-                Radau5::solve(problem, t0, tf, y0, options)
-            }
-
-            // Prefer implicit
-            (_, _, true) => Esdirk54::solve(problem, t0, tf, y0, options),
-
-            // Unknown/default: try explicit first
-            (Stiffness::Unknown, _, _) => {
-                // Try Tsit5 first
-                match Tsit5::solve(problem, t0, tf, y0, options) {
-                    Ok(result) => {
-                        // Check if solution seems reasonable
-                        if result.stats.n_reject < result.stats.n_accept {
-                            return Ok(result);
-                        }
-                    }
-                    Err(_) => {}
-                }
-
-                // Fall back to implicit method
-                Esdirk54::solve(problem, t0, tf, y0, options)
-            }
-        }
+/// Determine accuracy level from options.
+fn classify_accuracy<S: Scalar>(options: &SolverOptions<S>) -> Accuracy {
+    let rtol = options.rtol.to_f64();
+    if rtol >= 1e-3 {
+        Accuracy::Low
+    } else if rtol >= 1e-7 {
+        Accuracy::Standard
+    } else if rtol >= 1e-11 {
+        Accuracy::High
+    } else {
+        Accuracy::VeryHigh
     }
 }
 
-impl<S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField> Solver<S> for Auto {
-    fn solve<Sys: OdeSystem<S>>(
-        problem: &Sys,
-        t0: S,
-        tf: S,
-        y0: &[S],
-        options: &SolverOptions<S>,
-    ) -> Result<SolverResult<S>, SolverError> {
-        let hints = SolverHints::new();
-        Self::solve_with_hints(problem, t0, tf, y0, options, &hints)
+/// Attempt stiffness detection.
+fn detect_stiffness<S, Sys>(problem: &Sys, t: S, y: &[S], _options: &SolverOptions<S>) -> Stiffness
+where
+    S: Scalar,
+    Sys: OdeSystem<S>,
+{
+    let dim = problem.dim();
+    if dim == 0 {
+        return Stiffness::Unknown;
+    }
+
+    // Compute Jacobian eigenvalues (approximate via power iteration)
+    let h_factor = S::EPSILON.sqrt();
+    let mut f0 = vec![S::ZERO; dim];
+    let mut f1 = vec![S::ZERO; dim];
+    let _jv = vec![S::ZERO; dim];
+
+    problem.rhs(t, y, &mut f0);
+
+    // Simple stiffness indicator: ratio of max/min Jacobian elements
+    let mut max_jac = S::ZERO;
+    let mut min_jac = S::INFINITY;
+    let mut y_pert = y.to_vec();
+
+    for j in 0..dim.min(10) {
+        // Sample first 10 components for stiffness detection
+        let yj = y[j];
+        let h = h_factor * (S::ONE + yj.abs());
+        y_pert[j] = yj + h;
+        problem.rhs(t, &y_pert, &mut f1);
+        y_pert[j] = yj;
+
+        for i in 0..dim {
+            let jij = ((f1[i] - f0[i]) / h).abs();
+            if jij > S::from_f64(1e-15) {
+                max_jac = max_jac.max(jij);
+                min_jac = min_jac.min(jij);
+            }
+        }
+    }
+
+    // Stiffness ratio
+    if max_jac < S::from_f64(1e-10) {
+        return Stiffness::NonStiff;
+    }
+
+    let ratio = max_jac / min_jac.max(S::from_f64(1e-15));
+    let ratio_f64 = ratio.to_f64();
+
+    if ratio_f64 > 1e4 {
+        Stiffness::VeryStiff
+    } else if ratio_f64 > 100.0 {
+        Stiffness::ModeratelyStiff
+    } else {
+        Stiffness::NonStiff
     }
 }
 
@@ -313,7 +198,7 @@ where
     S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField,
     Sys: OdeSystem<S>,
 {
-    Auto::solve(problem, t0, tf, y0, options)
+    auto_solve_with_hints(problem, t0, tf, y0, options, &SolverHints::new())
 }
 
 /// Convenience function for automatic solving with hints.
@@ -329,7 +214,58 @@ where
     S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField,
     Sys: OdeSystem<S>,
 {
-    Auto::solve_with_hints(problem, t0, tf, y0, options, hints)
+    // Determine accuracy
+    let accuracy = hints.accuracy.unwrap_or_else(|| classify_accuracy(options));
+
+    // Determine stiffness
+    let stiffness = hints.stiffness.unwrap_or_else(|| {
+        if hints.detect_stiffness {
+            detect_stiffness(problem, t0, y0, options)
+        } else {
+            Stiffness::Unknown
+        }
+    });
+
+    // Select solver based on characteristics
+    match (stiffness, accuracy, hints.prefer_implicit) {
+        // Non-stiff problems
+        (Stiffness::NonStiff, Accuracy::Low, false)
+        | (Stiffness::NonStiff, Accuracy::Standard, false) => {
+            Tsit5::solve(problem, t0, tf, y0, options)
+        }
+        (Stiffness::NonStiff, Accuracy::High, false) => Vern6::solve(problem, t0, tf, y0, options),
+        (Stiffness::NonStiff, Accuracy::VeryHigh, false) => {
+            Vern8::solve(problem, t0, tf, y0, options)
+        }
+
+        // Moderately stiff
+        (Stiffness::ModeratelyStiff, _, _) => Esdirk54::solve(problem, t0, tf, y0, options),
+
+        // Very stiff
+        (Stiffness::VeryStiff, Accuracy::Low, _)
+        | (Stiffness::VeryStiff, Accuracy::Standard, _) => Bdf::solve(problem, t0, tf, y0, options),
+        (Stiffness::VeryStiff, Accuracy::High, _)
+        | (Stiffness::VeryStiff, Accuracy::VeryHigh, _) => {
+            Radau5::solve(problem, t0, tf, y0, options)
+        }
+
+        // Prefer implicit
+        (_, _, true) => Esdirk54::solve(problem, t0, tf, y0, options),
+
+        // Unknown/default: try explicit first
+        (Stiffness::Unknown, _, _) => {
+            // Try Tsit5 first
+            if let Ok(result) = Tsit5::solve(problem, t0, tf, y0, options) {
+                // Check if solution seems reasonable
+                if result.stats.n_reject < result.stats.n_accept {
+                    return Ok(result);
+                }
+            }
+
+            // Fall back to implicit method
+            Esdirk54::solve(problem, t0, tf, y0, options)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -348,7 +284,7 @@ mod tests {
             vec![1.0],
         );
         let options = SolverOptions::default().rtol(1e-6);
-        let result = Auto::solve(&problem, 0.0, 5.0, &[1.0], &options).unwrap();
+        let result = auto_solve(&problem, 0.0, 5.0, &[1.0], &options).unwrap();
 
         assert!(result.success);
         let y_final = result.y_final().unwrap();
@@ -372,14 +308,14 @@ mod tests {
         // Use moderately stiff hint which selects ESDIRK (more robust than BDF currently)
         let hints = SolverHints::new().stiffness(Stiffness::ModeratelyStiff);
 
-        let result = Auto::solve_with_hints(&problem, 0.0, 0.1, &[1.0], &options, &hints).unwrap();
+        let result = auto_solve_with_hints(&problem, 0.0, 0.1, &[1.0], &options, &hints).unwrap();
 
         assert!(result.success);
         let y_final = result.y_final().unwrap();
         let expected = (-10.0_f64).exp();
         assert!(
             (y_final[0] - expected).abs() < 0.05,
-            "Auto stiff: got {}, expected {}",
+            "stiff: got {}, expected {}",
             y_final[0],
             expected
         );
@@ -401,14 +337,14 @@ mod tests {
         let hints = SolverHints::new().stiffness(Stiffness::NonStiff);
 
         let result =
-            Auto::solve_with_hints(&problem, 0.0, 10.0, &[1.0, 0.0], &options, &hints).unwrap();
+            auto_solve_with_hints(&problem, 0.0, 10.0, &[1.0, 0.0], &options, &hints).unwrap();
 
         assert!(result.success);
         let y_final = result.y_final().unwrap();
         // Allow 0.1% error for moderate tolerances
         assert!(
             (y_final[0] - 10.0_f64.cos()).abs() < 1e-3,
-            "Auto high accuracy: got {}, expected {}",
+            "high accuracy: got {}, expected {}",
             y_final[0],
             10.0_f64.cos()
         );
@@ -426,7 +362,7 @@ mod tests {
             vec![1.0],
         );
         let options = SolverOptions::default();
-        let stiffness1 = Auto::detect_stiffness(&problem1, 0.0, &[1.0], &options);
+        let stiffness1 = detect_stiffness(&problem1, 0.0, &[1.0], &options);
         assert_eq!(stiffness1, Stiffness::NonStiff);
 
         // Stiff problem
@@ -439,7 +375,7 @@ mod tests {
             1.0,
             vec![1.0, 1.0],
         );
-        let stiffness2 = Auto::detect_stiffness(&problem2, 0.0, &[1.0, 1.0], &options);
+        let stiffness2 = detect_stiffness(&problem2, 0.0, &[1.0, 1.0], &options);
         assert!(stiffness2 == Stiffness::VeryStiff || stiffness2 == Stiffness::ModeratelyStiff);
     }
 
@@ -450,10 +386,10 @@ mod tests {
         let opts_high: SolverOptions<f64> = SolverOptions::default().rtol(1e-10);
         let opts_vhigh: SolverOptions<f64> = SolverOptions::default().rtol(1e-13);
 
-        assert_eq!(Auto::classify_accuracy(&opts_low), Accuracy::Low);
-        assert_eq!(Auto::classify_accuracy(&opts_std), Accuracy::Standard);
-        assert_eq!(Auto::classify_accuracy(&opts_high), Accuracy::High);
-        assert_eq!(Auto::classify_accuracy(&opts_vhigh), Accuracy::VeryHigh);
+        assert_eq!(classify_accuracy(&opts_low), Accuracy::Low);
+        assert_eq!(classify_accuracy(&opts_std), Accuracy::Standard);
+        assert_eq!(classify_accuracy(&opts_high), Accuracy::High);
+        assert_eq!(classify_accuracy(&opts_vhigh), Accuracy::VeryHigh);
     }
 
     #[test]
