@@ -16,23 +16,28 @@ What gates a `0.1.x` release is recorded here so the trigger doesn't
 remain an undocumented working agreement. Append-only; update when the
 trigger conditions change.
 
-**0.1.3** (current target): ships when **F-FD-NOSCALE-BUG** (already
-landed in `Unreleased`) and **F-OPTS** (landing 2026-05-16) close. The
-crate-affecting trio item F-SOLVER-FIELDS is **deferred** to a fresh
-foundation-process session (decision recorded 2026-05-16, implementation
-not on the 0.1.3 path); F-MATRIX-SHAPE is **deferred** as a Foundation
-Spec §7 #5 open question under the spec's named trigger. Website-track
-follow-ups (F-WEBSITE-AUDIT-GATES split-outs, F-WEBSITE-PR-FLOW, etc.)
-**never enter the release-trigger condition** because they're
-CI/website-quality work that lands on `main` and redeploys via
-Cloudflare Pages independent of `cargo publish`. With F-SOLVER-FIELDS
-deferred, 0.1.3's crate content is thin (one correctness bug fix plus
-a rustdoc paragraph across five options structs) — that thinness is
-itself a reason not to rush 0.1.3; it can sit in `Unreleased` until a
-substantive item joins, or ship now as a small focused release.
-Decision deferred to the next release session.
+**0.1.3** (current target): ships when **F-FD-NOSCALE-BUG** (landed in
+`Unreleased` 2026-05-15), **F-OPTS** (landed 2026-05-16), and
+**F-SOLVER-FIELDS** (landed 2026-05-17) close — all three now landed,
+trigger condition met. F-MATRIX-SHAPE is **deferred** as a Foundation
+Spec §7 #5 open question under the spec's named trigger and is **not**
+a 0.1.3 gate. Website-track follow-ups (F-WEBSITE-AUDIT-GATES split-outs,
+F-WEBSITE-PR-FLOW, etc.) **never enter the release-trigger condition**
+because they're CI/website-quality work that lands on `main` and
+redeploys via Cloudflare Pages independent of `cargo publish`. With
+F-SOLVER-FIELDS landed, 0.1.3's crate content is now substantive: one
+correctness bug fix (F-FD-NOSCALE-BUG), a rustdoc paragraph across five
+options structs (F-OPTS), an additive `SolverOptions` evolution plus a
+breaking public-API removal of silently-non-functional surface
+(F-SOLVER-FIELDS, including Foundation Spec §3.7 drift closure). The
+earlier "too thin to ship" calculus from 2026-05-16 no longer applies —
+the substantive bundle now favors shipping rather than further
+deferral. Final ship decision is its own per-step-confirmed sequence
+(version bump, CHANGELOG stamp, tag, `cargo publish`, Zenodo, GitHub
+Release, CITATION.cff back-port, docs.rs verification) and only
+happens on explicit go-ahead after the F-SOLVER-FIELDS PR merges.
 
-Last updated: 2026-05-16 (F-OPTS closed in `Unreleased` — five solver-family options structs (SDE/FDE/IDE/DDE/SPDE) now carry paragraph-form rustdoc divergence rationales pointing at Foundation Spec §2.5; audit found 2 sites beyond the named 3 (DdeOptions, SpdeOptions). F-MATRIX-SHAPE entry re-scoped as the operational tracker for Foundation Spec §7 #5; both the original "design question pending" framing and the audit's same-day "(b) de-facto" reading are retracted — the existing `&SparseMatrix<S>`-concrete pattern in iterative.rs/preconditioner.rs is expedient, not deliberate, and does not license either unification or "deliberately dense-only" documentation; question deferred per spec's named trigger. F-SOLVER-FIELDS decision recorded: option (b) (wire `max_order`/`min_order` through `SolverOptions`) per §2.5's centralized-configuration principle and §3.7's per-family extension anticipation; (a) rejected (deletes legitimate BDF capability); (c) recorded as deferred foundation open question (overriding §2.5 would need deliberate foundation design); implementation deferred to a fresh foundation-process session, not tonight. `Auto` struct cleanup (vestigial — `Solver<S>` impl ignores `self`, fields have zero workspace reads) rides with the (b) implementation. §3.7 spec-vs-reality drift flagged (spec says BDF max_order lives in `SolverOptions`; reality has it on the `Bdf` struct as a non-functional builder) for the implementer to close when (b) lands. New "Release-trigger conditions" section added — 0.1.3 gates on F-FD-NOSCALE-BUG + F-OPTS only; F-SOLVER-FIELDS and F-MATRIX-SHAPE deferred foundation work; website-track never enters the release trigger. — Earlier the same day: F-WEBSITE-SEO retired-with-reframe (preview-noindex misread as production-block; full retraction); Lighthouse `is-crawlable` disabled in both preset configs; F-WEBSITE-SEO-PROD-PROBE and F-WEBSITE-SEO-VERIFY forked; F-WEBSITE-AUDIT-GATES Amendment 3; F-WEBSITE-PR-FLOW recategorization. And earlier: F-WEBSITE-AUDIT-GATES partially retired.)
+Last updated: 2026-05-17 (F-SOLVER-FIELDS closed in `Unreleased` via the recorded option (b): `SolverOptions::max_order` / `SolverOptions::min_order` top-level `Option<usize>` fields and builders now wire BDF order control through the shared configuration vocabulary; default `None` preserves prior behavior byte-identically. Audit confirmation reproduced yesterday's findings exactly with two sharpenings (the `auto_solve` free function called `Auto::solve` internally requiring rewire, not pure deletion; the `solve_with_uncertainty::<Auto, f64>` doc example documented a never-functional capability that would have produced incorrect uncertainty-quantification output — surfaced in the breaking-removal CHANGELOG justification, not buried as cosmetic doc fix). Shape decision: top-level `Option<usize>` fields, per Foundation Spec §2.5's "one configuration vocabulary" principle and matching the established `dense_output`/`events` "applicable-to-some, ignored-by-rest" precedent; sub-struct path explicitly deferred to a future foundation-design pass triggered by multi-family namespace pressure (not now, not speculative). Builder disposition: B-2 clean delete of `Bdf::new`, `Bdf::with_max_order`, `Bdf::fixed_order`, `Bdf::{max_order,min_order}` fields, the `Auto` struct, `Auto::new`, `Auto::with_hints`, `impl Solver<S> for Auto`, and the `Auto::hints` field — all silently non-functional under the pre-fix code path, all migrations documented in CHANGELOG `### Removed`. Foundation-process artifacts: §6 decision-log entry #12 with explicit drift-closure note; §3.7 rewritten to describe the now-real top-level mechanism (closes spec-vs-reality drift); §3.4 (a)/(b)/(c) design-tension paragraph rewritten to reflect resolution; §7 #8 added recording option (c) (`Solver::solve(&self)` reshape) as a deferred foundation open question. Two distinct CHANGELOG entries per §2.8 visibility discipline: one `### Changed` (additive `SolverOptions` evolution) and one `### Removed` (breaking public-API removal with full migration text). Regression pinned by `numra-ode/tests/solver_options_order_regression.rs`; revert-confirm-restore protocol applied (temporarily reverting `bdf.rs::solve_internal` wiring → pinning test fails with `pinned==default==209` proving knob has no effect; restoring → test passes with `pinned ≫ 5×default`). 0.1.3's release-trigger condition now met (substantive bundle: F-FD-NOSCALE-BUG + F-OPTS + F-SOLVER-FIELDS); ship decision is its own per-step process. — Earlier: F-OPTS closed in `Unreleased` — five solver-family options structs (SDE/FDE/IDE/DDE/SPDE) now carry paragraph-form rustdoc divergence rationales pointing at Foundation Spec §2.5; audit found 2 sites beyond the named 3 (DdeOptions, SpdeOptions). F-MATRIX-SHAPE entry re-scoped as the operational tracker for Foundation Spec §7 #5; both the original "design question pending" framing and the audit's same-day "(b) de-facto" reading are retracted — the existing `&SparseMatrix<S>`-concrete pattern in iterative.rs/preconditioner.rs is expedient, not deliberate, and does not license either unification or "deliberately dense-only" documentation; question deferred per spec's named trigger. F-SOLVER-FIELDS decision recorded: option (b) (wire `max_order`/`min_order` through `SolverOptions`) per §2.5's centralized-configuration principle and §3.7's per-family extension anticipation; (a) rejected (deletes legitimate BDF capability); (c) recorded as deferred foundation open question (overriding §2.5 would need deliberate foundation design); implementation deferred to a fresh foundation-process session, not tonight. `Auto` struct cleanup (vestigial — `Solver<S>` impl ignores `self`, fields have zero workspace reads) rides with the (b) implementation. §3.7 spec-vs-reality drift flagged (spec says BDF max_order lives in `SolverOptions`; reality has it on the `Bdf` struct as a non-functional builder) for the implementer to close when (b) lands. New "Release-trigger conditions" section added — 0.1.3 gates on F-FD-NOSCALE-BUG + F-OPTS only; F-SOLVER-FIELDS and F-MATRIX-SHAPE deferred foundation work; website-track never enters the release trigger. — Earlier the same day: F-WEBSITE-SEO retired-with-reframe (preview-noindex misread as production-block; full retraction); Lighthouse `is-crawlable` disabled in both preset configs; F-WEBSITE-SEO-PROD-PROBE and F-WEBSITE-SEO-VERIFY forked; F-WEBSITE-AUDIT-GATES Amendment 3; F-WEBSITE-PR-FLOW recategorization. And earlier: F-WEBSITE-AUDIT-GATES partially retired.)
 
 ## Recently retired
 
@@ -40,6 +45,7 @@ One-line entries for follow-ups that landed and were removed from the
 file. Kept here so a future reader can find the closure record without
 git-archaeology.
 
+- **F-SOLVER-FIELDS: wire `Bdf::max_order`/`min_order` through `SolverOptions`; clean up vestigial `Auto`** — closed 2026-05-17 in `Unreleased` per the recorded option (b). *Snapshot framing: the symbol names referenced below (`Bdf::with_max_order`, `Bdf::fixed_order`, `Bdf::new`, `Bdf::{max_order,min_order}` fields, `Auto` struct, `Auto::new`, `Auto::with_hints`, `impl Solver<S> for Auto`, `Auto::hints` field) refer to the pre-fix public-API surface deleted by this close — a future reader navigating to find them and discovering they're gone is finding the documented outcome, not a record-vs-reality drift. Migration mappings in CHANGELOG `### Removed`.* `SolverOptions` gains top-level `Option<usize>` `max_order` / `min_order` fields with builders, consumed by BDF (clamped to `[1, MAX_ORDER=5]`) and ignored by every other solver — same precedent as `dense_output` and `events`. `Bdf`'s `Solver<S>::solve` impl now reads them; defaults `None` preserve prior behavior byte-identically across every existing call site. Foundation Spec §3.7 drift closed (the spec's claim that BDF max order lives in `SolverOptions` was previously false; the (b) wiring makes it true). Two distinct change-classes documented separately per §2.8 visibility discipline: one `### Changed` CHANGELOG entry for the additive evolution, one `### Removed` entry for the breaking public-API removal of silently-non-functional surface — `Bdf::new`, `Bdf::with_max_order`, `Bdf::fixed_order`, the `Bdf::{max_order, min_order}` fields, the `Auto` struct, `Auto::new`, `Auto::with_hints`, `impl Solver<S> for Auto`, the `Auto::hints` field. The `Auto` removal's justification is sharper than "vestigial": `Auto::solve` silently discarded any user-supplied `SolverHints`, so the documented `solve_with_uncertainty::<Auto, f64>(...)` example used auto-detected dispatch regardless of user intent — which *can* produce inaccurate uncertainty quantification when the hints encoded problem structure that auto-detection doesn't reconstruct (conditional on the user actually building hints; not an unconditional wrong-output claim). Surfaced in the CHANGELOG `### Removed` justification at that precise scope, not buried as cosmetic doc fix and not overclaimed as unconditional silent-wrong-output. The user-facing `auto_solve` / `auto_solve_with_hints` / `SolverHints` API is unaffected. Foundation Spec §6 #12 records the decision with full rationale, §3.4 design-tension paragraph rewritten to reflect resolution, §7 #8 records option (c) (reshape `Solver::solve` to `&self`) as a deferred foundation open question — explicitly *not* foreclosed by (b); a future session adopting (c) must justify the override against §2.5's centralized-configuration principle. Regression pinned by `numra-ode/tests/solver_options_order_regression.rs` (revert-confirm-restore protocol applied — reverting the wiring makes the pinning test fail with `pinned==default==209` proving the knob has no effect; restoring the wiring makes it pass with `pinned ≫ 5×default`). Audit confirmed yesterday's findings exactly with two sharpenings (the `auto_solve` free function required rewire to call the freed `auto_solve_with_hints` directly, not pure deletion; the `solve_with_uncertainty::<Auto, f64>` doc example documented a never-functional capability — both surfaced at the pre-implementation hard-stop, not after). Shape decision: top-level over sub-struct, per §2.5 reading and the precedent argument (`dense_output` / `events` already use the same shape); sub-struct path deferred to a future foundation-design pass triggered by multi-family namespace pressure rather than speculative anticipation now.
 - **F-OPTS: SDE/FDE/IDE options divergence from `SolverOptions` documentation** — closed 2026-05-16 in `Unreleased`. Foundation Spec §2.5 explicitly named F-OPTS as the documentation follow-up for the divergent solver-family options structs predating §2.5's "Configuration objects are shared across solver families" principle. Audit pass surfaced 2 additional sites beyond the entry's named 3: `DdeOptions` (`numra-dde/src/system.rs:54`) and `SpdeOptions` (`numra-spde/src/solver.rs:56`) — same audit-surfaces-more-than-named pattern as F-FD-STEP / F-CI-NODE20 / F-FD-CROSSCRATE / F-ERR (5-of-6 follow-ups now). Each of the five (`SdeOptions`, `FdeOptions`, `IdeOptions`, `DdeOptions`, `SpdeOptions`) gains a paragraph-form rustdoc divergence rationale grounded in the family's actual fields (noise-discretisation time control for SDE/SPDE; fixed-step-by-construction for FDE/IDE; discontinuity-propagation for DDE) plus a pointer to `docs/architecture/foundation-specification.md` §2.5. Per-family claims pre-commit-verified against consuming solver code: SRA-family (`sra.rs:128,296`) confirms adaptive `rtol`/`atol` consumption; DDE `dense_output: true` default confirmed at `system.rs:87`; SPDE `adaptive: bool` gates real branching at `solver.rs:395` between fixed-step EM/Milstein dispatch and adaptive variant code. The entry's "Optionally consider whether the divergence is still justified" question is *not* rolled into this close — `DdeOptions` is the most plausible retrofit candidate (closest shape to `SolverOptions`); if pursued it would open as F-OPTS-RETROFIT-DDE only when a real retrofit is contemplated, not speculatively. Rustdoc-only change; no public-API behavior altered.
 - **F-WEBSITE-SEO: entire Numra web presence is blocked from search indexing** — retired-with-reframe 2026-05-16, **without shipping a site fix because no site fix was warranted**. The entry's load-bearing premise — "the entire public Numra web presence has been organically undiscoverable by search engines since launch" — was wrong. The `is-crawlable: 0` finding it cited (Lighthouse runs on PR #5 and PR #8) came exclusively from PR **preview** deployments, which Cloudflare Pages deliberately injects `X-Robots-Tag: noindex` on to prevent duplicate-content with production. Direct checks against production on 2026-05-16 disconfirm the config-block hypothesis: `curl -I https://numra-rs.org/` and `curl -I https://book.numra-rs.org/` returned HTTP 200 with no `x-robots-tag` header; both sites' built HTML contains no `<meta name="robots">`; neither `_headers` file declares an `X-Robots-Tag`; `website/site/public/robots.txt` is `Allow: /`; Cloudflare's documented preview-only noindex behavior explicitly excludes production custom domains. **Production custom domains are not config-blocked from indexing** as of those checks. **Whether the production sites are actually indexed in practice** (sitemap pickup, Search Console coverage, organic crawler discovery) **is unverified and separately tracked as F-WEBSITE-SEO-VERIFY** — "config isn't blocking" is necessary-not-sufficient, and the retirement framing preserves that distinction rather than collapsing it. The gate was asserting `is-crawlable` against URLs Cloudflare designs to fail it, not against production. This is the same preview-only-false-signal shape as the marketing dark-mode Playwright tests retired in F-WEBSITE-AUDIT-GATES, though structurally narrower: the dark-mode case was a wrong property (marketing is light-only by design); the SEO case is the right property against the wrong URL set (preview-vs-production divergence in Cloudflare's documented behavior). Re-introducing the SEO assertion against a production-URL audit path would be correct (tracked as F-WEBSITE-SEO-PROD-PROBE); re-introducing the dark-mode marketing assertions against any URL would not. **The "highest priority in the entire backlog" / "every day of delay" / expedite-if-trivial framing is fully retracted**: it was built on the demonstrated misread of preview-noindex as production-block, and the direct checks disconfirm that misread. The in-scope action taken was instead to disable the `is-crawlable` assertion in both Lighthouse preset configs (`website/ci/lighthouserc.json`, `website/ci/lighthouserc-book.json`) with a foreclosing top-level `_comment` documenting the preview-noindex semantics — gate-correction-not-gate-silencing, same as the dark-mode tests. Two narrower follow-ups forked from the audit's residual observations: F-WEBSITE-SEO-PROD-PROBE (the unimplemented production-URL audit path the workflow comment at `.github/workflows/website.yml:213-215` aspires to but doesn't ship — a real CI-hygiene gap, medium priority) and F-WEBSITE-SEO-VERIFY (the necessary-not-sufficient sanity-check above — low priority, explicitly non-engineering). Neither fork inherits the original entry's highest-priority framing. The audit pattern lesson: gates that run against preview URLs cannot assert properties whose semantics differ between preview and production — same shape lesson F-WEBSITE-PR-FLOW must already incorporate, now with a third worked example. The premise correction was caught at the audit hard-stop before any code edit, before any CHANGELOG claim, and before the planned tiny-PR expedite — the hard-stop discipline was load-bearing in exactly the way it was for F-WEBSITE-AUDIT-GATES's URL-fix and Playwright corrections. **Symmetric-overclaim guard**: this retraction was further reviewed against the inverse risk — replacing "production is blocked" with "production was always correctly indexable" would have been one unverified absolute swapped for another, an emotionally-satisfying shape for a fourth correction in this arc that the necessary-not-sufficient discipline must specifically catch. The replacement claim is stated at the precision the direct checks support ("not config-blocked from indexing, as of 2026-05-16 checks"); the in-practice question is held open via F-WEBSITE-SEO-VERIFY rather than closed by inference. Same discipline that caught the original preview-vs-production misread, applied one level deeper to the correction itself.
 - **F-FD-NOSCALE-BUG: no-scaling correctness bug in public FD utilities** — landed in `Unreleased` (next 0.1.x release) 2026-05-15. Four FD utilities defaulting to hardcoded `h = 1e-8` without `(1 + |x|)` scaling silently degraded gradient/Jacobian outputs for callers with `|x| > ~5e7` (precision floor where `x + 1e-8` rounds back to `x` in `f64`). Fixed at all four named sites: `numra-optim/src/problem.rs:486` (`finite_diff_gradient`, central → `cbrt(EPSILON) * (1 + |x|)`), `numra-optim/src/problem.rs:503` (`finite_diff_jacobian`, central), `numra-dde/src/history.rs:188` (`History::evaluate_derivative` initial-history branch, central), `numra-sde/src/system.rs:68` (`SdeSystem::diffusion_derivative` trait default, **forward → `sqrt(EPSILON) * (1 + |x|)`** — direction-corrected by the audit; the entry had assumed central FD). Each pinned with a regression test at `|x| = 1e8` asserting analytical-truth proximity within `1e-3` relative; structural-correctness check verified on the forward-FD site (revert → fail → restore). Public-API rustdoc on the two `numra-optim` free functions documents the canonical step formula and the `~5e7` precision floor. Audit found exactly the four named sites — first follow-up where the audit confirmed the entry's scope rather than expanding it (different from F-FD-STEP / F-CI-NODE20 / F-FD-CROSSCRATE). The 0.1.2 CHANGELOG's note on this follow-up over-listed `numra-optim::robust` as no-scaling-bug-class; that was already corrected in F-FD-CROSSCRATE's audit pass and stands.
@@ -321,150 +327,6 @@ for the API surface so generic pipelines aren't broken at the boundary.
 Recorded as one consolidated follow-up rather than three separate
 entries because the three sites share the same generification approach
 and benefit from being addressed as a single sweep.
-
-### F-SOLVER-FIELDS: Wire `Bdf::max_order`/`min_order` through `SolverOptions`; clean up vestigial `Auto`
-
-**Status**: decision recorded 2026-05-16; implementation deferred to a
-fresh session. **Decision: option (b)** — wire `max_order` and
-`min_order` (the BDF order-control knobs) through `SolverOptions` (or a
-BDF-namespaced subset thereof), per Foundation Spec §3.4's documented
-(a)/(b)/(c) and §2.5's centralized-configuration principle. (a) is
-rejected; (c) is recorded as a deferred foundation open question, not
-adopted as the resolution here.
-
-**Audit findings (2026-05-16) that informed the decision**:
-
-- `Bdf::max_order` / `min_order` are read internally
-  (`numra-ode/src/bdf.rs:814,830,836`) via `solve_internal(&self, ...)`,
-  but the `Solver<S>` impl at `bdf.rs:164-175` discards `self` and
-  instantiates a fresh `Bdf::new()` for every static `Bdf::solve(...)`
-  call. The builder methods `Bdf::with_max_order` and `Bdf::fixed_order`
-  are therefore **silently non-functional** at the public trait surface —
-  the only call site that exercises caller-chosen order is the internal
-  test at `bdf.rs:1024-1025`, which bypasses the trait via
-  `solver.solve_internal(...)`. Every external invocation in the
-  workspace uses static `Bdf::solve(...)` syntax.
-- `Auto` is the same shape but worse: the entire `Auto` struct is
-  vestigial. `Auto::hints` is annotated `#[allow(dead_code)]` and has
-  zero workspace reads; `Auto::new` / `Auto::with_hints` are never
-  called externally; the `impl Solver<S> for Auto` at
-  `auto.rs:291-302` ignores `self.hints` and creates a fresh
-  `SolverHints::new()`. The user-facing API is the free function
-  `auto_solve` / `auto_solve_with_hints`, which takes `&SolverHints`
-  directly. The `Auto` struct exists but has no functional path.
-
-**Why (b), not (a) or (c)**:
-
-- **(a) — delete the non-functional builders**: rejected. BDF
-  caller-side order control is a legitimate numerical-library
-  capability (cap at order 2 to preserve L-stability;
-  fixed-low-order for problems with structural constraints).
-  Deleting a real capability because its plumbing is broken is the
-  least professional resolution; fixing the plumbing is correct.
-- **(c) — reshape `Solver::solve` to `fn solve(&self, ...)`**:
-  rejected as the resolution here, but **not closed** — it is a
-  legitimate foundation-design alternative that would also fix the
-  plumbing. (c) is rejected as the resolution because it fights
-  Foundation Spec §2.5's stated centralized-configuration
-  principle ("Users learn one configuration vocabulary, not
-  eighteen"). Overriding §2.5 in favor of instance-shaped
-  per-solver configuration would be a deliberate foundation-design
-  decision, not an end-of-session implementation. Recorded as
-  deferred foundation open question for a future session.
-- **(b) — wire through `SolverOptions`**: adopted. Aligns with
-  §2.5 (single shared configuration vocabulary) and §3.7's
-  documented "per-family extension mechanism may be needed" for
-  per-solver knobs. Additive `SolverOptions` evolution is
-  precedented (decision-log entries §6 #1 added `dense_output`;
-  §6 #10 made `t_eval` honored). Low-risk by precedent;
-  deliberate by foundation process.
-
-**Implementation requirements (when this lands as its own focused
-session)**:
-
-1. Decide the shape: a top-level `SolverOptions::max_order` /
-   `min_order` field (potentially `Option<usize>` so non-BDF solvers
-   ignore it without payload), or a BDF-namespaced sub-struct
-   (`SolverOptions::bdf: BdfOptions`). The top-level path matches
-   §2.5 most cleanly; the sub-struct path matches §3.7's
-   "per-family extension mechanism" anticipation. Default to the
-   top-level path unless the foundation-design conversation surfaces
-   a reason for the sub-struct.
-2. Update the `Bdf` static trait method to read the fields from
-   `SolverOptions` rather than ignoring `self`. Keep `Bdf::with_max_order`
-   / `Bdf::fixed_order` as ergonomic builders that produce a
-   pre-configured `SolverOptions` (or deprecate them in favor of
-   `SolverOptions::max_order(2)` if cleaner).
-3. **Clean up vestigial `Auto` in the same PR**: delete `Auto`
-   struct, `Auto::new`, `Auto::with_hints`, the `impl Solver<S> for
-   Auto`, and `Auto::hints` field. The user-facing API
-   (`auto_solve`, `auto_solve_with_hints`, `SolverHints`) is
-   unaffected. Auto's `Solver<S>` impl is also silently
-   non-functional under the same pattern; (b) doesn't fix it because
-   `auto_solve` is the actual entry point — so removal is the
-   correct action and rides naturally with the BDF wiring.
-4. Foundation-process discipline per §2.8:
-   - **§6 decision log entry**: append new entry recording this
-     decision, citing the audit and the §2.5 alignment.
-   - **§3.7 update**: spec currently says BDF max order "lives in
-     `SolverOptions` itself" — **spec-vs-reality drift**: in reality
-     it has been living on the `Bdf` struct as a non-functional
-     builder. The (b) implementation corrects §3.7 to match the new
-     reality (drift closed).
-   - **§3.4 update**: remove the "Tracked as F-SOLVER-FIELDS" bullet
-     and update the design-tension paragraph to reflect the resolution.
-   - **TWO distinct CHANGELOG "Changed" entries**, not one collapsed
-     "F-SOLVER-FIELDS" bullet. The PR couples two genuinely-different
-     change classes that §2.8 requires be visible separately:
-     - **Additive `SolverOptions` evolution** (low-risk, precedented
-       per decision-log #1 and #10): `max_order` / `min_order` added
-       to `SolverOptions`, `Bdf::solve` reads them. Same shape as the
-       `dense_output` / `t_eval` additions before it.
-     - **Subtractive public-API removal of `Auto`**: `Auto` struct,
-       `Auto::new`, `Auto::with_hints`, and `impl Solver<S> for Auto`
-       all deleted. **Technically breaking even at 0.1.x** — the
-       items are `pub` and visible in rustdoc. The breaking-removal
-       entry must call out: (i) the user-facing API (`auto_solve`,
-       `auto_solve_with_hints`, `SolverHints`) is unaffected;
-       (ii) the removed surface was silently non-functional (same
-       trait-discards-self pattern as Bdf, but unlike Bdf there is
-       no order-control capability to preserve since `auto_solve`
-       was always the actual entry point); (iii) anyone calling
-       `Auto::solve(...)` or `Auto::with_hints(...)` directly
-       should migrate to `auto_solve_with_hints(...)` which takes
-       the same `SolverHints` directly.
-     The PR is not split (the two changes are genuinely coupled by the
-     same non-functional-trait-impl pattern), but the future-session
-     implementer must produce both CHANGELOG entries distinctly so the
-     breaking removal is not concealed behind the additive bullet.
-   - **CHANGELOG `### Removed`** subsection if Keep-a-Changelog
-     ordering applies — `### Removed` is the natural home for the
-     `Auto` deletion under that taxonomy, with `### Changed` carrying
-     the additive `SolverOptions` evolution. The implementer chooses
-     between (i) single `### Changed` subsection with two bullets
-     clearly labeled "additive" / "breaking removal," or (ii) split
-     across `### Changed` (additive) + `### Removed` (Auto). Either
-     satisfies §2.8 as long as both change classes are visible.
-5. Tests: add a regression test that constructs
-   `SolverOptions::default().max_order(2).fixed_order(2)` (or the
-   chosen surface), passes it to `Bdf::solve`, and verifies the
-   resulting `SolverResult` exhibits the order-pinned behavior the
-   builder previously *claimed* to provide.
-
-**Priority**: medium. Real bug fix (the public-API builders are
-silently non-functional), but not user-reported. Below
-F-FD-NOSCALE-BUG-class active-correctness issues; above pure-doc
-items.
-
-**Sequencing**: implement as the first focused item of a fresh
-session, per the foundation-process discipline. Not tonight, not
-under throughput pressure.
-
-**0.1.3 gating note**: per the release-trigger conditions section,
-this is **not** a 0.1.3 gate. 0.1.3 ships F-FD-NOSCALE-BUG +
-F-OPTS as the crate-affecting close set; F-SOLVER-FIELDS lands
-when (b) is implemented, which is a deliberate foundation pass
-not tied to the 0.1.3 cadence.
 
 ---
 

@@ -264,18 +264,23 @@ let options = SolverOptions::default()
 
 ### Fixed-Order BDF
 
-If you know the problem structure, you can lock BDF to a specific order:
+If you know the problem structure, you can lock BDF to a specific order
+through `SolverOptions`:
 
 <!-- book-ignore: illustrative excerpt; not a standalone crate entry point. -->
 ```rust
-use numra::ode::Bdf;
+use numra::ode::SolverOptions;
 
 // BDF2 only (A-stable, good for mildly stiff problems)
-let solver = Bdf::fixed_order(2);
+let options = SolverOptions::default().max_order(2).min_order(2);
 
 // BDF1 = Backward Euler (most robust, lowest accuracy)
-let solver = Bdf::fixed_order(1);
+let options = SolverOptions::default().max_order(1).min_order(1);
 ```
+
+`max_order(n)` alone caps the order; combining `max_order(n)` with
+`min_order(n)` pins it once adaptive selection reaches `n` (BDF always
+starts at order 1).
 
 ## Summary
 

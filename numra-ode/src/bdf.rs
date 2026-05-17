@@ -79,40 +79,11 @@ use crate::solver::{Solver, SolverOptions, SolverResult, SolverStats};
 use crate::t_eval::{validate_grid, TEvalEmitter};
 
 /// BDF / NDF solver for stiff ODEs and index-1 DAEs (orders 1-5).
-#[derive(Clone, Debug, Default)]
-pub struct Bdf {
-    max_order: usize,
-    min_order: usize,
-}
-
-impl Bdf {
-    pub fn new() -> Self {
-        Self {
-            max_order: MAX_ORDER,
-            min_order: 1,
-        }
-    }
-
-    /// Cap the maximum order. Useful to keep the method L-stable
-    /// (max_order ≤ 2) for problems that need strict L-stability.
-    pub fn with_max_order(max_order: usize) -> Self {
-        Self {
-            max_order: max_order.clamp(1, MAX_ORDER),
-            min_order: 1,
-        }
-    }
-
-    /// Pin the order. Note: BDF *always* starts at order 1 (single-step info
-    /// available at startup); `fixed_order` only acts as a soft floor and a
-    /// hard ceiling for adaptive selection.
-    pub fn fixed_order(order: usize) -> Self {
-        let order = order.clamp(1, MAX_ORDER);
-        Self {
-            max_order: order,
-            min_order: order,
-        }
-    }
-}
+///
+/// Order control (cap, floor, pinning) is configured through
+/// [`SolverOptions::max_order`] and [`SolverOptions::min_order`].
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Bdf;
 
 // ---- Algorithm constants ---------------------------------------------------
 
@@ -169,9 +140,16 @@ impl<S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField> Solver<
         y0: &[S],
         options: &SolverOptions<S>,
     ) -> Result<SolverResult<S>, SolverError> {
-        let solver = Bdf::new();
-        solver.solve_internal(problem, t0, tf, y0, options)
+        solve_internal(problem, t0, tf, y0, options)
     }
+}
+
+/// Resolve the BDF order window from `SolverOptions`, clamping to the
+/// algorithmic `[1, MAX_ORDER]` range and ensuring `min_order ≤ max_order`.
+fn resolve_order_bounds<S: Scalar>(options: &SolverOptions<S>) -> (usize, usize) {
+    let max = options.max_order.unwrap_or(MAX_ORDER).clamp(1, MAX_ORDER);
+    let min = options.min_order.unwrap_or(1).clamp(1, max);
+    (min, max)
 }
 
 // ---- compute_R / change_D --------------------------------------------------
@@ -425,513 +403,498 @@ where
 
 // ---- Main solve loop -------------------------------------------------------
 
-impl Bdf {
-    fn solve_internal<S, Sys>(
-        &self,
-        problem: &Sys,
-        t0: S,
-        tf: S,
-        y0: &[S],
-        options: &SolverOptions<S>,
-    ) -> Result<SolverResult<S>, SolverError>
-    where
-        S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField,
-        Sys: OdeSystem<S>,
-    {
-        let dim = problem.dim();
-        if y0.len() != dim {
-            return Err(SolverError::DimensionMismatch {
-                expected: dim,
-                actual: y0.len(),
-            });
-        }
+fn solve_internal<S, Sys>(
+    problem: &Sys,
+    t0: S,
+    tf: S,
+    y0: &[S],
+    options: &SolverOptions<S>,
+) -> Result<SolverResult<S>, SolverError>
+where
+    S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField,
+    Sys: OdeSystem<S>,
+{
+    let (min_order, max_order) = resolve_order_bounds(options);
 
-        let mut stats = SolverStats::default();
+    let dim = problem.dim();
+    if y0.len() != dim {
+        return Err(SolverError::DimensionMismatch {
+            expected: dim,
+            actual: y0.len(),
+        });
+    }
 
-        let mut t = t0;
-        let direction = if tf > t0 { S::ONE } else { -S::ONE };
+    let mut stats = SolverStats::default();
 
-        if let Some(grid) = options.t_eval.as_deref() {
-            validate_grid(grid, t0, tf)?;
-        }
-        let mut grid_emitter = options
-            .t_eval
-            .as_deref()
-            .map(|g| TEvalEmitter::new(g, direction));
-        let (mut t_out, mut y_out) = if grid_emitter.is_some() {
-            (Vec::new(), Vec::new())
-        } else {
-            (vec![t0], y0.to_vec())
-        };
-        // Slopes at the previous accepted t (start of step) and the new t,
-        // needed by the Hermite interpolant in t_eval mode. BDF doesn't keep
-        // f(t, y) hot between steps, so we do explicit RHS evaluations only
-        // when a grid is supplied.
-        let mut dy_old_buf = vec![S::ZERO; dim];
-        let mut dy_new_buf = vec![S::ZERO; dim];
-        if grid_emitter.is_some() {
-            problem.rhs(t0, y0, &mut dy_old_buf);
-            stats.n_eval += 1;
-        }
+    let mut t = t0;
+    let direction = if tf > t0 { S::ONE } else { -S::ONE };
 
-        // ---- Initial RHS, step size, and divided differences ----
-        let mut f_eval = vec![S::ZERO; dim];
-        problem.rhs(t, y0, &mut f_eval);
+    if let Some(grid) = options.t_eval.as_deref() {
+        validate_grid(grid, t0, tf)?;
+    }
+    let mut grid_emitter = options
+        .t_eval
+        .as_deref()
+        .map(|g| TEvalEmitter::new(g, direction));
+    let (mut t_out, mut y_out) = if grid_emitter.is_some() {
+        (Vec::new(), Vec::new())
+    } else {
+        (vec![t0], y0.to_vec())
+    };
+    // Slopes at the previous accepted t (start of step) and the new t,
+    // needed by the Hermite interpolant in t_eval mode. BDF doesn't keep
+    // f(t, y) hot between steps, so we do explicit RHS evaluations only
+    // when a grid is supplied.
+    let mut dy_old_buf = vec![S::ZERO; dim];
+    let mut dy_new_buf = vec![S::ZERO; dim];
+    if grid_emitter.is_some() {
+        problem.rhs(t0, y0, &mut dy_old_buf);
         stats.n_eval += 1;
+    }
 
-        let mut h_abs = self.initial_step_size(y0, &f_eval, options, dim);
+    // ---- Initial RHS, step size, and divided differences ----
+    let mut f_eval = vec![S::ZERO; dim];
+    problem.rhs(t, y0, &mut f_eval);
+    stats.n_eval += 1;
 
-        // D[0] = y_0;  D[1] = h_0 · f_0 · direction;  D[2..] = 0.
-        let mut d_arr: Vec<Vec<S>> = (0..MAX_ORDER + 3).map(|_| vec![S::ZERO; dim]).collect();
-        d_arr[0].copy_from_slice(y0);
-        for i in 0..dim {
-            d_arr[1][i] = h_abs * f_eval[i] * direction;
+    let mut h_abs = initial_step_size(y0, &f_eval, options, dim);
+
+    // D[0] = y_0;  D[1] = h_0 · f_0 · direction;  D[2..] = 0.
+    let mut d_arr: Vec<Vec<S>> = (0..MAX_ORDER + 3).map(|_| vec![S::ZERO; dim]).collect();
+    d_arr[0].copy_from_slice(y0);
+    for i in 0..dim {
+        d_arr[1][i] = h_abs * f_eval[i] * direction;
+    }
+
+    // Mass matrix.
+    let mass_data = if problem.has_mass_matrix() {
+        let mut m = vec![S::ZERO; dim * dim];
+        problem.mass_matrix(&mut m);
+        Some(m)
+    } else {
+        None
+    };
+    let mass_ref = mass_data.as_deref();
+
+    // Jacobian + LU. Delegates to OdeSystem::jacobian, which lets a
+    // system override with an analytical Jacobian (e.g. MOLSystem*) and
+    // otherwise falls through to the canonical FD default in
+    // problem.rs. Costs one extra rhs evaluation per Jacobian rebuild
+    // vs the previous inlined path because the trait default
+    // recomputes f0 internally; that overhead is dominated by the LU
+    // on every problem we care about.
+    let mut jac = vec![S::ZERO; dim * dim];
+    problem.jacobian(t, y0, &mut jac);
+    stats.n_jac += 1;
+    let mut current_jac = true;
+    let mut lu: Option<LUFactorization<S>> = None;
+    let mut last_c: Option<S> = None;
+
+    // Order management.
+    let mut order = 1usize;
+    let mut n_equal_steps: usize = 0;
+
+    // Newton tolerance (Hairer formula).
+    let uround = S::from_f64(2.220446049250313e-16);
+    let newton_tol =
+        (S::from_f64(10.0) * uround / options.rtol).max(S::from_f64(0.03).min(options.rtol.sqrt()));
+
+    let h_min = options.h_min;
+    let h_max = options.h_max.min((tf - t0).abs());
+
+    let mut step_count = 0usize;
+
+    while (tf - t) * direction > S::from_f64(1e-12) * (tf - t0).abs() {
+        if step_count >= options.max_steps {
+            return Err(SolverError::MaxIterationsExceeded { t: t.to_f64() });
         }
 
-        // Mass matrix.
-        let mass_data = if problem.has_mass_matrix() {
-            let mut m = vec![S::ZERO; dim * dim];
-            problem.mass_matrix(&mut m);
-            Some(m)
-        } else {
-            None
-        };
-        let mass_ref = mass_data.as_deref();
+        // --- Step-size cap pre-checks (SciPy: top of _step_impl) ---
+        let ulp_min = S::from_f64(10.0) * uround * (t.abs().max(tf.abs())).max(S::ONE);
+        let min_step = h_min.max(ulp_min);
 
-        // Jacobian + LU. Delegates to OdeSystem::jacobian, which lets a
-        // system override with an analytical Jacobian (e.g. MOLSystem*) and
-        // otherwise falls through to the canonical FD default in
-        // problem.rs. Costs one extra rhs evaluation per Jacobian rebuild
-        // vs the previous inlined path because the trait default
-        // recomputes f0 internally; that overhead is dominated by the LU
-        // on every problem we care about.
-        let mut jac = vec![S::ZERO; dim * dim];
-        problem.jacobian(t, y0, &mut jac);
-        stats.n_jac += 1;
-        let mut current_jac = true;
-        let mut lu: Option<LUFactorization<S>> = None;
-        let mut last_c: Option<S> = None;
+        if h_abs > h_max {
+            let factor = h_max / h_abs;
+            change_d(&mut d_arr, order, factor);
+            n_equal_steps = 0;
+            h_abs = h_max;
+            lu = None;
+            last_c = None;
+        } else if h_abs < min_step {
+            let factor = min_step / h_abs;
+            change_d(&mut d_arr, order, factor);
+            n_equal_steps = 0;
+            h_abs = min_step;
+            lu = None;
+            last_c = None;
+        }
 
-        // Order management.
-        let mut order = 1usize;
-        let mut n_equal_steps: usize = 0;
+        // --- Inner loop: try, retry, possibly reduce h ---
+        let mut step_accepted = false;
+        // (y_new, d_correction, error_norm, h_abs_used, safety_factor)
+        let mut accepted: Option<AcceptedStep<S>> = None;
 
-        // Newton tolerance (Hairer formula).
-        let uround = S::from_f64(2.220446049250313e-16);
-        let newton_tol = (S::from_f64(10.0) * uround / options.rtol)
-            .max(S::from_f64(0.03).min(options.rtol.sqrt()));
-
-        let h_min = options.h_min;
-        let h_max = options.h_max.min((tf - t0).abs());
-
-        let mut step_count = 0usize;
-
-        while (tf - t) * direction > S::from_f64(1e-12) * (tf - t0).abs() {
-            if step_count >= options.max_steps {
-                return Err(SolverError::MaxIterationsExceeded { t: t.to_f64() });
-            }
-
-            // --- Step-size cap pre-checks (SciPy: top of _step_impl) ---
-            let ulp_min = S::from_f64(10.0) * uround * (t.abs().max(tf.abs())).max(S::ONE);
-            let min_step = h_min.max(ulp_min);
-
-            if h_abs > h_max {
-                let factor = h_max / h_abs;
-                change_d(&mut d_arr, order, factor);
-                n_equal_steps = 0;
-                h_abs = h_max;
-                lu = None;
-                last_c = None;
-            } else if h_abs < min_step {
-                let factor = min_step / h_abs;
-                change_d(&mut d_arr, order, factor);
-                n_equal_steps = 0;
-                h_abs = min_step;
-                lu = None;
-                last_c = None;
-            }
-
-            // --- Inner loop: try, retry, possibly reduce h ---
-            let mut step_accepted = false;
-            // (y_new, d_correction, error_norm, h_abs_used, safety_factor)
-            let mut accepted: Option<AcceptedStep<S>> = None;
-
-            while !step_accepted {
-                if h_abs < min_step {
-                    return Err(SolverError::StepSizeTooSmall {
-                        t: t.to_f64(),
-                        h: h_abs.to_f64(),
-                        h_min: h_min.to_f64(),
-                    });
-                }
-
-                let h = h_abs * direction;
-                let mut t_new = t + h;
-                let mut h_used = h;
-                let mut h_abs_used = h_abs;
-
-                // Clip to t_bound (rescale D to match the shorter step).
-                if (t_new - tf) * direction > S::ZERO {
-                    t_new = tf;
-                    h_used = t_new - t;
-                    h_abs_used = h_used.abs();
-                    let factor = h_abs_used / h_abs;
-                    change_d(&mut d_arr, order, factor);
-                    n_equal_steps = 0;
-                    h_abs = h_abs_used;
-                    lu = None;
-                    last_c = None;
-                }
-
-                // Predictor:  y_predict = ∑_{k=0..order} D[k]
-                let mut y_predict = vec![S::ZERO; dim];
-                for k in 0..=order {
-                    for i in 0..dim {
-                        y_predict[i] = y_predict[i] + d_arr[k][i];
-                    }
-                }
-
-                // ψ = (∑_{j=1..order} γ_j · D[j]) / α_order
-                let alpha_o = S::from_f64(ALPHA[order]);
-                let mut psi = vec![S::ZERO; dim];
-                for j in 1..=order {
-                    let g = S::from_f64(GAMMA[j]);
-                    for i in 0..dim {
-                        psi[i] = psi[i] + g * d_arr[j][i];
-                    }
-                }
-                for i in 0..dim {
-                    psi[i] = psi[i] / alpha_o;
-                }
-
-                let c = h_used / alpha_o;
-
-                // Pre-Newton scale based on |y_predict|.
-                let mut scale = vec![S::ZERO; dim];
-                for i in 0..dim {
-                    scale[i] =
-                        (options.atol + options.rtol * y_predict[i].abs()).max(S::from_f64(1e-300));
-                }
-
-                // --- Newton with retry-on-stale-Jacobian ---
-                let outcome;
-                loop {
-                    if lu.is_none() || last_c != Some(c) {
-                        let it = self.form_iteration_matrix(&jac, c, dim, mass_ref);
-                        lu = Some(LUFactorization::new(&it)?);
-                        stats.n_lu += 1;
-                        last_c = Some(c);
-                    }
-                    let attempt = solve_bdf_system(
-                        problem,
-                        t_new,
-                        &y_predict,
-                        c,
-                        &psi,
-                        lu.as_ref().unwrap(),
-                        &scale,
-                        newton_tol,
-                        mass_ref,
-                        &mut stats,
-                        dim,
-                    )?;
-
-                    if attempt.converged || current_jac {
-                        outcome = attempt;
-                        break;
-                    }
-
-                    // Stale Jacobian: refresh f baseline + J, retry
-                    // *without* reducing h. Critical: previous BDF skipped
-                    // this and reduced h on every Newton failure, which
-                    // wasted enormous numbers of steps.
-                    problem.rhs(t_new, &y_predict, &mut f_eval);
-                    stats.n_eval += 1;
-                    problem.jacobian(t_new, &y_predict, &mut jac);
-                    stats.n_jac += 1;
-                    current_jac = true;
-                    lu = None;
-                    last_c = None;
-                }
-
-                if !outcome.converged {
-                    // Real Newton failure with fresh Jacobian. Halve h.
-                    let factor = S::from_f64(0.5);
-                    change_d(&mut d_arr, order, factor);
-                    n_equal_steps = 0;
-                    h_abs = h_abs * factor;
-                    stats.n_reject += 1;
-                    lu = None;
-                    last_c = None;
-                    continue;
-                }
-
-                // --- Newton converged; check error norm ---
-                let safety = S::from_f64(0.9 * (2.0 * NEWTON_MAXITER as f64 + 1.0))
-                    / S::from_f64(2.0 * NEWTON_MAXITER as f64 + outcome.n_iter as f64);
-
-                let mut scale_new = vec![S::ZERO; dim];
-                for i in 0..dim {
-                    scale_new[i] = (options.atol + options.rtol * outcome.y_new[i].abs())
-                        .max(S::from_f64(1e-300));
-                }
-
-                let err_const = S::from_f64(ERROR_CONST[order]);
-                let mut err_sq = S::ZERO;
-                for i in 0..dim {
-                    let e = err_const * outcome.d[i] / scale_new[i];
-                    err_sq = err_sq + e * e;
-                }
-                let err_norm = (err_sq / S::from_usize(dim)).sqrt();
-
-                if err_norm > S::ONE {
-                    // Reject by error: shrink h. Do NOT reset LU per SciPy
-                    // (Newton was fine, only the error was too big), but DO
-                    // reset last_c since c changes with h.
-                    let order_p1 = S::from_usize(order + 1);
-                    let factor =
-                        S::from_f64(MIN_FACTOR).max(safety * err_norm.powf(-S::ONE / order_p1));
-                    change_d(&mut d_arr, order, factor);
-                    n_equal_steps = 0;
-                    h_abs = h_abs * factor;
-                    stats.n_reject += 1;
-                    last_c = None;
-                    continue;
-                }
-
-                accepted = Some(AcceptedStep {
-                    y_new: outcome.y_new,
-                    d_corr: outcome.d,
-                    err_norm,
-                    h_abs_used,
-                    safety,
+        while !step_accepted {
+            if h_abs < min_step {
+                return Err(SolverError::StepSizeTooSmall {
+                    t: t.to_f64(),
+                    h: h_abs.to_f64(),
+                    h_min: h_min.to_f64(),
                 });
-                step_accepted = true;
             }
 
-            let AcceptedStep {
-                y_new,
-                d_corr,
-                err_norm,
-                h_abs_used,
-                safety,
-            } = accepted.unwrap();
+            let h = h_abs * direction;
+            let mut t_new = t + h;
+            let mut h_used = h;
+            let mut h_abs_used = h_abs;
 
-            // --- Commit accepted step ---
-            stats.n_accept += 1;
-            n_equal_steps += 1;
-            let t_old = t;
-            // Snapshot the old state before the divided-differences update
-            // overwrites D[0]; needed by the Hermite interpolant.
-            let y_old_snapshot = if grid_emitter.is_some() {
-                Some(d_arr[0].clone())
-            } else {
-                None
-            };
-            t = t + h_abs_used * direction;
-            h_abs = h_abs_used;
+            // Clip to t_bound (rescale D to match the shorter step).
+            if (t_new - tf) * direction > S::ZERO {
+                t_new = tf;
+                h_used = t_new - t;
+                h_abs_used = h_used.abs();
+                let factor = h_abs_used / h_abs;
+                change_d(&mut d_arr, order, factor);
+                n_equal_steps = 0;
+                h_abs = h_abs_used;
+                lu = None;
+                last_c = None;
+            }
 
-            // Update modified divided differences in-place. The principal
-            // relation here is D^{j+1} y_n = D^j y_n − D^j y_{n-1}; combined
-            // with d_corr = D^{order+1} y_n, this elegant cascade updates
-            // the entire table:
-            //   D[order+2] ← d − D[order+1]
-            //   D[order+1] ← d
-            //   D[i]      ← D[i] + D[i+1]    for i = order, …, 0
+            // Predictor:  y_predict = ∑_{k=0..order} D[k]
+            let mut y_predict = vec![S::ZERO; dim];
+            for k in 0..=order {
+                for i in 0..dim {
+                    y_predict[i] = y_predict[i] + d_arr[k][i];
+                }
+            }
+
+            // ψ = (∑_{j=1..order} γ_j · D[j]) / α_order
+            let alpha_o = S::from_f64(ALPHA[order]);
+            let mut psi = vec![S::ZERO; dim];
+            for j in 1..=order {
+                let g = S::from_f64(GAMMA[j]);
+                for i in 0..dim {
+                    psi[i] = psi[i] + g * d_arr[j][i];
+                }
+            }
             for i in 0..dim {
-                d_arr[order + 2][i] = d_corr[i] - d_arr[order + 1][i];
-                d_arr[order + 1][i] = d_corr[i];
-            }
-            for k in (0..=order).rev() {
-                for i in 0..dim {
-                    d_arr[k][i] = d_arr[k][i] + d_arr[k + 1][i];
-                }
+                psi[i] = psi[i] / alpha_o;
             }
 
-            // After update, D[0] should equal y_new (modulo Newton tolerance).
-            debug_assert!({
-                let mut ok = true;
-                for i in 0..dim {
-                    let diff = (d_arr[0][i] - y_new[i]).abs();
-                    let scl = options.atol + options.rtol * y_new[i].abs().max(S::ONE);
-                    if diff.to_f64() > scl.to_f64() * 1e3 {
-                        ok = false;
-                        break;
-                    }
-                }
-                ok
-            });
+            let c = h_used / alpha_o;
 
-            if let Some(ref mut emitter) = grid_emitter {
-                problem.rhs(t, &d_arr[0], &mut dy_new_buf);
+            // Pre-Newton scale based on |y_predict|.
+            let mut scale = vec![S::ZERO; dim];
+            for i in 0..dim {
+                scale[i] =
+                    (options.atol + options.rtol * y_predict[i].abs()).max(S::from_f64(1e-300));
+            }
+
+            // --- Newton with retry-on-stale-Jacobian ---
+            let outcome;
+            loop {
+                if lu.is_none() || last_c != Some(c) {
+                    let it = form_iteration_matrix(&jac, c, dim, mass_ref);
+                    lu = Some(LUFactorization::new(&it)?);
+                    stats.n_lu += 1;
+                    last_c = Some(c);
+                }
+                let attempt = solve_bdf_system(
+                    problem,
+                    t_new,
+                    &y_predict,
+                    c,
+                    &psi,
+                    lu.as_ref().unwrap(),
+                    &scale,
+                    newton_tol,
+                    mass_ref,
+                    &mut stats,
+                    dim,
+                )?;
+
+                if attempt.converged || current_jac {
+                    outcome = attempt;
+                    break;
+                }
+
+                // Stale Jacobian: refresh f baseline + J, retry
+                // *without* reducing h. Critical: previous BDF skipped
+                // this and reduced h on every Newton failure, which
+                // wasted enormous numbers of steps.
+                problem.rhs(t_new, &y_predict, &mut f_eval);
                 stats.n_eval += 1;
-                let y_old = y_old_snapshot.as_deref().unwrap();
-                emitter.emit_step(
-                    t_old,
-                    y_old,
-                    &dy_old_buf,
-                    t,
-                    &d_arr[0],
-                    &dy_new_buf,
-                    &mut t_out,
-                    &mut y_out,
-                );
-                dy_old_buf.copy_from_slice(&dy_new_buf);
-            } else {
-                t_out.push(t);
-                y_out.extend_from_slice(&d_arr[0]);
+                problem.jacobian(t_new, &y_predict, &mut jac);
+                stats.n_jac += 1;
+                current_jac = true;
+                lu = None;
+                last_c = None;
             }
 
-            // Mark Jacobian as stale.
-            current_jac = false;
-
-            // --- Order / step adaptation (gated on quasi-constant steps) ---
-            //
-            // Until we have `order + 1` consecutive equal-size accepted
-            // steps, the modified-divided-differences are not yet a faithful
-            // proxy for "constant-step" differences, so the order-selection
-            // formulas are not trustworthy. SciPy enforces the same gate.
-            if n_equal_steps < order + 1 {
-                step_count += 1;
+            if !outcome.converged {
+                // Real Newton failure with fresh Jacobian. Halve h.
+                let factor = S::from_f64(0.5);
+                change_d(&mut d_arr, order, factor);
+                n_equal_steps = 0;
+                h_abs = h_abs * factor;
+                stats.n_reject += 1;
+                lu = None;
+                last_c = None;
                 continue;
             }
 
-            // Compute error norms for orders order−1 and order+1.
-            let mut err_m_norm = S::from_f64(f64::INFINITY);
-            if order > 1 {
-                let ec = S::from_f64(ERROR_CONST[order - 1]);
-                let mut s = S::ZERO;
-                for i in 0..dim {
-                    let scl =
-                        (options.atol + options.rtol * y_new[i].abs()).max(S::from_f64(1e-300));
-                    let e = ec * d_arr[order][i] / scl;
-                    s = s + e * e;
-                }
-                err_m_norm = (s / S::from_usize(dim)).sqrt();
+            // --- Newton converged; check error norm ---
+            let safety = S::from_f64(0.9 * (2.0 * NEWTON_MAXITER as f64 + 1.0))
+                / S::from_f64(2.0 * NEWTON_MAXITER as f64 + outcome.n_iter as f64);
+
+            let mut scale_new = vec![S::ZERO; dim];
+            for i in 0..dim {
+                scale_new[i] =
+                    (options.atol + options.rtol * outcome.y_new[i].abs()).max(S::from_f64(1e-300));
             }
 
-            let mut err_p_norm = S::from_f64(f64::INFINITY);
-            if order < self.max_order {
-                let ec = S::from_f64(ERROR_CONST[order + 1]);
-                let mut s = S::ZERO;
-                for i in 0..dim {
-                    let scl =
-                        (options.atol + options.rtol * y_new[i].abs()).max(S::from_f64(1e-300));
-                    let e = ec * d_arr[order + 2][i] / scl;
-                    s = s + e * e;
-                }
-                err_p_norm = (s / S::from_usize(dim)).sqrt();
+            let err_const = S::from_f64(ERROR_CONST[order]);
+            let mut err_sq = S::ZERO;
+            for i in 0..dim {
+                let e = err_const * outcome.d[i] / scale_new[i];
+                err_sq = err_sq + e * e;
+            }
+            let err_norm = (err_sq / S::from_usize(dim)).sqrt();
+
+            if err_norm > S::ONE {
+                // Reject by error: shrink h. Do NOT reset LU per SciPy
+                // (Newton was fine, only the error was too big), but DO
+                // reset last_c since c changes with h.
+                let order_p1 = S::from_usize(order + 1);
+                let factor =
+                    S::from_f64(MIN_FACTOR).max(safety * err_norm.powf(-S::ONE / order_p1));
+                change_d(&mut d_arr, order, factor);
+                n_equal_steps = 0;
+                h_abs = h_abs * factor;
+                stats.n_reject += 1;
+                last_c = None;
+                continue;
             }
 
-            let safe_pow = |e: S, p: usize| -> S {
-                let f = e.max(S::from_f64(1e-30));
-                f.powf(-S::ONE / S::from_usize(p))
-            };
-            let factor_m = if order > self.min_order && err_m_norm.to_f64().is_finite() {
-                safe_pow(err_m_norm, order)
-            } else {
-                S::ZERO
-            };
-            let factor_o = safe_pow(err_norm, order + 1);
-            let factor_p = if order < self.max_order && err_p_norm.to_f64().is_finite() {
-                safe_pow(err_p_norm, order + 2)
-            } else {
-                S::ZERO
-            };
-
-            let mut best = factor_o;
-            let mut delta_order: i32 = 0;
-            if factor_m > best {
-                best = factor_m;
-                delta_order = -1;
-            }
-            if factor_p > best {
-                best = factor_p;
-                delta_order = 1;
-            }
-            if !best.to_f64().is_finite() {
-                best = S::ONE;
-            }
-
-            order = ((order as i32) + delta_order) as usize;
-
-            let factor = (safety * best).min(S::from_f64(MAX_FACTOR));
-            let factor = factor.max(S::from_f64(MIN_FACTOR));
-
-            change_d(&mut d_arr, order, factor);
-            n_equal_steps = 0;
-            h_abs = h_abs * factor;
-            if h_abs > h_max {
-                let cap = h_max / h_abs;
-                change_d(&mut d_arr, order, cap);
-                h_abs = h_max;
-            }
-            lu = None;
-            last_c = None;
-
-            step_count += 1;
+            accepted = Some(AcceptedStep {
+                y_new: outcome.y_new,
+                d_corr: outcome.d,
+                err_norm,
+                h_abs_used,
+                safety,
+            });
+            step_accepted = true;
         }
 
-        Ok(SolverResult::new(t_out, y_out, dim, stats))
-    }
+        let AcceptedStep {
+            y_new,
+            d_corr,
+            err_norm,
+            h_abs_used,
+            safety,
+        } = accepted.unwrap();
 
-    fn initial_step_size<S: Scalar>(
-        &self,
-        y0: &[S],
-        f0: &[S],
-        options: &SolverOptions<S>,
-        dim: usize,
-    ) -> S {
-        if let Some(h0) = options.h0 {
-            return h0;
-        }
-        let mut d0 = S::ZERO;
-        let mut d1 = S::ZERO;
-        for i in 0..dim {
-            let sc = (options.atol + options.rtol * y0[i].abs()).max(S::from_f64(1e-15));
-            d0 = d0 + (y0[i] / sc) * (y0[i] / sc);
-            d1 = d1 + (f0[i] / sc) * (f0[i] / sc);
-        }
-        d0 = (d0 / S::from_usize(dim)).sqrt();
-        d1 = (d1 / S::from_usize(dim)).sqrt();
-        let h0 = if d0 < S::from_f64(1e-5) || d1 < S::from_f64(1e-5) {
-            S::from_f64(1e-6)
+        // --- Commit accepted step ---
+        stats.n_accept += 1;
+        n_equal_steps += 1;
+        let t_old = t;
+        // Snapshot the old state before the divided-differences update
+        // overwrites D[0]; needed by the Hermite interpolant.
+        let y_old_snapshot = if grid_emitter.is_some() {
+            Some(d_arr[0].clone())
         } else {
-            S::from_f64(0.01) * d0 / d1
+            None
         };
-        h0.min(options.h_max).max(options.h_min)
-    }
+        t = t + h_abs_used * direction;
+        h_abs = h_abs_used;
 
-    /// Build  M − c·J  (or  I − c·J  for ODEs).
-    fn form_iteration_matrix<S>(
-        &self,
-        jac: &[S],
-        c: S,
-        dim: usize,
-        mass: Option<&[S]>,
-    ) -> DenseMatrix<S>
-    where
-        S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField,
-    {
-        let mut m = DenseMatrix::zeros(dim, dim);
+        // Update modified divided differences in-place. The principal
+        // relation here is D^{j+1} y_n = D^j y_n − D^j y_{n-1}; combined
+        // with d_corr = D^{order+1} y_n, this elegant cascade updates
+        // the entire table:
+        //   D[order+2] ← d − D[order+1]
+        //   D[order+1] ← d
+        //   D[i]      ← D[i] + D[i+1]    for i = order, …, 0
         for i in 0..dim {
-            for j in 0..dim {
-                let jij = jac[i * dim + j];
-                let mij = match mass {
-                    Some(mass_data) => mass_data[i * dim + j],
-                    None => {
-                        if i == j {
-                            S::ONE
-                        } else {
-                            S::ZERO
-                        }
-                    }
-                };
-                m.set(i, j, mij - c * jij);
+            d_arr[order + 2][i] = d_corr[i] - d_arr[order + 1][i];
+            d_arr[order + 1][i] = d_corr[i];
+        }
+        for k in (0..=order).rev() {
+            for i in 0..dim {
+                d_arr[k][i] = d_arr[k][i] + d_arr[k + 1][i];
             }
         }
-        m
+
+        // After update, D[0] should equal y_new (modulo Newton tolerance).
+        debug_assert!({
+            let mut ok = true;
+            for i in 0..dim {
+                let diff = (d_arr[0][i] - y_new[i]).abs();
+                let scl = options.atol + options.rtol * y_new[i].abs().max(S::ONE);
+                if diff.to_f64() > scl.to_f64() * 1e3 {
+                    ok = false;
+                    break;
+                }
+            }
+            ok
+        });
+
+        if let Some(ref mut emitter) = grid_emitter {
+            problem.rhs(t, &d_arr[0], &mut dy_new_buf);
+            stats.n_eval += 1;
+            let y_old = y_old_snapshot.as_deref().unwrap();
+            emitter.emit_step(
+                t_old,
+                y_old,
+                &dy_old_buf,
+                t,
+                &d_arr[0],
+                &dy_new_buf,
+                &mut t_out,
+                &mut y_out,
+            );
+            dy_old_buf.copy_from_slice(&dy_new_buf);
+        } else {
+            t_out.push(t);
+            y_out.extend_from_slice(&d_arr[0]);
+        }
+
+        // Mark Jacobian as stale.
+        current_jac = false;
+
+        // --- Order / step adaptation (gated on quasi-constant steps) ---
+        //
+        // Until we have `order + 1` consecutive equal-size accepted
+        // steps, the modified-divided-differences are not yet a faithful
+        // proxy for "constant-step" differences, so the order-selection
+        // formulas are not trustworthy. SciPy enforces the same gate.
+        if n_equal_steps < order + 1 {
+            step_count += 1;
+            continue;
+        }
+
+        // Compute error norms for orders order−1 and order+1.
+        let mut err_m_norm = S::from_f64(f64::INFINITY);
+        if order > 1 {
+            let ec = S::from_f64(ERROR_CONST[order - 1]);
+            let mut s = S::ZERO;
+            for i in 0..dim {
+                let scl = (options.atol + options.rtol * y_new[i].abs()).max(S::from_f64(1e-300));
+                let e = ec * d_arr[order][i] / scl;
+                s = s + e * e;
+            }
+            err_m_norm = (s / S::from_usize(dim)).sqrt();
+        }
+
+        let mut err_p_norm = S::from_f64(f64::INFINITY);
+        if order < max_order {
+            let ec = S::from_f64(ERROR_CONST[order + 1]);
+            let mut s = S::ZERO;
+            for i in 0..dim {
+                let scl = (options.atol + options.rtol * y_new[i].abs()).max(S::from_f64(1e-300));
+                let e = ec * d_arr[order + 2][i] / scl;
+                s = s + e * e;
+            }
+            err_p_norm = (s / S::from_usize(dim)).sqrt();
+        }
+
+        let safe_pow = |e: S, p: usize| -> S {
+            let f = e.max(S::from_f64(1e-30));
+            f.powf(-S::ONE / S::from_usize(p))
+        };
+        let factor_m = if order > min_order && err_m_norm.to_f64().is_finite() {
+            safe_pow(err_m_norm, order)
+        } else {
+            S::ZERO
+        };
+        let factor_o = safe_pow(err_norm, order + 1);
+        let factor_p = if order < max_order && err_p_norm.to_f64().is_finite() {
+            safe_pow(err_p_norm, order + 2)
+        } else {
+            S::ZERO
+        };
+
+        let mut best = factor_o;
+        let mut delta_order: i32 = 0;
+        if factor_m > best {
+            best = factor_m;
+            delta_order = -1;
+        }
+        if factor_p > best {
+            best = factor_p;
+            delta_order = 1;
+        }
+        if !best.to_f64().is_finite() {
+            best = S::ONE;
+        }
+
+        order = ((order as i32) + delta_order) as usize;
+
+        let factor = (safety * best).min(S::from_f64(MAX_FACTOR));
+        let factor = factor.max(S::from_f64(MIN_FACTOR));
+
+        change_d(&mut d_arr, order, factor);
+        n_equal_steps = 0;
+        h_abs = h_abs * factor;
+        if h_abs > h_max {
+            let cap = h_max / h_abs;
+            change_d(&mut d_arr, order, cap);
+            h_abs = h_max;
+        }
+        lu = None;
+        last_c = None;
+
+        step_count += 1;
     }
+
+    Ok(SolverResult::new(t_out, y_out, dim, stats))
+}
+
+fn initial_step_size<S: Scalar>(y0: &[S], f0: &[S], options: &SolverOptions<S>, dim: usize) -> S {
+    if let Some(h0) = options.h0 {
+        return h0;
+    }
+    let mut d0 = S::ZERO;
+    let mut d1 = S::ZERO;
+    for i in 0..dim {
+        let sc = (options.atol + options.rtol * y0[i].abs()).max(S::from_f64(1e-15));
+        d0 = d0 + (y0[i] / sc) * (y0[i] / sc);
+        d1 = d1 + (f0[i] / sc) * (f0[i] / sc);
+    }
+    d0 = (d0 / S::from_usize(dim)).sqrt();
+    d1 = (d1 / S::from_usize(dim)).sqrt();
+    let h0 = if d0 < S::from_f64(1e-5) || d1 < S::from_f64(1e-5) {
+        S::from_f64(1e-6)
+    } else {
+        S::from_f64(0.01) * d0 / d1
+    };
+    h0.min(options.h_max).max(options.h_min)
+}
+
+/// Build  M − c·J  (or  I − c·J  for ODEs).
+fn form_iteration_matrix<S>(jac: &[S], c: S, dim: usize, mass: Option<&[S]>) -> DenseMatrix<S>
+where
+    S: Scalar + SimpleEntity + Conjugate<Canonical = S> + ComplexField,
+{
+    let mut m = DenseMatrix::zeros(dim, dim);
+    for i in 0..dim {
+        for j in 0..dim {
+            let jij = jac[i * dim + j];
+            let mij = match mass {
+                Some(mass_data) => mass_data[i * dim + j],
+                None => {
+                    if i == j {
+                        S::ONE
+                    } else {
+                        S::ZERO
+                    }
+                }
+            };
+            m.set(i, j, mij - c * jij);
+        }
+    }
+    m
 }
 
 #[cfg(test)]
@@ -1018,24 +981,6 @@ mod tests {
         let options = SolverOptions::default().rtol(1e-2).atol(1e-4);
         let result = Bdf::solve(&problem, 0.0, 20.0, &[2.0, 0.0], &options);
         assert!(result.is_ok(), "BDF Van der Pol failed: {:?}", result.err());
-    }
-
-    #[test]
-    fn test_bdf_fixed_order() {
-        let solver = Bdf::fixed_order(2);
-        let problem = OdeProblem::new(
-            |_t, y: &[f64], dydt: &mut [f64]| {
-                dydt[0] = -y[0];
-            },
-            0.0,
-            2.0,
-            vec![1.0],
-        );
-        let options = SolverOptions::default().rtol(1e-3).atol(1e-5);
-        let result = solver
-            .solve_internal(&problem, 0.0, 2.0, &[1.0], &options)
-            .unwrap();
-        assert!(result.success);
     }
 
     /// Regression: previously returned y_final = y_initial at success=true.

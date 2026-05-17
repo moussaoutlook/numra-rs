@@ -26,10 +26,12 @@
 //! ```text
 //! solve_with_uncertainty::<DoPri5, f64>(...) // explicit solver
 //! solve_with_uncertainty::<Radau5, f64>(...) // stiff solver
-//! solve_with_uncertainty::<Auto, f64>(...)   // auto-selected
+//! solve_with_uncertainty::<Tsit5, f64>(...)  // explicit, FSAL
 //! ```
 //!
 //! Any solver implementing the `Solver<S>` trait works without modification.
+//! For automatic solver selection on a single problem (without uncertainty
+//! quantification), see [`crate::auto_solve`] / [`crate::auto_solve_with_hints`].
 //!
 //! Author: Moussa Leblouba
 //! Date: 9 February 2026

@@ -17,7 +17,7 @@
 //!
 //! Numra integrates the augmented state `z = [y; vec(S)] ∈ ℝ^{N(1+N_s)}` with
 //! the user's chosen [`crate::Solver`] (DoPri5, Tsit5, Vern\*, Radau5, BDF,
-//! Esdirk\*, Auto). The augmented Jacobian is `block_diag(J_y, …, J_y)` —
+//! Esdirk\*). The augmented Jacobian is `block_diag(J_y, …, J_y)` —
 //! the standard CVODES *simultaneous-corrector* formulation.
 //!
 //! # Layout conventions
