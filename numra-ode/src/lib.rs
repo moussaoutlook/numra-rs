@@ -72,6 +72,8 @@
 //! Modified: 2 May 2026
 
 pub mod auto;
+#[cfg(feature = "autodiff")]
+pub mod autodiff_jacobian;
 pub mod bdf;
 pub mod dae_init;
 pub mod dense;
@@ -110,9 +112,14 @@ pub use radau5::Radau5;
 pub use auto::{auto_solve, auto_solve_with_hints, Accuracy, SolverHints, Stiffness};
 
 pub use sensitivity::{
-    solve_forward_sensitivity, solve_forward_sensitivity_with, AugmentedSystem, ClosureSystem,
-    ParametricOdeSystem, SensitivityResult,
+    solve_forward_sensitivity, solve_forward_sensitivity_with,
+    solve_initial_condition_sensitivity, solve_initial_condition_sensitivity_with,
+    AugmentedSystem, ClosureSystem, ParametricOdeSystem, SensitivityResult,
+    StateTransitionResult,
 };
+
+#[cfg(feature = "autodiff")]
+pub use autodiff_jacobian::AutodiffJacobianSystem;
 
 pub use dae_init::{compute_consistent_initial, compute_consistent_initial_tol};
 

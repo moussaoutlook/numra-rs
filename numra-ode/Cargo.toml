@@ -17,5 +17,13 @@ readme = "README.md"
 numra-core = { workspace = true }
 numra-linalg = { workspace = true }
 numra-nonlinear = { workspace = true }
+numra-autodiff = { workspace = true, optional = true }
 faer = { workspace = true }
 thiserror = { workspace = true }
+
+[features]
+default = []
+# Opt-in autodiff-derived Jacobian path. Behind a cargo feature so callers
+# who do not opt in do not pull `numra-autodiff` and pay zero in compile
+# time and binary size. See `AutodiffJacobianSystem`.
+autodiff = ["dep:numra-autodiff"]

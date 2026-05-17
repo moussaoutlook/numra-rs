@@ -410,3 +410,76 @@ fn workflow_stats_monte_carlo_ode() {
         assert!(y > 0.0 && y < 1.0, "y = {y} out of range");
     }
 }
+
+// =============================================================================
+// Workflow 7: IC sensitivity → Interpolation → Integration
+//
+// Solve the IC-sensitivity equations for the scalar exponential decay,
+// extract the state-transition trajectory Φ_{0,0}(t) = ∂y(t)/∂y₀, fit it
+// with a cubic spline, and integrate the spline against the closed-form
+// to verify the IC API's output flows into both `numra-interp` and
+// `numra-integrate` without adapter code.
+//
+// Composability contract item 5 (foundation-flowable output) + item 7
+// (interop test). `StateTransitionResult::phi_ij(i, 0, 0)` returns the
+// scalar Φ entry at output time i; the slice of those values across i
+// flows directly into `CubicSpline::natural`, whose output is consumed by
+// `quad`. No adapter code; foundation types only (`Vec<f64>`, `f64`).
+//
+// Analytical oracle: Φ(t) = exp(-k t), so
+//   ∫_0^3 Φ(t) dt = (1 - exp(-3k)) / k.
+// =============================================================================
+
+#[test]
+fn workflow_ic_sensitivity_interp_integrate() -> Result<(), numra::NumraError> {
+    use numra::integrate::{quad, QuadOptions};
+    use numra::interp::{CubicSpline, Interpolant};
+    use numra::ode::{DoPri5, SolverOptions};
+    use numra::solve_initial_condition_sensitivity_with;
+
+    let k = 0.5_f64;
+    let (t0, tf) = (0.0_f64, 3.0_f64);
+
+    // IC sensitivity over the scalar decay: Φ(t) = exp(-k t).
+    let result = solve_initial_condition_sensitivity_with::<DoPri5, f64, _>(
+        move |_t, y, dy| {
+            dy[0] = -k * y[0];
+        },
+        &[1.0],
+        t0,
+        tf,
+        &SolverOptions::default().rtol(1e-9).atol(1e-12),
+    )?;
+    assert!(result.success());
+
+    // Flow output → interp: take Φ_{0,0} at each output time and build a
+    // cubic spline. The IC trajectory grid is the solver's accepted-step +
+    // t_eval grid (no special handling required).
+    let t_grid: Vec<f64> = result.t().to_vec();
+    let phi_series: Vec<f64> = (0..result.len())
+        .map(|i| result.phi_ij(i, 0, 0))
+        .collect();
+    let spline = CubicSpline::natural(&t_grid, &phi_series)?;
+
+    // Cross-check: spline reproduces exp(-k t) at intermediate times.
+    for &ti in &[0.5_f64, 1.0, 1.5, 2.0, 2.5] {
+        let interp = spline.interpolate(ti);
+        let exact = (-k * ti).exp();
+        assert!(
+            (interp - exact).abs() < 1e-4,
+            "Φ-spline({ti}) = {interp}, exact = {exact}"
+        );
+    }
+
+    // Flow output → integrate: ∫_0^3 Φ(t) dt = (1 - exp(-3k))/k.
+    let q_opts = QuadOptions::default();
+    let q = quad(|t| spline.interpolate(t), t0, tf, &q_opts)?;
+    let exact_integral = (1.0 - (-k * tf).exp()) / k;
+    assert!(
+        (q.value - exact_integral).abs() < 1e-3,
+        "∫Φ = {}, exact = {exact_integral}",
+        q.value,
+    );
+
+    Ok(())
+}

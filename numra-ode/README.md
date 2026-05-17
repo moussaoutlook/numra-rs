@@ -40,7 +40,9 @@ let result = DoPri5::solve(&problem, 0.0, 20.0, &[1.0, 1.0, 1.0], &opts).unwrap(
 
 **Additional capabilities:**
 
-- **Forward sensitivity**: `ParametricOdeSystem`, `solve_forward_sensitivity`, `SensitivityResult`
+- **Forward parameter sensitivity**: `ParametricOdeSystem`, `solve_forward_sensitivity`, `SensitivityResult` — `S(t) = ∂y(t)/∂p` via the variational equations.
+- **Initial-condition sensitivity (state-transition matrix)**: `solve_initial_condition_sensitivity`, `StateTransitionResult` — `Φ(t) = ∂y(t)/∂y₀` over any `Solver`; the same variational machinery seeded as `S(t₀) = I`. Foundation for multiple-shooting / boundary-value methods, Lyapunov-exponent and Floquet stability analysis, periodic-orbit and monodromy computations.
+- **Autodiff-derived `J_y`** (cargo feature `autodiff`): `AutodiffJacobianSystem` — an `OdeSystem` adapter that obtains `J_y = ∂f/∂y` via forward-mode automatic differentiation through `numra-autodiff::Dual<S>`. Round-off-exact Jacobian, zero allocation per step. Opt-in by cargo feature so callers who don't need it pay zero in compile time and binary size.
 - **DAEs**: `DaeProblem`, `compute_consistent_initial`, structural index reduction (`reduce_dae_problem`, `analyze_dae_index`)
 - **Events**: zero-crossing detection with state resets (`bouncing_ball`-style)
 - **Uncertainty**: `UncertainParam`, `solve_with_uncertainty`, `solve_monte_carlo`

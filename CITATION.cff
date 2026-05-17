@@ -60,7 +60,7 @@ keywords:
   - "computational mathematics"
 
 # Update version and date-released on every release.
-version: "0.1.3"
+version: "0.1.4"
 date-released: "2026-05-17"
 
 # Identifiers — both DOIs returned by Zenodo on first publish.

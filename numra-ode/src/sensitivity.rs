@@ -135,7 +135,7 @@
 use numra_core::Scalar;
 
 use crate::error::SolverError;
-use crate::problem::OdeSystem;
+use crate::problem::{OdeProblem, OdeSystem};
 use crate::solver::{Solver, SolverOptions, SolverStats};
 
 /// An ODE system parameterised by a parameter vector `p`.
@@ -950,6 +950,290 @@ where
         n_states: y0.len(),
     };
     solve_forward_sensitivity::<Sol, S, _>(&system, t0, tf, y0, options)
+}
+
+// ============================================================================
+// Initial-condition sensitivity (state-transition matrix)
+//
+// Specialises the variational machinery above to the IC case: integrates
+// `Ṡ = J_y · S` with `S(t₀) = I_N`, producing `Φ(t) = ∂y(t)/∂y₀` —
+// the state-transition matrix of the linearised flow. Reuses
+// `AugmentedSystem` and `solve_forward_sensitivity` unchanged; no fork.
+//
+// The user-facing API takes an `OdeSystem<S>` (or RHS closure) and returns
+// a `StateTransitionResult<S>` whose accessors speak Φ(t)-vocabulary only.
+// Internally a private `IcAsParametric` wrapper reinterprets the plain
+// system as a `ParametricOdeSystem` with `n_params := n_states`,
+// `J_p ≡ 0`, and `S(t₀) = I`. The required dummy `params()` slice is the
+// only seam, encapsulated behind the wrapper and pinned by the test
+// `ic_dummy_params_are_unread` below.
+//
+// Invariant **IC-NO-PARAM-READ.** `IcAsParametric::rhs_with_params(t,y,p,dy)`
+// never reads `p`. The wrapped `OdeSystem::rhs(t,y,dy)` has no `p` argument
+// and cannot. Therefore `∂f/∂p ≡ 0` is mathematically exact (not "small in
+// some norm"), and `IcAsParametric::jacobian_p` writing zeros with
+// `has_analytical_jacobian_p() = true` is a correct analytical declaration
+// — `AugmentedSystem`'s debug consistency check at `sensitivity.rs:373` is
+// truthfully suppressed by this flag, not silenced.
+// ============================================================================
+
+/// Private wrapper: makes an `OdeSystem<S>` look like a `ParametricOdeSystem<S>`
+/// whose "parameters" are seeded so the forward-sensitivity flow computes
+/// `Φ(t) = ∂y(t)/∂y₀` instead of `∂y(t)/∂p`.
+struct IcAsParametric<'a, S: Scalar, Sys: OdeSystem<S> + ?Sized> {
+    inner: &'a Sys,
+    /// Dummy parameter slice of length `n_states`. Length-only requirement
+    /// from `ParametricOdeSystem` (asserted at solve entry, line 852–858).
+    /// Provably unread by `rhs_with_params`; pinned by
+    /// `ic_dummy_params_are_unread`.
+    dummy_p: Vec<S>,
+}
+
+impl<'a, S: Scalar, Sys: OdeSystem<S> + ?Sized> ParametricOdeSystem<S>
+    for IcAsParametric<'a, S, Sys>
+{
+    fn n_states(&self) -> usize {
+        self.inner.dim()
+    }
+    fn n_params(&self) -> usize {
+        self.inner.dim()
+    }
+    fn params(&self) -> &[S] {
+        &self.dummy_p
+    }
+
+    fn rhs_with_params(&self, t: S, y: &[S], _p: &[S], dy: &mut [S]) {
+        // IC-NO-PARAM-READ: `_p` is provably unread; `inner.rhs` has no
+        // `p` argument and cannot consume it.
+        self.inner.rhs(t, y, dy);
+    }
+
+    fn jacobian_y(&self, t: S, y: &[S], jy: &mut [S]) {
+        // Forwards to the inner system's Jacobian — analytical override if
+        // the user supplied one (e.g. `AutodiffJacobianSystem` from the
+        // `autodiff` feature), or `OdeSystem`'s FD default otherwise.
+        self.inner.jacobian(t, y, jy);
+    }
+
+    fn jacobian_p(&self, _t: S, _y: &[S], jp: &mut [S]) {
+        // J_p ≡ 0 analytically (IC-NO-PARAM-READ ⇒ ∂f/∂p ≡ 0 exactly).
+        for slot in jp.iter_mut() {
+            *slot = S::ZERO;
+        }
+    }
+
+    fn initial_sensitivity(&self, _y0: &[S], s0: &mut [S]) {
+        // Column-major identity: s0[k*N + i] = δ_{ik}.
+        let n = self.inner.dim();
+        for slot in s0.iter_mut() {
+            *slot = S::ZERO;
+        }
+        for k in 0..n {
+            s0[k * n + k] = S::ONE;
+        }
+    }
+
+    fn has_analytical_jacobian_y(&self) -> bool {
+        // Claim analytical so AugmentedSystem honours the forwarded
+        // `inner.jacobian` (which may itself be analytical or FD-default).
+        // The debug consistency check is then irrelevant for this flag.
+        true
+    }
+
+    fn has_analytical_jacobian_p(&self) -> bool {
+        // Truthful: J_p ≡ 0 is analytically exact per IC-NO-PARAM-READ.
+        true
+    }
+}
+
+/// Result of an initial-condition sensitivity solve.
+///
+/// Carries the state trajectory `y(t)` and the state-transition matrix
+/// `Φ(t) = ∂y(t) / ∂y₀ ∈ ℝ^{N×N}` of the linearised flow, evaluated at every
+/// output time the underlying solver produced.
+///
+/// # Φ(t) layout
+///
+/// Column-major within each per-time block: `phi(i)[k*N + j] = Φ(t_i)_{j,k}
+/// = ∂y_j(t_i) / ∂y_{0,k}`. The column-major flattening makes the j-th
+/// column (the trajectory's response at time `t_i` to a unit perturbation
+/// of `y_{0,k}`) a free contiguous slice — see [`Self::phi_column`].
+///
+/// # Vocabulary
+///
+/// All accessors speak state-transition-matrix vocabulary
+/// (`Φ`, `∂y_i/∂y_{0,j}`, monodromy). The type holds the underlying
+/// [`SensitivityResult`] in a private field; it does **not** `Deref` to it
+/// and does **not** re-export the parameter-shaped accessors.
+#[derive(Clone, Debug)]
+pub struct StateTransitionResult<S: Scalar> {
+    inner: SensitivityResult<S>,
+}
+
+impl<S: Scalar> StateTransitionResult<S> {
+    /// Output time points (length `n_times`). `t()[i]` is the i-th output
+    /// time; `phi(i)` is `Φ(t()[i])`.
+    pub fn t(&self) -> &[S] {
+        &self.inner.t
+    }
+
+    /// Number of output time points.
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    /// `true` iff the result has no output time points.
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    /// Underlying state dimension `N`.
+    pub fn dim(&self) -> usize {
+        self.inner.n_states
+    }
+
+    /// State `y(t_i)` at output index `i` (length `N`).
+    pub fn y(&self, i: usize) -> &[S] {
+        self.inner.y_at(i)
+    }
+
+    /// State at the final output time, length `N`. Empty slice when the
+    /// result has no time points.
+    pub fn final_y(&self) -> &[S] {
+        self.inner.final_state()
+    }
+
+    /// Full state-transition matrix `Φ(t_i) ∈ ℝ^{N×N}` at output index `i`,
+    /// column-major. `phi(i)[k*N + j] = Φ(t_i)_{j,k} = ∂y_j(t_i)/∂y_{0,k}`.
+    pub fn phi(&self, i: usize) -> &[S] {
+        self.inner.sensitivity_at(i)
+    }
+
+    /// Single entry `Φ(t_i)_{row, col} = ∂y_row(t_i) / ∂y_{0, col}`.
+    pub fn phi_ij(&self, i: usize, row: usize, col: usize) -> S {
+        self.inner.dyi_dpj(i, row, col)
+    }
+
+    /// Contiguous slice `Φ(t_i)_{:, col}` of length `N` — the trajectory's
+    /// response at `t_i` to a unit perturbation of `y_{0, col}`. Free slice
+    /// thanks to the column-major flattening.
+    pub fn phi_column(&self, i: usize, col: usize) -> &[S] {
+        self.inner.sensitivity_for_param(i, col)
+    }
+
+    /// `Φ(t_f)`, the state-transition matrix at the final output time.
+    /// When `(t_f − t_0)` equals one period of a periodic orbit this is
+    /// the *monodromy matrix*, whose eigenvalues are the orbit's
+    /// characteristic (Floquet) multipliers. The type does not enforce
+    /// periodicity; it only names the natural use. Empty slice when the
+    /// result has no time points.
+    pub fn final_phi(&self) -> &[S] {
+        self.inner.final_sensitivity()
+    }
+
+    /// `true` iff the underlying integration succeeded.
+    pub fn success(&self) -> bool {
+        self.inner.success
+    }
+
+    /// Solver diagnostic message (empty on success).
+    pub fn message(&self) -> &str {
+        &self.inner.message
+    }
+
+    /// Solver statistics from the underlying integration.
+    pub fn stats(&self) -> &SolverStats {
+        &self.inner.stats
+    }
+}
+
+/// Compute the state-transition matrix `Φ(t) = ∂y(t) / ∂y₀` of the
+/// linearised flow of `dy/dt = f(t, y)`, using any [`Solver`].
+///
+/// Integrates the variational equations `Ṡ = J_y · S` with seed
+/// `S(t₀) = I_N` over the same [`AugmentedSystem`] used for parameter
+/// sensitivity, then extracts the state-transition trajectory.
+///
+/// The user supplies only the ODE system; the IC seeding (identity initial
+/// sensitivity, zero parameter forcing) is performed internally. `J_y` is
+/// obtained from [`OdeSystem::jacobian`] — the user's analytical override
+/// if any, the trait's forward-FD default otherwise. For an
+/// exact-to-round-off `J_y` from autodiff, wrap the system in
+/// [`crate::AutodiffJacobianSystem`] (behind the `autodiff` feature).
+///
+/// # Example: scalar exponential decay
+///
+/// `dy/dt = -k y` has closed-form `Φ(t) = exp(-k t)`.
+///
+/// ```
+/// use numra_ode::sensitivity::solve_initial_condition_sensitivity_with;
+/// use numra_ode::{DoPri5, SolverOptions};
+///
+/// let k = 0.5_f64;
+/// let result = solve_initial_condition_sensitivity_with::<DoPri5, f64, _>(
+///     move |_t, y, dy| { dy[0] = -k * y[0]; },
+///     &[1.0],
+///     0.0, 2.0,
+///     &SolverOptions::default().rtol(1e-9).atol(1e-12),
+/// ).unwrap();
+///
+/// let last = result.len() - 1;
+/// let phi = result.phi_ij(last, 0, 0);
+/// let analytical = (-k * result.t()[last]).exp();
+/// assert!((phi - analytical).abs() < 1e-7);
+/// ```
+pub fn solve_initial_condition_sensitivity<Sol, S, Sys>(
+    system: &Sys,
+    t0: S,
+    tf: S,
+    y0: &[S],
+    options: &SolverOptions<S>,
+) -> Result<StateTransitionResult<S>, SolverError>
+where
+    Sol: Solver<S>,
+    S: Scalar,
+    Sys: OdeSystem<S> + ?Sized,
+{
+    let n = system.dim();
+    assert_eq!(
+        y0.len(),
+        n,
+        "solve_initial_condition_sensitivity: y0.len() = {} but dim() = {}",
+        y0.len(),
+        n,
+    );
+
+    let wrapper = IcAsParametric {
+        inner: system,
+        dummy_p: vec![S::ZERO; n],
+    };
+    let inner = solve_forward_sensitivity::<Sol, S, _>(&wrapper, t0, tf, y0, options)?;
+    Ok(StateTransitionResult { inner })
+}
+
+/// Closure-shaped convenience wrapper around
+/// [`solve_initial_condition_sensitivity`].
+///
+/// Wraps `rhs(t, y, dydt)` into an internal [`OdeProblem`] (forward-FD
+/// Jacobian via the [`OdeSystem`] default) and forwards. Suitable for
+/// one-shot analyses and REPL-style scripts. For an analytical `J_y` or an
+/// autodiff-derived `J_y`, implement [`OdeSystem`] directly (with a
+/// `jacobian` override or by wrapping in [`crate::AutodiffJacobianSystem`])
+/// and call [`solve_initial_condition_sensitivity`].
+pub fn solve_initial_condition_sensitivity_with<Sol, S, F>(
+    rhs: F,
+    y0: &[S],
+    t0: S,
+    tf: S,
+    options: &SolverOptions<S>,
+) -> Result<StateTransitionResult<S>, SolverError>
+where
+    Sol: Solver<S>,
+    S: Scalar,
+    F: Fn(S, &[S], &mut [S]),
+{
+    let problem = OdeProblem::new(rhs, t0, tf, y0.to_vec());
+    solve_initial_condition_sensitivity::<Sol, S, _>(&problem, t0, tf, y0, options)
 }
 
 #[cfg(test)]
