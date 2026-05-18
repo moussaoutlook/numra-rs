@@ -1,3 +1,12 @@
+// The `row * N + col` column-major flattening is written explicitly
+// throughout these tests so the (row, col) intent is visible at each
+// indexing site. Clippy flags `0*2+0` / `1*2+1` etc. as identity_op /
+// erasing_op, and the matching `for row in 0..N { for col in 0..N {
+// ... expected[row][col] ... } }` loop as needless_range_loop because
+// the loop variable doubles as both an `phi_ij` arg and an array index.
+// Both choices are deliberate test-code pedagogy.
+#![allow(clippy::identity_op, clippy::erasing_op, clippy::needless_range_loop)]
+
 //! Initial-condition sensitivity (state-transition matrix) regression suite.
 //!
 //! Sequencing rationale: `ic_matches_hand_seeded_variational` (test 4 in
