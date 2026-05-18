@@ -112,10 +112,9 @@ pub use radau5::Radau5;
 pub use auto::{auto_solve, auto_solve_with_hints, Accuracy, SolverHints, Stiffness};
 
 pub use sensitivity::{
-    solve_forward_sensitivity, solve_forward_sensitivity_with,
-    solve_initial_condition_sensitivity, solve_initial_condition_sensitivity_with,
-    AugmentedSystem, ClosureSystem, ParametricOdeSystem, SensitivityResult,
-    StateTransitionResult,
+    solve_forward_sensitivity, solve_forward_sensitivity_with, solve_initial_condition_sensitivity,
+    solve_initial_condition_sensitivity_with, AugmentedSystem, ClosureSystem, ParametricOdeSystem,
+    SensitivityResult, StateTransitionResult,
 };
 
 #[cfg(feature = "autodiff")]

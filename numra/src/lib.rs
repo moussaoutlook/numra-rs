@@ -59,8 +59,8 @@ pub use numra_ode as ode;
 // `numra::compute_sensitivities`. Advanced building blocks (`AugmentedSystem`,
 // `ClosureSystem`) remain in `numra::ode` for callers who need them.
 pub use numra_ode::sensitivity::{
-    solve_forward_sensitivity, solve_forward_sensitivity_with,
-    solve_initial_condition_sensitivity, solve_initial_condition_sensitivity_with,
+    solve_forward_sensitivity, solve_forward_sensitivity_with, solve_initial_condition_sensitivity,
+    solve_initial_condition_sensitivity_with,
 };
 pub use numra_ode::{ParametricOdeSystem, SensitivityResult, StateTransitionResult};
 pub use numra_optim as optim;

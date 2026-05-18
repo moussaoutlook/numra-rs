@@ -125,14 +125,8 @@ fn ic_matches_hand_seeded_variational() {
     let (t0, tf) = (0.0_f64, 1.5_f64);
     let opts = SolverOptions::default().rtol(1e-9).atol(1e-12);
 
-    let hand = solve_forward_sensitivity::<DoPri5, _, _>(
-        &Linear2x2HandSeeded,
-        t0,
-        tf,
-        &y0,
-        &opts,
-    )
-    .expect("hand-seeded variational solve failed");
+    let hand = solve_forward_sensitivity::<DoPri5, _, _>(&Linear2x2HandSeeded, t0, tf, &y0, &opts)
+        .expect("hand-seeded variational solve failed");
 
     let ic = solve_initial_condition_sensitivity::<DoPri5, _, _>(
         &Linear2x2OdeSystem,
@@ -394,14 +388,8 @@ fn ic_dummy_params_are_unread() {
         // that the RHS does not consume `p`. If any of these are NaN or
         // differ, IC-NO-PARAM-READ has been violated.
         assert!(z.is_finite(), "zero-dummy result not finite at i={i}: {z}");
-        assert!(
-            n.is_finite(),
-            "NaN-dummy poisoned trajectory at i={i}: {n}"
-        );
-        assert!(
-            f.is_finite(),
-            "∞-dummy poisoned trajectory at i={i}: {f}"
-        );
+        assert!(n.is_finite(), "NaN-dummy poisoned trajectory at i={i}: {n}");
+        assert!(f.is_finite(), "∞-dummy poisoned trajectory at i={i}: {f}");
         assert_eq!(z, n, "Φ differs between zero and NaN dummy at i={i}");
         assert_eq!(z, f, "Φ differs between zero and ∞ dummy at i={i}");
     }

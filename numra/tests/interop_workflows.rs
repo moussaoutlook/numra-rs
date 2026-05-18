@@ -456,9 +456,7 @@ fn workflow_ic_sensitivity_interp_integrate() -> Result<(), numra::NumraError> {
     // cubic spline. The IC trajectory grid is the solver's accepted-step +
     // t_eval grid (no special handling required).
     let t_grid: Vec<f64> = result.t().to_vec();
-    let phi_series: Vec<f64> = (0..result.len())
-        .map(|i| result.phi_ij(i, 0, 0))
-        .collect();
+    let phi_series: Vec<f64> = (0..result.len()).map(|i| result.phi_ij(i, 0, 0)).collect();
     let spline = CubicSpline::natural(&t_grid, &phi_series)?;
 
     // Cross-check: spline reproduces exp(-k t) at intermediate times.

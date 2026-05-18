@@ -62,20 +62,13 @@ fn autodiff_jy_matches_analytic_jy_on_lotka_volterra() {
     // the AD-vs-analytic difference we're measuring.
     let opts = SolverOptions::default().rtol(1e-10).atol(1e-13);
 
-    let analytic = solve_initial_condition_sensitivity::<DoPri5, f64, _>(
-        &LvAnalyticalJ,
-        t0,
-        tf,
-        &y0,
-        &opts,
-    )
-    .expect("analytic IC solve failed");
+    let analytic =
+        solve_initial_condition_sensitivity::<DoPri5, f64, _>(&LvAnalyticalJ, t0, tf, &y0, &opts)
+            .expect("analytic IC solve failed");
 
     let ad_sys = AutodiffJacobianSystem::<f64, _>::new(lv_dual, 2);
-    let ad = solve_initial_condition_sensitivity::<DoPri5, f64, _>(
-        &ad_sys, t0, tf, &y0, &opts,
-    )
-    .expect("autodiff IC solve failed");
+    let ad = solve_initial_condition_sensitivity::<DoPri5, f64, _>(&ad_sys, t0, tf, &y0, &opts)
+        .expect("autodiff IC solve failed");
 
     // Solver-adaptive output grids may differ in step count and exact
     // breakpoints between the two runs (the AD path's Jacobian is exact
