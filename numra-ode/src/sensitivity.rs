@@ -278,6 +278,155 @@ pub trait ParametricOdeSystem<S: Scalar> {
     fn has_analytical_jacobian_p(&self) -> bool {
         false
     }
+
+    // ------------------------------------------------------------------
+    // Mass-matrix surface (F-IC-SENS-MASS-SURFACE, 0.1.5, Foundation Spec
+    // §6 #14 / §3.8). Mirrors [`OdeSystem`]'s mass-matrix surface so that
+    // parameter-sensitivity hosts can declare DAE structure that the
+    // augmented `OdeSystem`-impl on [`AugmentedSystem`] then lifts onto
+    // the augmented `(N · (1 + N_s))`-dimensional state.
+    //
+    // Defaults match [`OdeSystem`]'s defaults exactly: `is_autonomous =
+    // false`, `has_mass_matrix = false`, `mass_matrix` fills row-major
+    // identity, `is_singular_mass = false`, `algebraic_indices = empty`.
+    // Every pre-0.1.5 implementor compiles unchanged.
+    // ------------------------------------------------------------------
+
+    /// Is the system autonomous? (f does not depend on t explicitly)
+    ///
+    /// Default: `false`. Override to `true` when `f(t, y, p) = f(y, p)`
+    /// independent of `t`. `AugmentedSystem` forwards this from the host
+    /// so the augmented system inherits the host's time-dependence
+    /// structure — variational equations inherit autonomy from the
+    /// state equation.
+    fn is_autonomous(&self) -> bool {
+        false
+    }
+
+    /// Does this system have a mass matrix?
+    ///
+    /// Default: `false` (the standard parameterised ODE `dy/dt = f(t, y, p)`).
+    /// Override to `true` for DAE-shaped parameterised systems
+    /// `M · y' = f(t, y, p)` where `M` is non-identity or singular.
+    /// See [`OdeSystem::has_mass_matrix`] for the equivalent surface on
+    /// the unparameterised side.
+    fn has_mass_matrix(&self) -> bool {
+        false
+    }
+
+    /// Get the mass matrix `M` for the DAE: `M · y' = f(t, y, p)`.
+    ///
+    /// Default returns identity (standard ODE), regardless of what
+    /// [`Self::has_mass_matrix`] reports — callers should consult
+    /// [`Self::has_mass_matrix`] before relying on this output.
+    ///
+    /// Layout: row-major, `mass[i * n + j] = M[i, j]`, length `n²` where
+    /// `n = self.n_states()`. Mirrors [`OdeSystem::mass_matrix`].
+    fn mass_matrix(&self, mass: &mut [S]) {
+        let n = self.n_states();
+        for i in 0..n {
+            for j in 0..n {
+                mass[i * n + j] = if i == j { S::ONE } else { S::ZERO };
+            }
+        }
+    }
+
+    /// Is the mass matrix singular? (i.e., is this a DAE?)
+    ///
+    /// Default: `false`. Override to `true` for semi-explicit DAEs where
+    /// one or more rows of `M` are zero (algebraic constraints).
+    fn is_singular_mass(&self) -> bool {
+        false
+    }
+
+    /// Indices of algebraic variables (rows `i` where `M[i, i] = 0`).
+    ///
+    /// Default: empty (all rows differential). Override for DAE systems
+    /// to enumerate the algebraic rows so downstream solvers can apply
+    /// row-aware error scaling and the augmented-system lift can map
+    /// each host algebraic index `i` to its `(N_s + 1)` copies on the
+    /// augmented diagonal.
+    fn algebraic_indices(&self) -> Vec<usize> {
+        Vec::new()
+    }
+}
+
+/// Lift the host's `n × n` mass matrix `M` block-diagonally onto the
+/// augmented system's `(n + n·m) × (n + n·m)` state, where `m =
+/// n_params` is the number of sensitivity columns.
+///
+/// # Variational-equation derivation
+///
+/// The host DAE is `M · y' = f(t, y, p)`. Differentiating each side with
+/// respect to a parameter `p_k` gives the variational equation
+///
+/// ```text
+///   M · (∂y/∂p_k)' = J_y · (∂y/∂p_k) + J_p_{:,k}
+/// ```
+///
+/// so each sensitivity column `∂y/∂p_k` lives in the same M-weighted
+/// space as the state itself. Stacking the augmented state `z = [y;
+/// vec(S)] ∈ ℝ^{n(1+m)}` (column-major sensitivity flattening, see
+/// module-level layout conventions) and writing the augmented dynamics in
+/// matrix form `M_aug · z' = F(t, z, p)` therefore requires
+///
+/// ```text
+///   M_aug = block_diag(M, M, …, M)  with (m + 1) copies of M
+/// ```
+///
+/// — one M for the state block, plus one M for each of the `m`
+/// sensitivity-column blocks. Singular rows of `M` lift through to every
+/// block (see `lift_algebraic_indices_for_augmented`).
+///
+/// # Layout
+///
+/// `host_m`: row-major, length `n²`, `host_m[i * n + j] = M[i, j]`.
+/// `aug_mass`: row-major, length `(n * (1 + m))²`, filled by this
+/// function. All cross-block entries are zero (block-diagonal).
+fn lift_mass_matrix_for_augmented<S: Scalar>(host_m: &[S], n: usize, m: usize, aug_mass: &mut [S]) {
+    let dim = n * (1 + m);
+    debug_assert_eq!(host_m.len(), n * n);
+    debug_assert_eq!(aug_mass.len(), dim * dim);
+    // Zero the augmented matrix first (all off-block entries are zero).
+    for slot in aug_mass.iter_mut() {
+        *slot = S::ZERO;
+    }
+    // Place `(m + 1)` copies of M on the diagonal blocks. Block `b`
+    // occupies rows `[b*n, (b+1)*n)` and columns `[b*n, (b+1)*n)`.
+    for b in 0..=m {
+        let row0 = b * n;
+        let col0 = b * n;
+        for i in 0..n {
+            for j in 0..n {
+                aug_mass[(row0 + i) * dim + (col0 + j)] = host_m[i * n + j];
+            }
+        }
+    }
+}
+
+/// Lift the host's algebraic indices onto the augmented system's `(N_s
+/// + 1)` blocks.
+///
+/// The host's algebraic structure (rows `i` of `M` that are entirely
+/// zero) propagates to every sensitivity column through the variational
+/// equation: the row-`i` variational equation
+/// `M[i,:] · (∂y/∂p_k)' = J_y[i,:] · (∂y/∂p_k) + J_p[i,k]` is algebraic
+/// in every block whenever it is algebraic in the host. So for each host
+/// algebraic index `i`, the augmented algebraic indices are
+/// `{i, n + i, 2n + i, …, m · n + i}` — one copy per block.
+///
+/// Result is sorted ascending to match the conventional `algebraic_indices`
+/// output ordering.
+fn lift_algebraic_indices_for_augmented(host_indices: &[usize], n: usize, m: usize) -> Vec<usize> {
+    let mut out = Vec::with_capacity(host_indices.len() * (1 + m));
+    for b in 0..=m {
+        let offset = b * n;
+        for &i in host_indices {
+            out.push(offset + i);
+        }
+    }
+    out.sort_unstable();
+    out
 }
 
 /// Wraps a [`ParametricOdeSystem`] as an [`OdeSystem`] over the augmented
@@ -297,6 +446,14 @@ pub struct AugmentedSystem<S: Scalar, Sys: ParametricOdeSystem<S>> {
     fd_f1: std::cell::RefCell<Vec<S>>,
     fd_y_pert: std::cell::RefCell<Vec<S>>,
     fd_p_pert: std::cell::RefCell<Vec<S>>,
+    // Lifted host algebraic indices for the augmented `(N · (1 + N_s))`
+    // state. Computed once at construction by `lift_algebraic_indices_for_
+    // augmented` from `system.algebraic_indices()`. Algebraic indices are
+    // assumed constant over the host's lifetime (the trait contract does
+    // not require this explicitly, but every shipping implementor returns
+    // a constant set, and a future foundation change that ever makes them
+    // dynamic should revisit this cache).
+    augmented_algebraic_indices: Vec<usize>,
     // Debug-only: tracks whether the first-call analytical-vs-FD
     // consistency check has run. See `check_jacobian_flags`.
     #[cfg(debug_assertions)]
@@ -309,6 +466,12 @@ impl<S: Scalar, Sys: ParametricOdeSystem<S>> AugmentedSystem<S, Sys> {
     pub fn new(system: Sys) -> Self {
         let n = system.n_states();
         let np = system.n_params();
+        // Snapshot the host's algebraic indices once at construction and
+        // lift them onto the augmented state's `(N_s + 1)` blocks. See
+        // `lift_algebraic_indices_for_augmented` for the lift derivation
+        // and the host-stability assumption.
+        let augmented_algebraic_indices =
+            lift_algebraic_indices_for_augmented(&system.algebraic_indices(), n, np);
         Self {
             system,
             jy_scratch: std::cell::RefCell::new(vec![S::ZERO; n * n]),
@@ -317,6 +480,7 @@ impl<S: Scalar, Sys: ParametricOdeSystem<S>> AugmentedSystem<S, Sys> {
             fd_f1: std::cell::RefCell::new(vec![S::ZERO; n]),
             fd_y_pert: std::cell::RefCell::new(vec![S::ZERO; n]),
             fd_p_pert: std::cell::RefCell::new(vec![S::ZERO; np]),
+            augmented_algebraic_indices,
             #[cfg(debug_assertions)]
             flag_check_done: std::cell::Cell::new(false),
         }
@@ -567,6 +731,87 @@ impl<S: Scalar, Sys: ParametricOdeSystem<S>> OdeSystem<S> for AugmentedSystem<S,
             }
         }
     }
+
+    // ------------------------------------------------------------------
+    // Mass-matrix + autonomy surface (F-IC-SENS-MASS-SURFACE, 0.1.5,
+    // Foundation Spec §6 #14). The pre-0.1.5 `impl OdeSystem for
+    // AugmentedSystem` inherited the trait defaults for these five
+    // methods — silently dropping the wrapped `ParametricOdeSystem`'s
+    // mass-matrix and autonomy declarations onto the augmented state.
+    // The downstream solvers (Radau5, BDF) read these methods directly
+    // (radau5.rs:234,237; bdf.rs:470,472), so the silent defaults
+    // produced M-blind variational integrations for any host with
+    // non-identity or singular M. The five overrides below delegate /
+    // lift from the host. See `lift_mass_matrix_for_augmented` and
+    // `lift_algebraic_indices_for_augmented` for the block-diagonal
+    // derivation.
+    // ------------------------------------------------------------------
+
+    fn is_autonomous(&self) -> bool {
+        // Variational equations inherit the host's time-dependence
+        // structure — if `f(t, y, p)` is t-independent, so is the
+        // augmented RHS (whose sensitivity columns depend on `J_y`,
+        // `J_p`, themselves evaluated at the host's `(t, y, p)`).
+        self.system.is_autonomous()
+    }
+
+    fn has_mass_matrix(&self) -> bool {
+        // Direct delegation. Downstream solvers (Radau5, BDF) gate the
+        // M-aware Newton system on this flag; a host that declares
+        // `has_mass_matrix = false` must continue to take the identity-M
+        // fast path through the augmented integration.
+        self.system.has_mass_matrix()
+    }
+
+    /// Fill the augmented mass matrix.
+    ///
+    /// Two distinct cases (correctness, not defense): the
+    /// `has_mass_matrix() = false` branch returns the full augmented
+    /// identity rather than the host's identity-lifted result, because
+    /// downstream solvers dispatch on `has_mass_matrix()` separately
+    /// from `mass_matrix()` — a host that explicitly declared
+    /// `has_mass_matrix() = true` with `M = I` is semantically distinct
+    /// from a host that declared `has_mass_matrix() = false`, and the
+    /// branch preserves that distinction. The M-aware branch lifts the
+    /// host's `N × N` `M` block-diagonally over `(N_s + 1)` copies via
+    /// `lift_mass_matrix_for_augmented`.
+    fn mass_matrix(&self, mass: &mut [S]) {
+        let n = self.system.n_states();
+        let np = self.system.n_params();
+        let dim = n * (1 + np);
+        if !self.system.has_mass_matrix() {
+            // Augmented identity for the full `dim × dim` matrix.
+            // Semantically distinct from the M-aware identity branch
+            // (see the rustdoc above).
+            for i in 0..dim {
+                for j in 0..dim {
+                    mass[i * dim + j] = if i == j { S::ONE } else { S::ZERO };
+                }
+            }
+            return;
+        }
+        // Borrow the host's `N × N` M into local scratch and lift onto
+        // the augmented diagonal. Local scratch (not a `RefCell` on the
+        // struct) because this path is cold relative to `rhs`/`jacobian`
+        // — solvers call `mass_matrix` once at the start of integration,
+        // not every step.
+        let mut host_m = vec![S::ZERO; n * n];
+        self.system.mass_matrix(&mut host_m);
+        lift_mass_matrix_for_augmented(&host_m, n, np, mass);
+    }
+
+    fn is_singular_mass(&self) -> bool {
+        // Direct delegation. Singularity lifts through every block (a
+        // zero row of host M is zero in every augmented diagonal block).
+        self.system.is_singular_mass()
+    }
+
+    fn algebraic_indices(&self) -> Vec<usize> {
+        // Cached at construction in `new()`; see the field doc on
+        // `augmented_algebraic_indices` for the host-stability
+        // assumption.
+        self.augmented_algebraic_indices.clone()
+    }
 }
 
 /// Forwarding impl: a reference to a parametric system is itself a parametric
@@ -602,6 +847,26 @@ impl<S: Scalar, T: ParametricOdeSystem<S>> ParametricOdeSystem<S> for &T {
     }
     fn has_analytical_jacobian_p(&self) -> bool {
         (*self).has_analytical_jacobian_p()
+    }
+    // Mass-matrix surface (F-IC-SENS-MASS-SURFACE, 0.1.5). Forwards from
+    // the referenced parametric system; otherwise `&Sys` would silently
+    // inherit the trait defaults and drop the host's M declaration —
+    // exactly the inward-direction boundary gap this PR exists to close
+    // (see `feedback_wrapper_boundary_symmetry`).
+    fn is_autonomous(&self) -> bool {
+        (*self).is_autonomous()
+    }
+    fn has_mass_matrix(&self) -> bool {
+        (*self).has_mass_matrix()
+    }
+    fn mass_matrix(&self, mass: &mut [S]) {
+        (*self).mass_matrix(mass)
+    }
+    fn is_singular_mass(&self) -> bool {
+        (*self).is_singular_mass()
+    }
+    fn algebraic_indices(&self) -> Vec<usize> {
+        (*self).algebraic_indices()
     }
 }
 
@@ -1043,6 +1308,37 @@ impl<'a, S: Scalar, Sys: OdeSystem<S> + ?Sized> ParametricOdeSystem<S>
     fn has_analytical_jacobian_p(&self) -> bool {
         // Truthful: J_p ≡ 0 is analytically exact per IC-NO-PARAM-READ.
         true
+    }
+
+    // ------------------------------------------------------------------
+    // Mass-matrix + autonomy forwarding (F-IC-SENS-MASS-SURFACE, 0.1.5,
+    // Foundation Spec §6 #14). Closes the inward-direction boundary gap
+    // F-IC-SENS shipped with: the 0.1.4 wrapper inherited the
+    // `ParametricOdeSystem` defaults for these five methods (returning
+    // `has_mass_matrix = false`, identity M, etc.), silently dropping
+    // the wrapped `OdeSystem`'s declarations on the way into the
+    // augmented integration. See `feedback_wrapper_boundary_symmetry`
+    // for the both-direction boundary discipline this restores.
+    // ------------------------------------------------------------------
+
+    fn is_autonomous(&self) -> bool {
+        self.inner.is_autonomous()
+    }
+
+    fn has_mass_matrix(&self) -> bool {
+        self.inner.has_mass_matrix()
+    }
+
+    fn mass_matrix(&self, mass: &mut [S]) {
+        self.inner.mass_matrix(mass);
+    }
+
+    fn is_singular_mass(&self) -> bool {
+        self.inner.is_singular_mass()
+    }
+
+    fn algebraic_indices(&self) -> Vec<usize> {
+        self.inner.algebraic_indices()
     }
 }
 
@@ -1622,5 +1918,92 @@ mod tests {
                 // Some solvers return Err directly for max_steps; that's also acceptable.
             }
         }
+    }
+
+    // ====================================================================
+    // F-IC-SENS-MASS-SURFACE Test 6 — structural: IcAsParametric forwards
+    // the wrapped OdeSystem's mass-matrix surface and is_autonomous.
+    //
+    // Closes the inward-direction structural check of the boundary-
+    // symmetry pair. Lives here (not in tests/) because IcAsParametric
+    // is private. Paired with Test 5 in
+    // `numra-ode/tests/ic_sensitivity_mass_matrix.rs::augmented_system_
+    // lifts_mass_surface_block_diagonally`, which covers the
+    // AugmentedSystem (outward-from-wrapper) lift on the same data.
+    // ====================================================================
+
+    struct MockMassOde;
+
+    impl OdeSystem<f64> for MockMassOde {
+        fn dim(&self) -> usize {
+            3
+        }
+        fn rhs(&self, _t: f64, _y: &[f64], dy: &mut [f64]) {
+            for slot in dy.iter_mut() {
+                *slot = 0.0;
+            }
+        }
+        fn is_autonomous(&self) -> bool {
+            true
+        }
+        fn has_mass_matrix(&self) -> bool {
+            true
+        }
+        fn mass_matrix(&self, m: &mut [f64]) {
+            // diag(2, 3, 0) row-major.
+            for slot in m.iter_mut() {
+                *slot = 0.0;
+            }
+            m[0 * 3 + 0] = 2.0;
+            m[1 * 3 + 1] = 3.0;
+            m[2 * 3 + 2] = 0.0;
+        }
+        fn is_singular_mass(&self) -> bool {
+            true
+        }
+        fn algebraic_indices(&self) -> Vec<usize> {
+            vec![2]
+        }
+    }
+
+    #[test]
+    fn ic_as_parametric_forwards_mass_surface() {
+        let host = MockMassOde;
+        let n = host.dim();
+        let wrapper = IcAsParametric {
+            inner: &host,
+            dummy_p: vec![0.0; n],
+        };
+
+        // Inward-direction boundary check: every method the host
+        // declares on `OdeSystem`'s M surface (and `is_autonomous`)
+        // must round-trip through the `ParametricOdeSystem` impl.
+        assert!(
+            wrapper.is_autonomous(),
+            "is_autonomous not forwarded by IcAsParametric"
+        );
+        assert!(
+            wrapper.has_mass_matrix(),
+            "has_mass_matrix not forwarded by IcAsParametric"
+        );
+        assert!(wrapper.is_singular_mass(), "is_singular_mass not forwarded");
+        assert_eq!(
+            wrapper.algebraic_indices(),
+            vec![2],
+            "algebraic_indices not forwarded by IcAsParametric",
+        );
+
+        let mut m = vec![0.0_f64; n * n];
+        wrapper.mass_matrix(&mut m);
+        assert_eq!(m[0 * 3 + 0], 2.0, "mass_matrix[0,0] not forwarded");
+        assert_eq!(m[1 * 3 + 1], 3.0, "mass_matrix[1,1] not forwarded");
+        assert_eq!(
+            m[2 * 3 + 2],
+            0.0,
+            "mass_matrix[2,2] (algebraic) not forwarded"
+        );
+        // Off-diagonal entries must remain zero (the host M is diagonal).
+        assert_eq!(m[0 * 3 + 1], 0.0);
+        assert_eq!(m[1 * 3 + 2], 0.0);
     }
 }
