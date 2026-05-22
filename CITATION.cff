@@ -72,8 +72,8 @@ identifiers:
     value: "10.5281/zenodo.20159709"
     description: "All versions (concept DOI; preferred for citation)"
   - type: doi
-    value: "10.5281/zenodo.20264977"
-    description: "Version 0.1.4 (for reproducibility)"
+    value: "10.5281/zenodo.20338318"
+    description: "Version 0.1.5 (for reproducibility)"
 
 # Optional: list preferred citation as a paper rather than the software
 # itself. Useful if a companion methods paper is published.
