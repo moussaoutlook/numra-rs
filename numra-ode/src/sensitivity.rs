@@ -1455,7 +1455,7 @@ impl<S: Scalar> StateTransitionResult<S> {
 /// obtained from [`OdeSystem::jacobian`] — the user's analytical override
 /// if any, the trait's forward-FD default otherwise. For an
 /// exact-to-round-off `J_y` from autodiff, wrap the system in
-/// [`crate::AutodiffJacobianSystem`] (behind the `autodiff` feature).
+/// `AutodiffJacobianSystem` (behind the `autodiff` feature).
 ///
 /// # Example: scalar exponential decay
 ///
@@ -1514,7 +1514,7 @@ where
 /// Jacobian via the [`OdeSystem`] default) and forwards. Suitable for
 /// one-shot analyses and REPL-style scripts. For an analytical `J_y` or an
 /// autodiff-derived `J_y`, implement [`OdeSystem`] directly (with a
-/// `jacobian` override or by wrapping in [`crate::AutodiffJacobianSystem`])
+/// `jacobian` override or by wrapping in `AutodiffJacobianSystem`)
 /// and call [`solve_initial_condition_sensitivity`].
 pub fn solve_initial_condition_sensitivity_with<Sol, S, F>(
     rhs: F,
