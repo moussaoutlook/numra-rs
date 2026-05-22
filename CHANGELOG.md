@@ -4,6 +4,8 @@ All notable public changes to Numra are recorded here. The project follows seman
 
 ## Unreleased
 
+## 0.1.5 - 2026-05-22
+
 ### Added
 
 - **F-IC-SENS-MASS-SURFACE (additive, non-breaking)** — `numra-ode`: `ParametricOdeSystem` gains the four-method mass-matrix surface mirroring `OdeSystem` — `has_mass_matrix() -> bool` (default `false`), `mass_matrix(&self, mass: &mut [S])` (default fills row-major identity, length `n²`), `is_singular_mass() -> bool` (default `false`), `algebraic_indices() -> Vec<usize>` (default empty) — plus `is_autonomous() -> bool` (default `false`). Defaults reproduce the pre-0.1.5 implicit behavior exactly: every existing implementor (`AugmentedSystem`, `ClosureSystem`, `ParametricMOLSystem2D/3D`, `IcAsParametric`, the `&T` blanket impl, every user-defined external impl) compiles unchanged with no source-level changes. The `&T` blanket impl forwards the new methods so `&Sys` carries M into `solve_forward_sensitivity` without ownership transfer. Foundation Spec **§3.8 added** (was missing for `ParametricOdeSystem` — a documentation drift this entry closes); §3.3 "Mass matrix as a first-class composable" deferred bullet updated to note partial concretization; §6 #14 records the decision; §7 #3 updated (split into two independent sub-questions with separate triggers: identity-default removal vs DaeSystem peer trait — see §7 #3); §7 #9 added (IC manifold-projection follow-up, four-axis design space).
@@ -32,7 +34,7 @@ All notable public changes to Numra are recorded here. The project follows seman
 
 ### Changed
 
-- **Workspace version 0.1.4 → 0.1.5 prep** (additive correctness release): workspace `[workspace.package].version` and all 21 internal-dependency pins in the workspace `Cargo.toml` will be bumped in the release-prep PR; `CITATION.cff` `version:` field bumped (date stamp deferred to the actual release-prep PR per the established convention from `8073a6a` for 0.1.4 and `514fdf7` for 0.1.3). **No existing public signature changes meaning**: every pre-0.1.5 `ParametricOdeSystem` implementor remains source-compatible with the new trait default-impl additions; `solve_forward_sensitivity{,_with}` users are unaffected at runtime; `solve_initial_condition_sensitivity{,_with}` users see only the corrected M-aware variational integration (no change for identity-M; correctness restoration for non-identity-M and singular-M).
+- **Workspace version 0.1.4 → 0.1.5 prep** (additive correctness release): workspace `[workspace.package].version` and all 20 internal-dependency pins in `[workspace.dependencies]` bumped in lockstep (all 21 publishable crates inherit via `version.workspace = true`); `CITATION.cff` `version:` field 0.1.4 → 0.1.5, `date-released` 2026-05-18 → 2026-05-22. The version-DOI block in `identifiers` is intentionally left at 0.1.4 values — Zenodo mints the 0.1.5 DOI on GitHub Release, after which a follow-up `docs(citation): back-port Zenodo DOIs for v0.1.5` commit fills it in. Same pattern as `5aa85d0` (0.1.2) / `8b3ec0a` (0.1.3) / `47d25a9` (0.1.4). **No existing public signature changes meaning**: every pre-0.1.5 `ParametricOdeSystem` implementor remains source-compatible with the new trait default-impl additions; `solve_forward_sensitivity{,_with}` users are unaffected at runtime; `solve_initial_condition_sensitivity{,_with}` users see only the corrected M-aware variational integration (no change for identity-M; correctness restoration for non-identity-M and singular-M).
 
 ## 0.1.4 - 2026-05-18
 
