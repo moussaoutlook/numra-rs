@@ -2,34 +2,87 @@
 //!
 //! Author: Moussa Leblouba
 //! Date: 9 February 2026
-//! Modified: 2 May 2026
+//! Modified: 2 September 2026
 
 use numra_core::Scalar;
 
 use crate::error::StatsError;
 
+/// Neumaier compensated accumulator.
+///
+/// Tracks a running error-compensation term so that the accumulated sum
+/// stays accurate even when it is many orders of magnitude larger than the
+/// individual addends (e.g. data with a large common offset).
+struct CompensatedSum<S> {
+    sum: S,
+    /// Running compensation for lost low-order bits.
+    comp: S,
+}
+
+impl<S: Scalar> CompensatedSum<S> {
+    fn new() -> Self {
+        Self {
+            sum: S::ZERO,
+            comp: S::ZERO,
+        }
+    }
+
+    fn add(&mut self, x: S) {
+        let t = self.sum + x;
+        if self.sum.abs() >= x.abs() {
+            self.comp += (self.sum - t) + x;
+        } else {
+            self.comp += (x - t) + self.sum;
+        }
+        self.sum = t;
+    }
+
+    fn value(&self) -> S {
+        self.sum + self.comp
+    }
+}
+
 /// Arithmetic mean.
+///
+/// Uses compensated (Neumaier) summation so that the result stays accurate
+/// on data with a large common offset (see issue #10).
 pub fn mean<S: Scalar>(data: &[S]) -> Result<S, StatsError> {
     if data.is_empty() {
         return Err(StatsError::EmptyData);
     }
     let n = S::from_usize(data.len());
-    let sum: S = data.iter().copied().fold(S::ZERO, |a, b| a + b);
-    Ok(sum / n)
+    let mut sum = CompensatedSum::new();
+    for &x in data {
+        sum.add(x);
+    }
+    Ok(sum.value() / n)
 }
 
 /// Sample variance (with Bessel's correction, divides by N-1).
+///
+/// Computed with the corrected two-pass algorithm (Chan, Golub & LeVeque,
+/// 1983) on top of the compensated mean: the `(Σd)²/n` term cancels the
+/// bias introduced by rounding of the mean itself, and both sums are
+/// accumulated with Neumaier compensation. On data whose mean is large
+/// relative to its spread this recovers the variance of the stored inputs
+/// where a naive mean loses it to catastrophic cancellation and Welford's
+/// single-pass update (running mean quantised at the ulp of the offset)
+/// keeps an O(ulp(mean)/spread) error (see issue #10).
 pub fn variance<S: Scalar>(data: &[S]) -> Result<S, StatsError> {
     if data.len() < 2 {
         return Err(StatsError::EmptyData);
     }
     let m = mean(data)?;
     let n = S::from_usize(data.len());
-    let sum_sq: S = data
-        .iter()
-        .copied()
-        .fold(S::ZERO, |a, x| a + (x - m) * (x - m));
-    Ok(sum_sq / (n - S::ONE))
+    let mut sum_sq = CompensatedSum::new();
+    let mut sum_dev = CompensatedSum::new();
+    for &x in data {
+        let d = x - m;
+        sum_sq.add(d * d);
+        sum_dev.add(d);
+    }
+    let sum_dev = sum_dev.value();
+    Ok((sum_sq.value() - sum_dev * sum_dev / n) / (n - S::ONE))
 }
 
 /// Sample standard deviation.
@@ -139,11 +192,19 @@ pub fn covariance<S: Scalar>(x: &[S], y: &[S]) -> Result<S, StatsError> {
     let mx = mean(x)?;
     let my = mean(y)?;
     let n = S::from_usize(x.len());
-    let sum: S = x
-        .iter()
-        .zip(y.iter())
-        .fold(S::ZERO, |a, (&xi, &yi)| a + (xi - mx) * (yi - my));
-    Ok(sum / (n - S::ONE))
+    // Corrected two-pass co-moment (see `variance`): the `Σdx·Σdy/n` term
+    // cancels the bias from rounding of the two means (issue #10).
+    let mut sum_xy = CompensatedSum::new();
+    let mut sum_dx = CompensatedSum::new();
+    let mut sum_dy = CompensatedSum::new();
+    for (&xi, &yi) in x.iter().zip(y.iter()) {
+        let dx = xi - mx;
+        let dy = yi - my;
+        sum_xy.add(dx * dy);
+        sum_dx.add(dx);
+        sum_dy.add(dy);
+    }
+    Ok((sum_xy.value() - sum_dx.value() * sum_dy.value() / n) / (n - S::ONE))
 }
 
 /// Covariance matrix for p variables, each with n observations.
@@ -256,6 +317,71 @@ mod tests {
         // Off-diagonal should be negative (inversely correlated)
         assert!(cov[1] < 0.0);
         assert!((cov[1] - cov[2]).abs() < 1e-12); // symmetric
+    }
+
+    /// Regression test for issue #10: variance of data with a large common
+    /// offset must not lose precision to catastrophic cancellation.
+    #[test]
+    fn test_variance_large_offset() {
+        // Deterministic pseudo-random uniform [0, 1) samples shifted by 1e12.
+        // True variance of the uniform part is 1/12.
+        let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
+        let data: Vec<f64> = (0..100_000)
+            .map(|_| {
+                // xorshift64*
+                state ^= state >> 12;
+                state ^= state << 25;
+                state ^= state >> 27;
+                let u =
+                    (state.wrapping_mul(0x2545_F491_4F6C_DD1D) >> 11) as f64 / (1u64 << 53) as f64;
+                u + 1.0e12
+            })
+            .collect();
+        let v = variance(&data).unwrap();
+        let expected = 1.0 / 12.0;
+        assert!(
+            (v - expected).abs() / expected < 1e-2,
+            "variance = {v}, expected ~{expected}"
+        );
+    }
+
+    /// Exact-value companion to `test_variance_large_offset`: `i % 100` is
+    /// uniform on `0..100` with population variance `(100² − 1)/12`, so the
+    /// sample variance is known in closed form.
+    #[test]
+    fn test_variance_large_offset_exact() {
+        let n = 10_000_usize;
+        let data: Vec<f64> = (0..n).map(|i| 1.0e12 + (i % 100) as f64).collect();
+        let expected = (100.0 * 100.0 - 1.0) / 12.0 * n as f64 / (n as f64 - 1.0);
+        let v = variance(&data).unwrap();
+        assert!(
+            (v - expected).abs() / expected < 1e-12,
+            "variance = {v}, expected {expected}"
+        );
+    }
+
+    #[test]
+    fn test_mean_large_offset() {
+        // 99_995 = 7 · 14_285, so the mean of `i % 7` is exactly 3.
+        let data: Vec<f64> = (0..99_995).map(|i| 1.0e12 + (i % 7) as f64).collect();
+        let m = mean(&data).unwrap();
+        assert!((m - 1.0e12 - 3.0).abs() < 1e-3, "mean = {m}");
+    }
+
+    #[test]
+    fn test_covariance_large_offset() {
+        // Perfectly correlated data with a huge offset: cov(x, x) == var(x),
+        // and both must equal the closed-form sample variance of `i % 100`.
+        let n = 10_000_usize;
+        let data: Vec<f64> = (0..n).map(|i| 1.0e12 + (i % 100) as f64).collect();
+        let expected = (100.0 * 100.0 - 1.0) / 12.0 * n as f64 / (n as f64 - 1.0);
+        let cov = covariance(&data, &data).unwrap();
+        let var = variance(&data).unwrap();
+        assert!((cov - var).abs() / var < 1e-12, "cov = {cov}, var = {var}");
+        assert!(
+            (cov - expected).abs() / expected < 1e-12,
+            "cov = {cov}, expected {expected}"
+        );
     }
 
     #[test]

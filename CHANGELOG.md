@@ -4,6 +4,14 @@ All notable public changes to Numra are recorded here. The project follows seman
 
 ## Unreleased
 
+### Fixed
+
+- **Issue #10 (numerical stability of descriptive statistics)** — `numra-stats`: `mean`, `variance`, `std_dev`, `covariance`, `covariance_matrix`, `skewness` and `kurtosis` lost precision catastrophically on data with a large common offset. **Root cause:** `mean` used naive summation. `variance` was already two-pass, but on the issue's reproduction (10⁶ samples of `U[0, 1) + 10¹²`) the accumulated rounding error in the mean (≈ 0.5) is squared by the second pass — `0.3288` returned for a true `0.08339`, ≈ 4× too large, with the excess equal to the squared mean error to three digits. **Fix:** `mean` now uses Neumaier compensated summation; `variance` and `covariance` use the corrected two-pass algorithm (Chan, Golub & LeVeque 1983) with compensated sums, whose `(Σd)²/n` term cancels the residual bias from rounding of the mean itself. `std_dev`, `covariance_matrix`, `skewness` and `kurtosis` are fixed through those. No API change; results on well-conditioned data may differ from 0.1.5 at rounding level only.
+
+  **Welford's single-pass update (the issue's suggestion) was evaluated and not adopted for the slice API.** Measured on the issue's data against the exact variance of the stored `f64` inputs (the residuals `x − 10¹²` are exact multiples of 2⁻¹³, so integer sums of `k` and `k²` give the exact answer): 0.1.5 naive mean → relative error 2.9; Welford (`delta · delta2` form) → 1.8·10⁻⁵; the issue's `RunningStats` → 1.3·10⁻⁵; corrected two-pass with compensated sums → 0 (bit-exact). Welford's floor comes from its running mean living at magnitude 10¹², where each `mean += delta / n` update is quantised at ulp(10¹²) ≈ 1.2·10⁻⁴ against a spread of ≈ 0.29; a two-pass with an accurate mean subtracts exactly (Sterbenz) and only sums small non-negative squares. A streaming accumulator remains a reasonable future addition for an iterator-based API.
+
+  **Four regression tests** with 10¹²-offset data in `numra-stats/src/descriptive.rs` (`test_variance_large_offset`, `test_variance_large_offset_exact`, `test_mean_large_offset`, `test_covariance_large_offset`). Revert-confirm-restore protocol applied: against the 0.1.5 implementation all four fail with `variance = 0.29058` (expected ≈ 0.08333), `variance = 833.33579` (expected `833.33333…`, closed form `(100² − 1)/12 · n/(n − 1)`), `mean = 10¹² + 1.763` (expected `10¹² + 3`); restore → all pass. **Composability contract:** below the contract's surface — no trait, result-type, error, input/output-type or `Scalar`-genericity change.
+
 ## 0.1.5 - 2026-05-22
 
 ### Added
